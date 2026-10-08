@@ -39,6 +39,40 @@ const coreRoutes: RouteRecordRaw[] = [
     children: [],
   },
   {
+    name: 'JapanGrad',
+    path: '/japan-grad',
+    component: () => import('#/views/japan-grad/layout.vue'),
+    meta: { title: '大学选择与对比' },
+    children: [
+      {
+        name: 'UniversityList',
+        path: '',
+        component: () => import('#/views/japan-grad/index.vue'),
+        meta: {
+          title: '大学选择与对比',
+        },
+      },
+      {
+        name: 'UniversityDetails',
+        path: 'universities/:universityId',
+        component: () => import('#/views/japan-grad/university.vue'),
+        meta: { title: '大学 · 研究科' },
+      },
+      {
+        name: 'GraduateSchoolDetails',
+        path: 'universities/:universityId/schools/:schoolId',
+        component: () => import('#/views/japan-grad/school.vue'),
+        meta: { title: '研究科 · 专攻' },
+      },
+      {
+        name: 'MajorDetails',
+        path: 'universities/:universityId/schools/:schoolId/majors/:majorId',
+        component: () => import('#/views/japan-grad/major.vue'),
+        meta: { title: '专攻 · 老师' },
+      },
+    ],
+  },
+  {
     component: AuthPageLayout,
     meta: {
       hideInTab: true,

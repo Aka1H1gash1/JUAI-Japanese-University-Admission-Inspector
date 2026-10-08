@@ -1,3 +1,24 @@
+## JapanGrad 择校笔记（当前前端原型）
+
+这个仓库保存 JapanGrad 的前端开发进度，基于下方的 Vue Vben Admin 开源框架。
+
+已实现：空白大学清单与横向对比，以及 **大学 → 研究科 → 专攻 → 老师** 的手动资料管理。老师支持心仪标记、独立个人主页与研究室主页、四种职称下拉选项。数据保存到当前浏览器；目前属于前端原型阶段。
+
+- [当前进度与验证记录](./docs/japangrad/PROGRESS.md)
+- [运行说明与本地数据说明](./apps/web-antd/src/views/japan-grad/README.md)
+- [完整产品需求（规划范围）](./docs/japangrad/PRD.md)
+
+使用项目要求的 Node.js 和 pnpm 安装并启动：
+
+```sh
+pnpm install
+pnpm --filter @vben/web-antd dev --host 127.0.0.1 --port 5666
+```
+
+打开 `http://127.0.0.1:5666/japan-grad`。
+
+---
+
 <div align="center">
   <a href="https://github.com/anncwb/vue-vben-admin">
     <img alt="VbenAdmin Logo" width="215" src="https://unpkg.com/@vbenjs/static-source@0.1.7/source/logo-v1.webp">
