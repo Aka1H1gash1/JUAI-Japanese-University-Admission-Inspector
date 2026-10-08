@@ -1,0 +1,1 @@
+# JUAI-Japanese-University-Admission-Inspector
