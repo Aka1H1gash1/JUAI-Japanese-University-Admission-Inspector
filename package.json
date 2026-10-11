@@ -1,27 +1,28 @@
 {
-  "name": "vben-admin-monorepo",
+  "name": "juai-japanese-university-admission-inspector",
   "version": "5.7.0",
   "private": true,
   "keywords": [
-    "monorepo",
-    "turbo",
-    "vben",
-    "vben admin",
-    "vben pro",
-    "vue",
-    "vue admin",
-    "vue vben admin",
-    "vue vben admin pro",
+    "juai",
+    "japan",
+    "graduate-school",
+    "admissions",
+    "research-labs",
+    "study-abroad",
     "vue3"
   ],
-  "homepage": "https://github.com/vbenjs/vue-vben-admin",
-  "bugs": "https://github.com/vbenjs/vue-vben-admin/issues",
-  "repository": "vbenjs/vue-vben-admin.git",
+  "homepage": "https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector",
+  "bugs": {
+    "url": "https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector.git"
+  },
   "license": "MIT",
   "author": {
-    "name": "vben",
-    "email": "ann.vben@gmail.com",
-    "url": "https://github.com/anncwb"
+    "name": "Aka1H1gash1",
+    "url": "https://github.com/Aka1H1gash1"
   },
   "type": "module",
   "scripts": {
@@ -116,5 +117,6 @@
     "node": "^22.18.0 || ^24.12.0",
     "pnpm": ">=11.0.0"
   },
-  "packageManager": "pnpm@11.16.0"
+  "packageManager": "pnpm@11.16.0",
+  "description": "A local workspace for Japanese graduate school admissions, research labs and exam planning."
 }

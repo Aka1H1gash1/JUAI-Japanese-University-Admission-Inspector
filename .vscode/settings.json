@@ -113,8 +113,7 @@
     "**/CVS": true,
     "**/.stylelintcache": true,
     "**/.DS_Store": true,
-    "**/vite.config.mts.*": true,
-    "**/tea.yaml": true
+    "**/vite.config.mts.*": true
   },
   "files.watcherExclude": {
     "**/.git/objects/**": true,
@@ -234,7 +233,7 @@
     "*.tsx": "$(capture).test.ts, $(capture).test.tsx, $(capture).spec.ts, $(capture).spec.tsx,$(capture).d.ts",
     "*.env": "$(capture).env.*",
     "README.md": "README*,CHANGELOG*,LICENSE,CNAME",
-    "package.json": "pnpm-lock.yaml,pnpm-workspace.yaml,.gitattributes,.gitignore,.gitpod.yml,.npmrc,.browserslistrc,.node-version,.git*,.tazerc.json",
+    "package.json": "pnpm-lock.yaml,pnpm-workspace.yaml,.gitattributes,.gitignore,.npmrc,.browserslistrc,.node-version,.git*,.tazerc.json",
     "oxlint.config.ts": ".eslintignore,.stylelintignore,.commitlintrc.*,stylelint.config.*,.lintstagedrc.mjs,cspell.json,lefthook.yml,oxfmt.config.*,eslint.config.*"
   },
   "commentTranslate.hover.enabled": false,
