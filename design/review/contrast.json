@@ -1,0 +1,114 @@
+[
+  {
+    "label": "light selected tab",
+    "ratio": 6.84,
+    "foreground": [
+      150,
+      63,
+      40
+    ],
+    "background": [
+      253,
+      254,
+      254
+    ]
+  },
+  {
+    "label": "light primary button",
+    "ratio": 4.84,
+    "foreground": [
+      255,
+      253,
+      251
+    ],
+    "background": [
+      182,
+      83,
+      53
+    ]
+  },
+  {
+    "label": "light hovered secondary button",
+    "ratio": 6.84,
+    "foreground": [
+      150,
+      63,
+      40
+    ],
+    "background": [
+      253,
+      254,
+      254
+    ]
+  },
+  {
+    "label": "light placeholder",
+    "ratio": 4.68,
+    "foreground": [
+      104,
+      116,
+      135
+    ],
+    "background": [
+      253,
+      254,
+      254
+    ]
+  },
+  {
+    "label": "dark selected tab",
+    "ratio": 7.85,
+    "foreground": [
+      244,
+      160,
+      132
+    ],
+    "background": [
+      28,
+      33,
+      42
+    ]
+  },
+  {
+    "label": "dark primary button",
+    "ratio": 4.84,
+    "foreground": [
+      255,
+      253,
+      251
+    ],
+    "background": [
+      182,
+      83,
+      53
+    ]
+  },
+  {
+    "label": "dark hovered secondary button",
+    "ratio": 7.85,
+    "foreground": [
+      244,
+      160,
+      132
+    ],
+    "background": [
+      28,
+      33,
+      42
+    ]
+  },
+  {
+    "label": "dark placeholder",
+    "ratio": 7.13,
+    "foreground": [
+      162,
+      173,
+      191
+    ],
+    "background": [
+      28,
+      33,
+      42
+    ]
+  }
+]

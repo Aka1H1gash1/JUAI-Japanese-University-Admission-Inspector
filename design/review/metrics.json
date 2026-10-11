@@ -1,0 +1,62 @@
+[
+  {
+    "page": "universities",
+    "mode": "light",
+    "domContentLoadedMs": 99,
+    "transferredBytes": 1970601
+  },
+  {
+    "page": "university",
+    "mode": "light",
+    "domContentLoadedMs": 43,
+    "transferredBytes": 1958965
+  },
+  {
+    "page": "school",
+    "mode": "light",
+    "domContentLoadedMs": 29,
+    "transferredBytes": 1952652
+  },
+  {
+    "page": "major",
+    "mode": "light",
+    "domContentLoadedMs": 40,
+    "transferredBytes": 2013501
+  },
+  {
+    "page": "professor",
+    "mode": "light",
+    "domContentLoadedMs": 49,
+    "transferredBytes": 2028930
+  },
+  {
+    "page": "universities",
+    "mode": "dark",
+    "domContentLoadedMs": 44,
+    "transferredBytes": 1970601
+  },
+  {
+    "page": "university",
+    "mode": "dark",
+    "domContentLoadedMs": 37,
+    "transferredBytes": 1958965
+  },
+  {
+    "page": "school",
+    "mode": "dark",
+    "domContentLoadedMs": 43,
+    "transferredBytes": 1952652
+  },
+  {
+    "page": "major",
+    "mode": "dark",
+    "domContentLoadedMs": 33,
+    "transferredBytes": 2013501
+  },
+  {
+    "page": "professor",
+    "mode": "dark",
+    "domContentLoadedMs": 38,
+    "transferredBytes": 2028930
+  }
+]
