@@ -223,8 +223,13 @@ export function eventCountdown(event: PlannerEvent, today = japanToday()) {
     return ['task', 'followup', 'contact'].includes(event.kind)
       ? `已逾期 ${Math.round(dayNumber(today) - dayNumber(event.end))} 天`
       : '日期已过';
-  if (event.start <= today && event.end > today)
-    return `进行中 · ${Math.round(dayNumber(event.end) - dayNumber(today))} 天后截止`;
+  if (event.start < event.end && event.start <= today && event.end >= today) {
+    const remaining = Math.round(dayNumber(event.end) - dayNumber(today));
+    const ending = event.kind === 'application' ? '截止' : '结束';
+    return remaining === 0
+      ? `今天${ending}`
+      : `进行中 · ${remaining} 天后${ending}`;
+  }
   const days = Math.round(dayNumber(event.start) - dayNumber(today));
   return days === 0 ? '今天' : days === 1 ? '明天' : `${days} 天后`;
 }
@@ -378,6 +383,21 @@ export function calendarText(events: PlannerEvent[]) {
         `DESCRIPTION:${icsText(event.title)}`,
         'END:VALARM',
       );
+    if (
+      !event.complete &&
+      event.kind === 'application' &&
+      event.end > event.start &&
+      event.end >= today
+    ) {
+      // DATE DTEND is exclusive: two days before it is one day before the closing date.
+      lines.push(
+        'BEGIN:VALARM',
+        'TRIGGER;RELATED=END:-P2D',
+        'ACTION:DISPLAY',
+        `DESCRIPTION:${icsText(`${event.title}截止前一天（${event.end} 截止）`)}`,
+        'END:VALARM',
+      );
+    }
     lines.push('END:VEVENT');
   }
   lines.push('END:VCALENDAR');
