@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 import { execFile } from 'node:child_process';
 import geography from './japan-geography.json' with { type: 'json' };
 import { upgradeResearchLabs } from './research-labs.mjs';
+import { planningError } from './planning-fields.mjs';
 import {
   deliveryProperties,
   fileProperties,
@@ -205,6 +206,8 @@ export function validateExplorer(data) {
     )
   )
     fail('老师所属研究室不存在或与专攻不匹配。');
+  const plannerError = planningError(data);
+  if (plannerError) fail(plannerError);
   return data;
 }
 
@@ -436,6 +439,37 @@ export async function createLocalApp({
           const majorIds = new Set((data.majors ?? []).map((item) => item.id));
           if (legacyLabs)
             data.labs = data.labs.filter((item) => majorIds.has(item.majorId));
+          const previousPeople = new Map(
+            current.data.professors.map((item) => [item.id, item]),
+          );
+          for (const person of data.professors) {
+            const previous = previousPeople.get(person?.id);
+            if (
+              person &&
+              person.contact === undefined &&
+              previous?.contact !== undefined
+            )
+              person.contact = previous.contact;
+          }
+          const previousLabs = new Map(
+            (current.data.labs ?? []).map((item) => [item.id, item]),
+          );
+          for (const lab of data.labs) {
+            if (!lab) continue;
+            const previous = previousLabs.get(lab.id);
+            for (const key of ['tasks', 'mainProfessorId'])
+              if (lab[key] === undefined && previous?.[key] !== undefined)
+                lab[key] = previous[key];
+            if (
+              lab.mainProfessorId &&
+              previous?.mainProfessorId === lab.mainProfessorId &&
+              !data.professors.some(
+                (person) =>
+                  person?.id === lab.mainProfessorId && person.labId === lab.id,
+              )
+            )
+              lab.mainProfessorId = '';
+          }
           validateExplorer(data);
           const previousUniversities = new Map(
             current.data.universities.map((item) => [item.id, item]),

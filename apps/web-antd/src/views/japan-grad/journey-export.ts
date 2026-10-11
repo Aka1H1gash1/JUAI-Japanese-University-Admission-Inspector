@@ -3,12 +3,21 @@ import type { LabTarget } from './lab-targets';
 import { recurringBudget, targetExams, targetExamText } from './lab-targets';
 import { universityGeography } from './japan-geography';
 import {
+  CONTACT_LABELS,
+  normalizedContact,
+  primaryProfessor,
+} from './application-planning';
+import {
   dormitoryLabel,
   universityBudgetTotals,
   universityFees,
 } from './university-fees';
 
-type Cell = string | number | { formula: string; value: number | '' };
+type Cell =
+  | string
+  | number
+  | { formula: string; value: number | '' }
+  | { input: number };
 interface Sheet {
   name: string;
   rows: Cell[][];
@@ -48,6 +57,8 @@ function worksheet(sheet: Sheet) {
       return `<row r="${index + 1}" ht="${height}" customHeight="1">${row
         .map((cell, col) => {
           const ref = `${column(col)}${index + 1}`;
+          if (typeof cell === 'object' && 'input' in cell)
+            return `<c r="${ref}" s="5"><v>${cell.input}</v></c>`;
           if (typeof cell === 'object')
             return `<c r="${ref}" s="4"${cell.value === '' ? ' t="str"' : ''}><f>${xml(cell.formula)}</f><v>${cell.value}</v></c>`;
           if (typeof cell === 'number')
@@ -60,7 +71,7 @@ function worksheet(sheet: Sheet) {
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><dimension ref="A1:${last}"/><sheetViews><sheetView workbookViewId="0"><pane xSplit="${frozenColumns}" ySplit="1" topLeftCell="${frozenColumns ? 'C2' : 'A2'}" activePane="${frozenColumns ? 'bottomRight' : 'bottomLeft'}" state="frozen"/></sheetView></sheetViews><sheetFormatPr defaultRowHeight="36"/><cols>${sheet.widths.map((width, index) => `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`).join('')}</cols><sheetData>${rows}</sheetData><autoFilter ref="A1:${last}"/><pageMargins left="0.3" right="0.3" top="0.5" bottom="0.5" header="0.2" footer="0.2"/><pageSetup orientation="landscape" paperSize="9" fitToWidth="1" fitToHeight="0"/></worksheet>`;
 }
 
-const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0;(#,##0);&quot;-&quot;"/></numFmts><fonts count="3"><font><sz val="11"/><color rgb="FF000000"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><sz val="11"/><color rgb="FF0000FF"/><name val="Arial"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB65335"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F4F7"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom><color rgb="FFDCE1E8"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="5"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="164" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyNumberFormat="1" applyAlignment="1"><alignment vertical="top"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment vertical="top"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
+const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0;(#,##0);&quot;-&quot;"/></numFmts><fonts count="3"><font><sz val="11"/><color rgb="FF000000"/><name val="Arial"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Arial"/></font><font><sz val="11"/><color rgb="FF0000FF"/><name val="Arial"/></font></fonts><fills count="4"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FFB65335"/><bgColor indexed="64"/></patternFill></fill><fill><patternFill patternType="solid"><fgColor rgb="FFF2F4F7"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom><color rgb="FFDCE1E8"/></bottom><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment vertical="center" wrapText="1"/></xf><xf numFmtId="164" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyNumberFormat="1" applyAlignment="1"><alignment vertical="top"/></xf><xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1" applyAlignment="1"><alignment vertical="top" wrapText="1"/></xf><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyAlignment="1"><alignment vertical="top"/></xf><xf numFmtId="0" fontId="2" fillId="0" borderId="0" xfId="0" applyFont="1" applyAlignment="1"><alignment vertical="top"/></xf></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>`;
 
 export function createJourneyWorkbook(
   targets: LabTarget[],
@@ -108,8 +119,28 @@ export function createJourneyWorkbook(
     '费用备注',
     '个人备注',
     '导出时间',
+    '主要联系老师',
+    '联系状态',
+    '首封发送日期',
+    '教授面试约定（JST）',
+    '下次跟进',
+    '教授回复要点',
+    '材料 / 待办逐项进度',
   ];
   const summary: Cell[][] = [headers];
+  const materials: Cell[][] = [
+    [
+      '大学',
+      '研究科',
+      '专攻',
+      '研究室',
+      '项目',
+      '类型',
+      '准备进度（%）',
+      '截止日期（JST）',
+      '备注',
+    ],
+  ];
   const exams: Cell[][] = [
     [
       '研究室名称',
@@ -136,6 +167,8 @@ export function createJourneyWorkbook(
     const annual = recurringBudget(university);
     const budget = universityBudgetTotals(university);
     const row = index + 2;
+    const person = primaryProfessor(target);
+    const contact = normalizedContact(person?.contact);
     summary.push([
       lab.name,
       university.name,
@@ -194,7 +227,31 @@ export function createJourneyWorkbook(
       university.feeNotes,
       lab.notes,
       date,
+      person?.name ?? '',
+      person ? CONTACT_LABELS[contact.status] : '',
+      contact.firstSentDate,
+      contact.interviewAt.replace('T', ' '),
+      contact.followUpDate,
+      contact.replySummary,
+      (lab.tasks ?? [])
+        .map(
+          (task) =>
+            `${task.title} · ${task.progress}%${task.dueDate ? ` · 截止 ${task.dueDate}` : ''}`,
+        )
+        .join('\n'),
     ]);
+    for (const task of lab.tasks ?? [])
+      materials.push([
+        university.name,
+        school.name,
+        major.name,
+        lab.name,
+        task.title,
+        task.kind === 'material' ? '申请材料' : '其他待办',
+        { input: task.progress },
+        task.dueDate,
+        task.notes,
+      ]);
     for (const record of major.examHistory.toSorted(
       (a, b) =>
         b.year.localeCompare(a.year) || a.session.localeCompare(b.session),
@@ -236,10 +293,19 @@ export function createJourneyWorkbook(
       ),
     },
     {
+      name: '材料与待办',
+      rows: materials,
+      widths: [24, 24, 24, 24, 36, 16, 18, 22, 48],
+    },
+    {
       name: '字段说明',
       widths: [30, 95],
       rows: [
         ['项目', '说明'],
+        [
+          '联络与材料',
+          '联系状态与日期来自研究室主要联系老师；材料与待办明细保留各项目进度与截止日期。未设主要老师时采用该研究室第一位老师。草稿正文不包含在清单导出中。',
+        ],
         ['导出时间', date],
         [
           '导出范围',

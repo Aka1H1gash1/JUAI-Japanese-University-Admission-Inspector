@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { App, Button, Input, Modal, Select } from 'ant-design-vue';
+import { useRoute, useRouter } from 'vue-router';
+import { App, Button, Input, Modal, Select, Tabs } from 'ant-design-vue';
 import { useExplorerStore } from './explorer';
 import { geographySearchTerms } from './japan-geography';
 import { labComparisonRows, labContext, labPath } from './lab-targets';
@@ -8,8 +9,29 @@ import { vAccessibleSelect } from './select-accessibility';
 import ExplorerIcon from './components/explorer-icon.vue';
 import ResearchLabCard from './components/research-lab-card.vue';
 import JourneyLabPicker from './components/journey-lab-picker.vue';
+import JourneyContactBoard from './components/journey-contact-board.vue';
+import JourneyContactDialog from './components/journey-contact-dialog.vue';
+import JourneyTimeline from './components/journey-timeline.vue';
+import JourneyTaskPanel from './components/journey-task-panel.vue';
 const store = useExplorerStore();
 const { message } = App.useApp();
+const route = useRoute();
+const router = useRouter();
+const view = computed({
+  get: () =>
+    ['contacts', 'timeline'].includes(String(route.query.view))
+      ? String(route.query.view)
+      : 'targets',
+  set: (value: string) => {
+    void router.replace({ query: { ...route.query, view: value } });
+  },
+});
+const contactOpen = ref(false);
+const contactLabId = ref('');
+function manageContact(id: string) {
+  contactLabId.value = id;
+  contactOpen.value = true;
+}
 const query = ref('');
 const year = ref('latest');
 const comparisonOpen = ref(false);
@@ -125,54 +147,83 @@ async function exportWorkbook(scope: 'visible' | 'selected') {
           继续添加研究室 →
         </button>
       </div>
-      <div class="list-toolbar">
-        <Input
-          v-model:value="query"
-          allow-clear
-          class="explorer-search"
-          placeholder="搜索研究室、大学、方向、地域或老师"
-          aria-label="搜索想考研究室"
-          ><template #prefix><ExplorerIcon name="search" /></template></Input
-        ><Select
-          v-accessible-select
-          v-model:value="year"
-          aria-label="对比考试年份"
-          class="journey-year-select"
-          :options="yearOptions"
-        /><Button
-          class="icon-button"
-          :disabled="selectedTargets.length < 2"
-          @click="comparisonOpen = true"
-          ><ExplorerIcon name="compare" />横向对比{{
-            selectedTargets.length ? `（${selectedTargets.length}）` : ''
-          }}</Button
-        >
-      </div>
-      <div class="list-caption">
-        <span>当前显示 {{ visible.length }} 个 · 勾选 2–6 个研究室进行对比</span
-        ><span>导出范围为当前搜索结果；考试明细包含历年全部记录</span>
-      </div>
-      <div v-if="selected.length" class="journey-selection">
-        <span>已选 {{ selected.length }} 个研究室</span
-        ><Button :loading="exporting" @click="exportWorkbook('selected')"
-          >导出所选</Button
-        ><Button type="text" @click="selected = []">清空选择</Button>
-      </div>
-      <div v-if="visible.length" class="research-lab-grid">
-        <ResearchLabCard
-          v-for="item in visible"
-          :key="item.lab.id"
-          :lab-id="item.lab.id"
-          show-affiliation
-          selectable
-          :selected="selected.includes(item.lab.id)"
-          @select="select"
+      <div class="journey-planning-layout">
+        <div class="journey-planning-main">
+          <div class="list-toolbar">
+            <Input
+              v-model:value="query"
+              allow-clear
+              class="explorer-search"
+              placeholder="搜索研究室、大学、方向、地域或老师"
+              aria-label="搜索想考研究室"
+              ><template #prefix
+                ><ExplorerIcon name="search" /></template></Input
+            ><Select
+              v-accessible-select
+              v-model:value="year"
+              aria-label="对比与日程考试年份"
+              class="journey-year-select"
+              :options="yearOptions"
+            /><Button
+              class="icon-button"
+              :disabled="selectedTargets.length < 2"
+              @click="comparisonOpen = true"
+              ><ExplorerIcon name="compare" />横向对比{{
+                selectedTargets.length ? `（${selectedTargets.length}）` : ''
+              }}</Button
+            >
+          </div>
+          <div class="list-caption">
+            <span
+              >当前显示 {{ visible.length }} 个 · 勾选 2–6
+              个研究室进行对比</span
+            ><span>导出范围为当前搜索结果；考试明细包含历年全部记录</span>
+          </div>
+          <div v-if="selected.length" class="journey-selection">
+            <span>已选 {{ selected.length }} 个研究室</span
+            ><Button :loading="exporting" @click="exportWorkbook('selected')"
+              >导出所选</Button
+            ><Button type="text" @click="selected = []">清空选择</Button>
+          </div>
+          <Tabs v-model:active-key="view" class="journey-workspace-tabs"
+            ><Tabs.TabPane key="targets" tab="研究室清单">
+              <div v-if="visible.length" class="research-lab-grid">
+                <ResearchLabCard
+                  v-for="item in visible"
+                  :key="item.lab.id"
+                  :lab-id="item.lab.id"
+                  show-affiliation
+                  selectable
+                  :selected="selected.includes(item.lab.id)"
+                  @select="select"
+                  @contact="manageContact"
+                />
+              </div>
+              <div v-else class="search-empty">
+                <ExplorerIcon name="search" />
+                <h2>没有符合条件的研究室</h2>
+                <Button @click="query = ''">清除搜索</Button>
+              </div> </Tabs.TabPane
+            ><Tabs.TabPane key="contacts" tab="教授联络看板"
+              ><JourneyContactBoard
+                v-if="view === 'contacts'"
+                :targets="visible"
+                @manage="manageContact" /></Tabs.TabPane
+            ><Tabs.TabPane key="timeline" tab="时间线与日程"
+              ><JourneyTimeline
+                v-if="view === 'timeline'"
+                :targets="visible"
+                :year="year" /></Tabs.TabPane
+          ></Tabs>
+        </div>
+        <JourneyTaskPanel
+          :targets="targets"
+          :year="year"
+          @timeline="
+            query = '';
+            view = 'timeline';
+          "
         />
-      </div>
-      <div v-else class="search-empty">
-        <ExplorerIcon name="search" />
-        <h2>没有符合条件的研究室</h2>
-        <Button @click="query = ''">清除搜索</Button>
       </div>
     </template>
     <section v-else class="collection-empty journey-empty">
@@ -183,6 +234,7 @@ async function exportWorkbook(scope: 'visible' | 'selected') {
         ><ExplorerIcon name="plus" />新增研究室</Button
       >
     </section>
+    <JourneyContactDialog v-model:open="contactOpen" :lab-id="contactLabId" />
     <JourneyLabPicker v-model:open="pickerOpen" @added="query = ''" />
     <Modal
       v-model:open="comparisonOpen"

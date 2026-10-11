@@ -53,6 +53,10 @@ await cp(
   path.join(root, 'local-server/research-labs.mjs'),
   path.join(target, 'local-server/research-labs.mjs'),
 );
+await cp(
+  path.join(root, 'local-server/planning-fields.mjs'),
+  path.join(target, 'local-server/planning-fields.mjs'),
+);
 const nextWeb = path.join(target, `.web-next-${Date.now()}`);
 await cp(path.join(root, 'apps/web-antd/dist'), nextWeb, {
   recursive: true,

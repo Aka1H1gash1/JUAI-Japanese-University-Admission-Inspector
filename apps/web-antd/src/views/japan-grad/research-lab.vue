@@ -9,6 +9,7 @@ import ExplorerIcon from './components/explorer-icon.vue';
 import MajorAdmissions from './components/major-admissions.vue';
 import ExamHistory from './components/exam-history.vue';
 import ResearchLabTeachers from './components/research-lab-teachers.vue';
+import LabTasks from './components/lab-tasks.vue';
 const store = useExplorerStore();
 const route = useRoute();
 const router = useRouter();
@@ -24,7 +25,10 @@ const target = computed(() => {
     : undefined;
 });
 const tab = computed({
-  get: () => (route.query.tab === 'admissions' ? 'admissions' : 'teachers'),
+  get: () =>
+    ['admissions', 'tasks'].includes(String(route.query.tab))
+      ? String(route.query.tab)
+      : 'teachers',
   set: (value: string) => {
     void router.replace({ query: { ...route.query, tab: value } });
   },
@@ -42,7 +46,7 @@ function remove() {
   if (!value) return;
   modal.confirm({
     title: `删除「${value.lab.name}」？`,
-    content: `研究室与 ${value.professors.length} 位老师的资料、论文索引和邮件将一并删除，也会移出修考之路；原文件保留在工作区。`,
+    content: `研究室与 ${value.professors.length} 位老师的资料、联络草稿、材料待办、论文索引和邮件将一并删除，也会移出修考之路；原文件保留在工作区。`,
     okText: '确认删除',
     cancelText: '取消',
     okButtonProps: { danger: true },
@@ -155,6 +159,12 @@ function remove() {
             :key="`exams-${target.major.id}`"
             :major-id="target.major.id" /></template
       ></Tabs.TabPane>
+      <Tabs.TabPane key="tasks" tab="材料与待办"
+        ><LabTasks
+          v-if="tab === 'tasks'"
+          :key="target.lab.id"
+          :lab-id="target.lab.id"
+      /></Tabs.TabPane>
     </Tabs>
     <EntityEditor
       v-model:open="editorOpen"

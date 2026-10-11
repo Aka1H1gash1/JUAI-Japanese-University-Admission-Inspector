@@ -7,6 +7,12 @@ import type {
 } from './explorer';
 import { universityGeography } from './japan-geography';
 import {
+  CONTACT_LABELS,
+  materialProgress,
+  normalizedContact,
+  primaryProfessor,
+} from './application-planning';
+import {
   dormitoryLabel,
   formatYen,
   universityBudgetTotals,
@@ -187,6 +193,50 @@ export function labComparisonRows(targets: LabTarget[], year: string) {
         targetExams(item, year)
           .filter((exam) => exam.notes)
           .map((exam) => `${exam.year} ${exam.session}：${exam.notes}`)
+          .join('\n'),
+    ],
+    [
+      '主要联系老师 / 状态',
+      (item) => {
+        const person = primaryProfessor(item);
+        return person
+          ? `${person.name} · ${CONTACT_LABELS[normalizedContact(person.contact).status]}`
+          : '';
+      },
+    ],
+    [
+      '教授面试约定（JST）',
+      (item) =>
+        normalizedContact(primaryProfessor(item)?.contact).interviewAt.replace(
+          'T',
+          ' ',
+        ),
+    ],
+    [
+      '下次跟进',
+      (item) => normalizedContact(primaryProfessor(item)?.contact).followUpDate,
+    ],
+    [
+      '教授回复要点',
+      (item) => normalizedContact(primaryProfessor(item)?.contact).replySummary,
+    ],
+    [
+      '材料准备进度',
+      (item) => {
+        const progress = materialProgress(item.lab.tasks);
+        return progress.count
+          ? `${progress.percent}% · ${progress.done}/${progress.count} 项完成`
+          : '未建清单';
+      },
+    ],
+    [
+      '材料 / 待办清单',
+      (item) =>
+        (item.lab.tasks ?? [])
+          .map(
+            (task) =>
+              `${task.title} · ${task.progress}%${task.dueDate ? ` · 截止 ${task.dueDate}` : ''}`,
+          )
           .join('\n'),
     ],
     ['研究室官网', (item) => item.lab.website],

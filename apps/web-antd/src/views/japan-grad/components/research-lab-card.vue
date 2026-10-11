@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { computed } from 'vue';
-import { App, Button, Checkbox } from 'ant-design-vue';
+import { App, Button, Checkbox, Progress } from 'ant-design-vue';
 import { useExplorerStore } from '../explorer';
 import { annualBudgetText, labContext, labPath } from '../lab-targets';
 import { universityLocation } from '../japan-geography';
 import ExplorerIcon from './explorer-icon.vue';
+import ContactStatus from './contact-status.vue';
+import { primaryProfessor, materialProgress } from '../application-planning';
 
 const props = defineProps<{
   labId: string;
@@ -12,7 +14,11 @@ const props = defineProps<{
   selectable?: boolean;
   selected?: boolean;
 }>();
-const emit = defineEmits<{ edit: [id: string]; select: [id: string] }>();
+const emit = defineEmits<{
+  edit: [id: string];
+  select: [id: string];
+  contact: [id: string];
+}>();
 const store = useExplorerStore();
 const { message } = App.useApp();
 const target = computed(() => labContext(store, props.labId));
@@ -77,6 +83,39 @@ async function toggle() {
       </p>
       <p class="lab-budget">{{ annualBudgetText(target.university) }}</p>
     </template>
+    <div class="planner-card-status">
+      <span class="planner-muted"
+        >联系状态 · {{ primaryProfessor(target)?.name || '老师待添加' }}</span
+      ><ContactStatus :contact="primaryProfessor(target)?.contact" />
+    </div>
+    <div
+      v-if="showAffiliation || target.lab.tasks?.length"
+      class="planner-card-material"
+    >
+      <span
+        >材料准备
+        <strong>{{
+          materialProgress(target.lab.tasks).count
+            ? `${materialProgress(target.lab.tasks).percent}%`
+            : '未建清单'
+        }}</strong></span
+      ><Progress
+        :percent="materialProgress(target.lab.tasks).percent"
+        :show-info="false"
+        size="small"
+        :stroke-color="'var(--jg-accent)'"
+      />
+    </div>
+    <div v-if="showAffiliation" class="planner-card-links">
+      <Button
+        type="text"
+        :disabled="store.saving"
+        @click="emit('contact', labId)"
+        >联络与草稿</Button
+      ><RouterLink :to="`${labPath(target)}?tab=tasks`"
+        >材料与待办 →</RouterLink
+      >
+    </div>
     <p v-if="target.lab.notes" class="card-notes">{{ target.lab.notes }}</p>
     <div class="research-lab-card-bottom">
       <Checkbox

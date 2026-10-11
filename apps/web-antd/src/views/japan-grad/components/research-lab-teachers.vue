@@ -5,6 +5,7 @@ import { professorInitials, useExplorerStore } from '../explorer';
 import { labContext } from '../lab-targets';
 import EntityEditor from './entity-editor.vue';
 import ExplorerIcon from './explorer-icon.vue';
+import ContactStatus from './contact-status.vue';
 const props = defineProps<{ labId: string }>();
 const store = useExplorerStore();
 const ctx = computed(() => labContext(store, props.labId));
@@ -108,6 +109,7 @@ function editProfessor(id = '') {
                 .join(' / ') || '职称待补充'
             }}
           </p>
+          <ContactStatus :contact="professor.contact" />
           <div class="professor-research">
             <span>研究方向</span>
             <p>{{ professor.research || '研究方向待补充' }}</p>
@@ -120,7 +122,7 @@ function editProfessor(id = '') {
           </p>
           <div class="professor-card-bottom">
             <span class="professor-card-summary"
-              >资料 · 论文 · 邮件<ExplorerIcon name="arrow"
+              >资料 · 联络 · 论文 · 邮件<ExplorerIcon name="arrow"
             /></span>
             <Button
               type="text"

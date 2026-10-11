@@ -8,6 +8,7 @@ import { useExplorerStore, websiteUrl } from '../explorer';
 import ExplorerIcon from './explorer-icon.vue';
 import DocumentArchive from './document-archive.vue';
 import ProfessorMail from './professor-mail.vue';
+import ProfessorContact from './professor-contact.vue';
 
 const props = defineProps<{ professorId: string }>();
 const store = useExplorerStore();
@@ -15,7 +16,7 @@ const route = useRoute();
 const router = useRouter();
 const tab = computed({
   get: () =>
-    ['profile', 'papers', 'mail'].includes(String(route.query.tab))
+    ['profile', 'contact', 'papers', 'mail'].includes(String(route.query.tab))
       ? String(route.query.tab)
       : 'profile',
   set: (value: string) => {
@@ -98,6 +99,12 @@ const university = computed(() =>
           </div>
         </dl>
       </Tabs.TabPane>
+      <Tabs.TabPane key="contact" tab="联络与草稿"
+        ><ProfessorContact
+          v-if="tab === 'contact'"
+          :key="professor.id"
+          :professor-id="professor.id"
+      /></Tabs.TabPane>
       <Tabs.TabPane key="papers" tab="论文库"
         ><DocumentArchive
           v-if="tab === 'papers'"

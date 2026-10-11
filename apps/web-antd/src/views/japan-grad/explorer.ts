@@ -1,4 +1,7 @@
 import { ref } from 'vue';
+import type { ApplicationTask, ProfessorContact } from './application-planning';
+import { normalizedContact } from './application-planning';
+import { planningError } from '../../../../../local-server/planning-fields.mjs';
 import type { ExamHistoryRecord } from './exam-history';
 import type { MajorAdmissionFields } from './major-admissions';
 import { admissionRangeError, validAdmissionFields } from './major-admissions';
@@ -84,6 +87,8 @@ export interface Major extends MajorAdmissionFields {
 }
 
 export interface ResearchLab {
+  mainProfessorId?: string;
+  tasks?: ApplicationTask[];
   id: string;
   majorId: string;
   name: string;
@@ -97,6 +102,7 @@ export interface ResearchLab {
 }
 
 export interface Professor {
+  contact?: ProfessorContact;
   labId?: string;
   id: string;
   majorId: string;
@@ -275,6 +281,7 @@ function isExplorerData(value: unknown): value is ExplorerData {
             typeof lab.wantApply === 'boolean' &&
             value.majors.some((major) => major.id === lab.majorId),
         ))) &&
+    !planningError(value) &&
     value.majors.every(
       (item) =>
         hasStrings(item, [
@@ -442,8 +449,15 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
       applicationEnd: item.applicationEnd ?? '',
       applicationMaterials: item.applicationMaterials ?? '',
     }));
-    professors.value = data.professors;
-    labs.value = data.labs ?? [];
+    professors.value = data.professors.map((item) => ({
+      ...item,
+      contact: normalizedContact(item.contact),
+    }));
+    labs.value = (data.labs ?? []).map((item) => ({
+      ...item,
+      mainProfessorId: item.mainProfessorId ?? '',
+      tasks: item.tasks ?? [],
+    }));
   }
   function load() {
     if (loadPromise) return loadPromise;
@@ -679,6 +693,8 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           examNotes: get('examNotes'),
           applicationNotes: get('applicationNotes'),
           wantApply: previous?.wantApply ?? false,
+          mainProfessorId: previous?.mainProfessorId ?? '',
+          tasks: previous?.tasks ?? [],
         };
         const index = labs.value.findIndex((item) => item.id === id);
         if (index === -1) labs.value.push(value);
@@ -706,10 +722,14 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
             : '',
           laboratoryWebsite: previous?.laboratoryWebsite ?? '',
           favorite: previous?.favorite ?? false,
+          contact: normalizedContact(previous?.contact),
         };
         const index = professors.value.findIndex((item) => item.id === id);
         if (index === -1) professors.value.push(value);
         else professors.value[index] = value;
+        for (const room of labs.value)
+          if (room.mainProfessorId === value.id && room.id !== value.labId)
+            room.mainProfessorId = '';
       }
       return entityId;
     });
@@ -717,9 +737,11 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
 
   function removeEntity(kind: EntityKind, id: string) {
     return mutate(() => {
-      if (kind === 'professor')
+      if (kind === 'professor') {
         professors.value = professors.value.filter((item) => item.id !== id);
-      else if (kind === 'lab') {
+        for (const lab of labs.value)
+          if (lab.mainProfessorId === id) lab.mainProfessorId = '';
+      } else if (kind === 'lab') {
         professors.value = professors.value.filter((item) => item.labId !== id);
         labs.value = labs.value.filter((item) => item.id !== id);
       } else if (kind === 'major') {
@@ -755,6 +777,74 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
       const professor = professors.value.find((item) => item.id === id);
       if (professor) professor.favorite = !professor.favorite;
     }).catch(() => {});
+  }
+  function saveProfessorContact(
+    professorId: string,
+    contact: ProfessorContact,
+    labId = '',
+  ) {
+    return mutate(() => {
+      const person = professors.value.find((item) => item.id === professorId);
+      if (!person) throw new Error('老师已不存在。');
+      const lab = labId
+        ? labs.value.find((item) => item.id === labId)
+        : undefined;
+      if (labId && (!lab || person.labId !== lab.id))
+        throw new Error('请选择该研究室的老师。');
+      const next = normalizedContact(contact);
+      const error = planningError({
+        professors: [{ ...person, contact: next }],
+      });
+      if (error) throw new Error(error);
+      person.contact = next;
+      if (lab) lab.mainProfessorId = person.id;
+    });
+  }
+  function saveLabTasks(labId: string, tasks: ApplicationTask[]) {
+    return mutate(() => {
+      const lab = labs.value.find((item) => item.id === labId);
+      if (!lab) throw new Error('研究室已不存在。');
+      const next = tasks.map((item) => ({
+        ...item,
+        title: item.title.trim(),
+        notes: item.notes.trim(),
+      }));
+      const error = planningError({
+        labs: [{ ...lab, tasks: next }],
+        professors: professors.value,
+      });
+      if (error) throw new Error(error);
+      lab.tasks = next;
+    });
+  }
+  function saveLabTask(labId: string, task: ApplicationTask) {
+    return mutate(() => {
+      const lab = labs.value.find((item) => item.id === labId);
+      if (!lab) throw new Error('研究室已不存在。');
+      const tasks = [...(lab.tasks ?? [])];
+      const index = tasks.findIndex((item) => item.id === task.id);
+      const value = {
+        ...task,
+        id: task.id || crypto.randomUUID(),
+        title: task.title.trim(),
+        notes: task.notes.trim(),
+      };
+      if (index < 0) tasks.push(value);
+      else tasks[index] = value;
+      const error = planningError({
+        labs: [{ ...lab, tasks }],
+        professors: professors.value,
+      });
+      if (error) throw new Error(error);
+      lab.tasks = tasks;
+    });
+  }
+  function removeLabTask(labId: string, id: string) {
+    return mutate(() => {
+      const lab = labs.value.find((item) => item.id === labId);
+      if (!lab) throw new Error('研究室已不存在。');
+      lab.tasks = (lab.tasks ?? []).filter((item) => item.id !== id);
+    });
   }
   function saveExamRecord(
     majorId: string,
@@ -816,6 +906,10 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     schoolLabs,
     toggleWantApply,
     addJourneyLabs,
+    saveProfessorContact,
+    saveLabTasks,
+    saveLabTask,
+    removeLabTask,
     schools,
     majors,
     professors,
