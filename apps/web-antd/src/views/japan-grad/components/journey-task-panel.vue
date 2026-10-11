@@ -66,7 +66,7 @@ const todos = computed(() =>
 );
 const reminders = computed(() =>
   plannerReminders(
-    buildPlannerEvents(props.targets, props.year ?? 'latest', today.value),
+    buildPlannerEvents(props.targets, props.year ?? 'latest'),
     today.value,
   )
     .filter((item) => item.kind !== 'task')

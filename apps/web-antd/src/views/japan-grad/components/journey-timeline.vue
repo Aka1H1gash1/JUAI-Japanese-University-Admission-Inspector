@@ -26,9 +26,7 @@ const startMonth = ref(today.value.slice(0, 7));
 const monthCount = ref(6);
 const selectedEvent = ref<PlannerEvent>();
 const detailsOpen = ref(false);
-const events = computed(() =>
-  buildPlannerEvents(props.targets, props.year, today.value),
-);
+const events = computed(() => buildPlannerEvents(props.targets, props.year));
 const bounds = computed(() => {
   const start = validPlannerDay(`${startMonth.value}-01`)
     ? `${startMonth.value}-01`

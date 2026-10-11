@@ -41,11 +41,7 @@ function dateRange(text: string) {
   const end = dateFromText(parts[1] ?? '') || start;
   return start && end >= start ? { start, end } : undefined;
 }
-export function buildPlannerEvents(
-  targets: LabTarget[],
-  year = 'latest',
-  today = japanToday(),
-) {
+export function buildPlannerEvents(targets: LabTarget[], year = 'latest') {
   const events: PlannerEvent[] = [];
   for (const target of targets) {
     const { lab, major, school, university } = target;
@@ -181,9 +177,7 @@ export function buildPlannerEvents(
           `教授面试 · ${person.name}`,
           contact.interviewAt.slice(0, 10),
           contact.interviewAt.slice(0, 10),
-          contact.status === 'closed' ||
-            contact.status === 'consent' ||
-            contact.interviewAt.slice(0, 10) < today,
+          contact.status === 'closed',
           contact.replySummary,
           contact.interviewAt,
           personPath,
@@ -219,7 +213,12 @@ export function buildPlannerEvents(
   );
 }
 export function eventCountdown(event: PlannerEvent, today = japanToday()) {
-  if (event.complete) return '已完成';
+  if (event.complete)
+    return event.kind === 'task'
+      ? '已完成'
+      : ['sent', 'consent'].includes(event.kind)
+        ? '已记录'
+        : '已结束';
   if (event.end < today)
     return ['task', 'followup', 'contact'].includes(event.kind)
       ? `已逾期 ${Math.round(dayNumber(today) - dayNumber(event.end))} 天`
