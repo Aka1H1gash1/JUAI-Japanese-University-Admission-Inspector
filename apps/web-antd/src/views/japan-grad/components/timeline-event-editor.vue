@@ -11,7 +11,12 @@ import {
   timelineNodeLabel,
 } from '../timeline';
 import { useExplorerStore } from '../explorer';
-import { japanToday } from '../application-planning';
+import {
+  japanToday,
+  contactTimelinePrefix,
+  CONTACT_TIMELINE_KINDS,
+  primaryProfessor,
+} from '../application-planning';
 import { vAccessibleSelect } from '../select-accessibility';
 const props = defineProps<{
   targets: LabTarget[];
@@ -37,6 +42,7 @@ const form = ref<TimelineEntry>({
   complete: false,
   notes: '',
   replaces: '',
+  linkContact: false,
 });
 const target = computed(() =>
   props.targets.find((t) => t.lab.id === labId.value),
@@ -61,6 +67,56 @@ const original = computed(() =>
         (e) => e.id === props.event!.entryId,
       )
     : undefined,
+);
+const sourceLink = computed(() => {
+  const source = form.value.replaces;
+  if (!target.value) return undefined;
+  if (
+    !source &&
+    ['contact', 'consent', 'interview', 'teacher_interview'].includes(
+      form.value.kind,
+    )
+  ) {
+    const person = primaryProfessor(target.value);
+    if (!person) return undefined;
+    const suffix =
+      form.value.kind === 'contact'
+        ? form.value.complete
+          ? 'sent'
+          : 'planned'
+        : form.value.kind === 'consent'
+          ? 'consent'
+          : 'interview';
+    return {
+      person,
+      suffix,
+      source: `${contactTimelinePrefix(person.id, person.contact?.experienceId || '')}-${suffix}`,
+      generated: true,
+    };
+  }
+  for (const person of target.value.professors) {
+    const prefix = contactTimelinePrefix(
+      person.id,
+      person.contact?.experienceId || '',
+    );
+    if (source.startsWith(`${prefix}-`)) {
+      const suffix = source.slice(
+        prefix.length + 1,
+      ) as keyof typeof CONTACT_TIMELINE_KINDS;
+      if (
+        CONTACT_TIMELINE_KINDS[suffix] &&
+        (CONTACT_TIMELINE_KINDS[suffix] === form.value.kind ||
+          (suffix === 'sent' && form.value.kind === 'contact'))
+      )
+        return { person, suffix, source, generated: false };
+    }
+  }
+});
+const canLink = computed(
+  () =>
+    !!sourceLink.value &&
+    (!['sent', 'consent'].includes(sourceLink.value.suffix) ||
+      form.value.complete),
 );
 watch(open, (value) => {
   if (!value) return;
@@ -88,6 +144,7 @@ watch(open, (value) => {
         ? [event.title, event.details].filter(Boolean).join('\n')
         : event?.details || '',
     replaces: entry?.replaces || (event?.imported ? event.source : ''),
+    linkContact: entry?.linkContact ?? Boolean(event?.imported),
   };
   startTime.value = form.value.at.slice(11, 16);
   endTime.value = form.value.endAt.slice(11, 16);
@@ -127,6 +184,18 @@ async function save() {
   }
   const entry = {
     ...form.value,
+    replaces:
+      form.value.linkContact && canLink.value
+        ? sourceLink.value?.source || form.value.replaces
+        : form.value.replaces,
+    kind:
+      form.value.linkContact &&
+      canLink.value &&
+      sourceLink.value?.generated &&
+      form.value.kind === 'interview'
+        ? ('teacher_interview' as const)
+        : form.value.kind,
+    linkContact: form.value.linkContact && canLink.value,
     id: form.value.id || crypto.randomUUID(),
     end: form.value.end || form.value.start,
     at: startTime.value ? `${form.value.start}T${startTime.value}` : '',
@@ -274,6 +343,15 @@ function remove() {
             :disabled="store.saving"
             placeholder="记录教授姓名、考试科目、地点、材料或其他说明"
           />
+        </div>
+        <div v-if="sourceLink" class="field full">
+          <Checkbox
+            v-model:checked="form.linkContact"
+            :disabled="store.saving || !canLink"
+            >联动 {{ sourceLink.person.name }} 的考学记录</Checkbox
+          ><small
+            >联动后会更新对应日期；老师记录中的后续修改也会同步到此节点。</small
+          >
         </div>
         <div class="field full">
           <Checkbox v-model:checked="form.complete" :disabled="store.saving"

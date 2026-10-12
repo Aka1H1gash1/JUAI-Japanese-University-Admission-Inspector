@@ -2,7 +2,10 @@ import type { LabTimeline, TimelineEntry } from './timeline';
 import { emptyTimeline, timelineError } from './timeline';
 import { ref } from 'vue';
 import type { ApplicationTask, ProfessorContact } from './application-planning';
-import { normalizedContact } from './application-planning';
+import {
+  normalizedContact,
+  contactTimelinePrefix,
+} from './application-planning';
 import { planningError } from '../../../../../local-server/planning-fields.mjs';
 import type { ExamHistoryRecord } from './exam-history';
 import type { MajorAdmissionFields } from './major-admissions';
@@ -107,6 +110,7 @@ export interface ResearchLab {
 
 export interface Professor {
   contact?: ProfessorContact;
+  contactHistory?: ProfessorContact[];
   labId?: string;
   id: string;
   majorId: string;
@@ -460,6 +464,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     professors.value = data.professors.map((item) => ({
       ...item,
       contact: normalizedContact(item.contact),
+      contactHistory: (item.contactHistory ?? []).map(normalizedContact),
     }));
     labs.value = (data.labs ?? []).map((item) => ({
       ...item,
@@ -738,6 +743,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
             : '',
           laboratoryWebsite: previous?.laboratoryWebsite ?? '',
           favorite: previous?.favorite ?? false,
+          contactHistory: previous?.contactHistory ?? [],
           contact: normalizedContact(previous?.contact),
         };
         const index = professors.value.findIndex((item) => item.id === id);
@@ -827,6 +833,72 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
         title: entry.title.trim(),
         notes: entry.notes.trim(),
       };
+      if (value.linkContact) {
+        const person = professors.value.find(
+          (p) =>
+            p.labId === labId &&
+            value.replaces.startsWith(
+              `${contactTimelinePrefix(p.id, p.contact?.experienceId || '')}-`,
+            ),
+        );
+        if (!person) throw new Error('关联老师或经历已变化，请重新打开日程。');
+        const contact = normalizedContact(person.contact);
+        const prefix = contactTimelinePrefix(person.id, contact.experienceId);
+        const suffix = value.replaces.slice(prefix.length + 1);
+        if (suffix === 'planned' && value.kind === 'contact') {
+          contact.plannedDate = value.start;
+          if (value.complete) {
+            contact.firstSentDate = value.start;
+            if (
+              ['not_contacted', 'first_sent', 'replied'].includes(
+                contact.status,
+              )
+            )
+              contact.status = 'first_sent';
+            value.replaces = `${prefix}-sent`;
+          }
+        } else if (
+          suffix === 'sent' &&
+          ['sent', 'contact'].includes(value.kind) &&
+          value.complete
+        ) {
+          contact.firstSentDate = value.start;
+          if (contact.status === 'not_contacted') contact.status = 'first_sent';
+        } else if (suffix === 'followup' && value.kind === 'followup')
+          contact.followUpDate = value.start;
+        else if (suffix === 'interview' && value.kind === 'teacher_interview') {
+          if (value.complete) {
+            contact.actualInterviewDate = value.start;
+            contact.actualInterviewAt = value.at;
+            if (!['consent', 'closed'].includes(contact.status))
+              contact.status = 'interview_completed';
+          } else {
+            contact.interviewDate = value.start;
+            contact.interviewAt = value.at;
+            if (
+              ['not_contacted', 'first_sent', 'replied'].includes(
+                contact.status,
+              )
+            )
+              contact.status = 'interview_scheduled';
+            contact.actualInterviewDate = '';
+            contact.actualInterviewAt = '';
+            if (contact.status === 'interview_completed')
+              contact.status = 'interview_scheduled';
+          }
+        } else if (
+          suffix === 'consent' &&
+          value.kind === 'consent' &&
+          value.complete
+        ) {
+          contact.consentDate = value.start;
+          if (contact.status !== 'closed') contact.status = 'consent';
+        } else
+          throw new Error(
+            '此节点不能联动老师记录，请取消联动后保存为个人日程。',
+          );
+        person.contact = contact;
+      }
       const timeline = {
         events: [
           ...current.events.filter(
@@ -875,6 +947,73 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
         hiddenSources: [],
       };
     });
+  }
+  function updateContactExperience(
+    professorId: string,
+    experienceId: string,
+    patch: Partial<ProfessorContact>,
+    base: ProfessorContact,
+    labId = '',
+  ) {
+    return externalMutation<{ experience: ProfessorContact }>(
+      `/professors/${professorId}/experiences/${experienceId}`,
+      'PATCH',
+      {
+        patch,
+        labId,
+        version: base.version,
+        base: Object.fromEntries(
+          Object.keys(patch).map((key) => [
+            key,
+            base[key as keyof ProfessorContact],
+          ]),
+        ),
+      },
+    );
+  }
+  function createContactExperience(
+    professorId: string,
+    title: string,
+    labId = '',
+  ) {
+    const person = professors.value.find((p) => p.id === professorId);
+    if (!person?.contact?.experienceId)
+      return Promise.reject(new Error('请先读取老师的考学记录。'));
+    return externalMutation<{ experience: ProfessorContact }>(
+      `/professors/${professorId}/experiences`,
+      'POST',
+      {
+        title,
+        labId,
+        expectedExperienceId: person.contact.experienceId,
+        version: person.contact.version,
+      },
+    );
+  }
+  function externalMutation<T>(
+    route: string,
+    method: string,
+    input: unknown,
+  ): Promise<T> {
+    const task = pending.then(async () => {
+      saving.value = true;
+      try {
+        const result = await localApi<T>(route, jsonOptions(method, input));
+        const latest = await localApi<WorkspaceSnapshot>('/workspace');
+        if (!isExplorerData(latest.data))
+          throw new Error('工作区数据格式错误。');
+        apply(latest.data);
+        revision = latest.revision;
+        return result;
+      } finally {
+        saving.value = false;
+      }
+    });
+    pending = task.then(
+      () => {},
+      () => {},
+    );
+    return task;
   }
   async function refresh() {
     await pending;
@@ -994,6 +1133,8 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     toggleWantApply,
     addJourneyLabs,
     saveProfessorContact,
+    updateContactExperience,
+    createContactExperience,
     saveTimelineEvent,
     removeTimelineEvent,
     restoreTimelineSources,

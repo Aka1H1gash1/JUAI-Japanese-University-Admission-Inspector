@@ -28,10 +28,12 @@ defineProps<{ event: PlannerEvent }>();
           ><span>JST</span>
         </header>
         <p
-          v-if="event.title !== timelineNodeLabel(event)"
+          v-if="
+            (event.contextTitle || event.title) !== timelineNodeLabel(event)
+          "
           class="timeline-hover-context"
         >
-          {{ event.title }}
+          {{ event.contextTitle || event.title }}
         </p>
         <dl>
           <div>

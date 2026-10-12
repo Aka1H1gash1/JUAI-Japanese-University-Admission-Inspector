@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { computed, watch } from 'vue';
+import { useEventListener, useIntervalFn } from '@vueuse/core';
+import { useCommunicationsStore } from '../communications';
+import ContactStageContent from './contact-stage-content.vue';
 import { App, Button, Select } from 'ant-design-vue';
 import type { LabTarget } from '../lab-targets';
 import type { ContactStatus } from '../application-planning';
@@ -6,23 +10,56 @@ import {
   CONTACT_LABELS,
   CONTACT_OPTIONS,
   CONTACT_STATUSES,
-  contactWithStatus,
   normalizedContact,
-  primaryProfessor,
 } from '../application-planning';
 import { labPath } from '../lab-targets';
 import { useExplorerStore } from '../explorer';
+import type { Professor } from '../explorer';
 import { vAccessibleSelect } from '../select-accessibility';
 import ContactStatusBadge from './contact-status.vue';
 const props = defineProps<{ targets: LabTarget[] }>();
-const emit = defineEmits<{ manage: [id: string] }>();
+const emit = defineEmits<{ manage: [id: string, professorId?: string] }>();
 const store = useExplorerStore();
 const { message } = App.useApp();
-function stage(target: LabTarget) {
-  return normalizedContact(primaryProfessor(target)?.contact).status;
+const sources = useCommunicationsStore();
+const professorIds = computed(() =>
+  props.targets.flatMap((t) => t.professors.map((p) => p.id)),
+);
+watch(
+  () => professorIds.value.join('|'),
+  () => {
+    void sources.load(professorIds.value);
+  },
+  { immediate: true },
+);
+let refreshing = false;
+async function refresh() {
+  if (refreshing || document.visibilityState === 'hidden') return;
+  refreshing = true;
+  try {
+    await store.refresh();
+    await sources.load(professorIds.value);
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '关联资料更新失败。');
+  } finally {
+    refreshing = false;
+  }
 }
-async function change(target: LabTarget, value: unknown) {
-  const person = primaryProfessor(target);
+useIntervalFn(() => void refresh(), 15000);
+useEventListener(window, 'focus', () => void refresh());
+type BoardEntry = { target: LabTarget; person?: Professor; key: string };
+const entries = computed<BoardEntry[]>(() =>
+  props.targets.flatMap<BoardEntry>((target) =>
+    target.professors.length
+      ? target.professors.map((person) => ({ target, person, key: person.id }))
+      : [{ target, person: undefined, key: target.lab.id }],
+  ),
+);
+function stage(entry: BoardEntry) {
+  return normalizedContact(entry.person?.contact).status;
+}
+async function change(entry: BoardEntry, value: unknown) {
+  const person = entry.person;
   if (
     !person ||
     typeof value !== 'string' ||
@@ -30,39 +67,45 @@ async function change(target: LabTarget, value: unknown) {
   )
     return;
   try {
-    await store.saveProfessorContact(
+    const current = normalizedContact(person.contact);
+    const result = await store.updateContactExperience(
       person.id,
-      contactWithStatus(
-        normalizedContact(person.contact),
-        value as ContactStatus,
-      ),
-      target.lab.id,
+      current.experienceId,
+      { status: value as ContactStatus },
+      current,
     );
+    if (result.experience.status !== value)
+      message.info('面试前阶段已按这段经历的实际收发邮件更新。');
+    await sources.load([person.id]);
   } catch (error) {
     message.error(
       error instanceof Error ? error.message : '更新联系状态失败。',
     );
   }
 }
-function drag(event: DragEvent, target: LabTarget) {
+function drag(event: DragEvent, entry: BoardEntry) {
   if (store.saving) {
     event.preventDefault();
     return;
   }
-  event.dataTransfer?.setData('text/plain', target.lab.id);
+  event.dataTransfer?.setData('text/plain', entry.key);
   if (event.dataTransfer) event.dataTransfer.effectAllowed = 'move';
 }
 function drop(event: DragEvent, status: ContactStatus) {
-  const target = props.targets.find(
-    (item) => item.lab.id === event.dataTransfer?.getData('text/plain'),
+  const entry = entries.value.find(
+    (item) => item.key === event.dataTransfer?.getData('text/plain'),
   );
-  if (target && !store.saving) void change(target, status);
+  if (entry && !store.saving) void change(entry, status);
 }
 </script>
 <template>
   <section class="journey-contact-board" aria-label="教授联络看板">
     <p class="planner-view-description">
-      按研究室的主要联系老师分列。可拖动卡片或用下拉框更新状态，点「联络与草稿」记录邮件和面试。
+      按每位老师的当前考学阶段显示对应资料。邮件往来会联动面试前状态，面试与后续进展由你确认；每段经历的完整记录持续保留。
+    </p>
+    <p v-if="sources.error" class="form-error" role="alert">
+      {{ sources.error }}
+      <Button size="small" @click="refresh">重试关联资料</Button>
     </p>
     <div class="contact-board-scroll">
       <div class="contact-board-columns">
@@ -76,48 +119,42 @@ function drop(event: DragEvent, status: ContactStatus) {
           <h2>
             {{ CONTACT_LABELS[status]
             }}<span>{{
-              targets.filter((item) => stage(item) === status).length
+              entries.filter((item) => stage(item) === status).length
             }}</span>
           </h2>
           <article
-            v-for="target in targets.filter((item) => stage(item) === status)"
-            :key="target.lab.id"
+            v-for="entry in entries.filter((item) => stage(item) === status)"
+            :key="entry.key"
             class="contact-board-card"
-            :draggable="Boolean(primaryProfessor(target)) && !store.saving"
-            @dragstart="drag($event, target)"
+            :draggable="Boolean(entry.person) && !store.saving"
+            @dragstart="drag($event, entry)"
           >
-            <p>{{ target.university.name }}</p>
-            <RouterLink :to="labPath(target)"
-              ><h3>{{ target.lab.name }}</h3></RouterLink
+            <p>{{ entry.target.university.name }}</p>
+            <RouterLink :to="labPath(entry.target)"
+              ><h3>{{ entry.target.lab.name }}</h3></RouterLink
             ><span class="planner-muted">{{
-              primaryProfessor(target)?.name || '尚未添加联系老师'
+              entry.person?.name || '尚未添加联系老师'
             }}</span
-            ><ContactStatusBadge
-              :contact="primaryProfessor(target)?.contact"
-              compact
-            /><span
-              v-if="primaryProfessor(target)?.contact?.interviewAt"
-              class="planner-muted"
-              >面试
-              {{
-                primaryProfessor(target)?.contact?.interviewAt.replace('T', ' ')
-              }}
-              JST</span
-            ><Select
+            ><ContactStatusBadge :contact="entry.person?.contact" compact />
+            <ContactStageContent
+              :target="entry.target"
+              :professor-id="entry.person?.id"
+            />
+            <Select
               v-accessible-select
               :value="status"
               :options="CONTACT_OPTIONS"
-              :disabled="!primaryProfessor(target) || store.saving"
-              :aria-label="`${target.lab.name}联系状态`"
-              @change="change(target, $event)"
+              :disabled="!entry.person || store.saving"
+              :aria-label="`${entry.target.lab.name}联系状态`"
+              @change="change(entry, $event)"
             /><Button
               :disabled="store.saving"
-              @click="emit('manage', target.lab.id)"
-              >联络与草稿</Button
+              @click="emit('manage', entry.target.lab.id, entry.person?.id)"
+              >查看整段考学经历</Button
             >
           </article>
           <p
-            v-if="!targets.some((item) => stage(item) === status)"
+            v-if="!entries.some((item) => stage(item) === status)"
             class="contact-board-empty"
           >
             暂无目标

@@ -99,7 +99,7 @@ const university = computed(() =>
           </div>
         </dl>
       </Tabs.TabPane>
-      <Tabs.TabPane key="contact" tab="联络与草稿"
+      <Tabs.TabPane key="contact" tab="考学经历"
         ><ProfessorContact
           v-if="tab === 'contact'"
           :key="professor.id"

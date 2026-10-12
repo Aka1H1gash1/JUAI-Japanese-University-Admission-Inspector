@@ -5,6 +5,7 @@ import { buildPlannerEvents } from './application-calendar';
 import type { PlannerEventKind } from './application-calendar';
 import {
   CONTACT_LABELS,
+  CONTACT_RESULT_LABELS,
   normalizedContact,
   primaryProfessor,
 } from './application-planning';
@@ -74,6 +75,74 @@ const plannedDates = (target: LabTarget, kinds: PlannerEventKind[]) =>
     )
     .join('\n');
 export const JOURNEY_EXPORT_FIELDS = [
+  field(
+    'experienceTitle',
+    '当前考学经历',
+    '考学经历',
+    (t) => contact(t).experienceTitle,
+  ),
+  field(
+    'contactRequirements',
+    '教授联络要求',
+    '考学经历',
+    (t) => contact(t).requirements,
+    { width: 44 },
+  ),
+  field(
+    'interviewPreparation',
+    '面试准备',
+    '考学经历',
+    (t) => contact(t).interviewPreparation,
+    { width: 44 },
+  ),
+  field('actualInterview', '实际面试时间（JST）', '考学经历', (t) =>
+    (contact(t).actualInterviewAt || contact(t).actualInterviewDate).replace(
+      'T',
+      ' ',
+    ),
+  ),
+  field(
+    'interviewQA',
+    '面试问题与回答',
+    '考学经历',
+    (t) =>
+      contact(t)
+        .interviewQA.map((q) => `问题：${q.question}\n回答：${q.answer}`)
+        .join('\n\n'),
+    { width: 48 },
+  ),
+  field(
+    'interviewReview',
+    '面试复盘',
+    '考学经历',
+    (t) => contact(t).interviewNotes,
+    { width: 44 },
+  ),
+  field(
+    'consentDate',
+    '内诺取得日期',
+    '考学经历',
+    (t) => contact(t).consentDate,
+  ),
+  field('finalResult', '考学结果', '考学经历', (t) =>
+    contact(t).finalResult === 'pending'
+      ? ''
+      : CONTACT_RESULT_LABELS[contact(t).finalResult],
+  ),
+  field(
+    'experienceResultDate',
+    '考学结果日期',
+    '考学经历',
+    (t) => contact(t).resultDate,
+  ),
+  field(
+    'resultSummary',
+    '考学结果说明',
+    '考学经历',
+    (t) => contact(t).resultNotes,
+    { width: 44 },
+  ),
+
   field(
     'plannedFirstContact',
     '规划：首次联系教授',

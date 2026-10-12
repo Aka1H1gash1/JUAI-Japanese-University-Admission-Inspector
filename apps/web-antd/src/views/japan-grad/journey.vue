@@ -30,7 +30,9 @@ const view = computed({
 });
 const contactOpen = ref(false);
 const contactLabId = ref('');
-function manageContact(id: string) {
+const contactProfessorId = ref('');
+function manageContact(id: string, professorId?: string) {
+  contactProfessorId.value = professorId || '';
   contactLabId.value = id;
   contactOpen.value = true;
 }
@@ -234,7 +236,11 @@ function openExport() {
       :initial-ids="exportInitialIds"
       :initial-year="year"
     />
-    <JourneyContactDialog v-model:open="contactOpen" :lab-id="contactLabId" />
+    <JourneyContactDialog
+      v-model:open="contactOpen"
+      :lab-id="contactLabId"
+      :professor-id="contactProfessorId || undefined"
+    />
     <JourneyLabPicker v-model:open="pickerOpen" @added="query = ''" />
     <Modal
       v-model:open="comparisonOpen"

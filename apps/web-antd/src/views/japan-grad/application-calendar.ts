@@ -6,6 +6,7 @@ import {
   dayNumber,
   japanToday,
   normalizedContact,
+  contactTimelinePrefix,
   validPlannerDay,
 } from './application-planning';
 export type PlannerEventKind =
@@ -36,6 +37,7 @@ export interface PlannerEvent {
   entryId?: string;
   imported?: boolean;
   originSource?: string;
+  contextTitle?: string;
   complete: boolean;
   details: string;
   path: string;
@@ -144,31 +146,43 @@ export function buildPlannerEvents(targets: LabTarget[], year = 'latest') {
     }
     for (const person of target.professors) {
       const contact = normalizedContact(person.contact);
+      const prefix = contactTimelinePrefix(person.id, contact.experienceId);
       const personPath = `${path}/professors/${person.id}?tab=contact`;
-      add(
-        `${person.id}-planned`,
-        'contact',
-        `联系 ${person.name}`,
-        contact.plannedDate,
-        contact.plannedDate,
-        contact.status !== 'not_contacted',
-        '',
-        '',
-        personPath,
+      const sameContactDay =
+        !!contact.firstSentDate &&
+        contact.firstSentDate === contact.plannedDate;
+      const plannedLinked = target.lab.timeline?.events.some(
+        (e) => e.linkContact && e.replaces === `${prefix}-planned`,
       );
-      add(
-        `${person.id}-sent`,
-        'sent',
-        `首封已发 · ${person.name}`,
-        contact.firstSentDate,
-        contact.firstSentDate,
-        true,
-        '',
-        '',
-        personPath,
+      const sentLinked = target.lab.timeline?.events.some(
+        (e) => e.linkContact && e.replaces === `${prefix}-sent`,
       );
+      if (!sameContactDay || plannedLinked)
+        add(
+          `${prefix}-planned`,
+          'contact',
+          `联系 ${person.name}`,
+          contact.plannedDate,
+          contact.plannedDate,
+          contact.status !== 'not_contacted',
+          '',
+          '',
+          personPath,
+        );
+      if (!sameContactDay || !plannedLinked || sentLinked)
+        add(
+          `${prefix}-sent`,
+          'sent',
+          `首封已发 · ${person.name}`,
+          contact.firstSentDate,
+          contact.firstSentDate,
+          true,
+          '',
+          '',
+          personPath,
+        );
       add(
-        `${person.id}-followup`,
+        `${prefix}-followup`,
         'followup',
         `跟进 ${person.name}`,
         contact.followUpDate,
@@ -178,20 +192,38 @@ export function buildPlannerEvents(targets: LabTarget[], year = 'latest') {
         '',
         personPath,
       );
-      if (contact.interviewAt)
+      const actualInterview =
+        contact.actualInterviewAt || contact.actualInterviewDate;
+      const interview =
+        actualInterview || contact.interviewAt || contact.interviewDate;
+      if (interview)
         add(
-          `${person.id}-interview`,
+          `${prefix}-interview`,
           'teacher_interview',
           `教授面试 · ${person.name}`,
-          contact.interviewAt.slice(0, 10),
-          contact.interviewAt.slice(0, 10),
-          contact.status === 'closed',
-          contact.replySummary,
-          contact.interviewAt,
+          interview.slice(0, 10),
+          interview.slice(0, 10),
+          Boolean(actualInterview) ||
+            ['interview_completed', 'closed'].includes(contact.status),
+          [
+            !actualInterview &&
+            ['interview_completed', 'closed'].includes(contact.status)
+              ? '沿用预约时间；实际面试时间待补充。'
+              : '',
+            contact.interviewPreparation
+              ? `准备：${contact.interviewPreparation.slice(0, 1400)}${contact.interviewPreparation.length > 1400 ? '…（完整内容见考学记录）' : ''}`
+              : '',
+            contact.interviewNotes
+              ? `复盘：${contact.interviewNotes.slice(0, 1400)}`
+              : contact.replySummary.slice(0, 1400),
+          ]
+            .filter(Boolean)
+            .join('\n'),
+          interview.includes('T') ? interview : '',
           personPath,
         );
       add(
-        `${person.id}-consent`,
+        `${prefix}-consent`,
         'consent',
         `内诺 · ${person.name}`,
         contact.consentDate,
@@ -201,6 +233,18 @@ export function buildPlannerEvents(targets: LabTarget[], year = 'latest') {
         '',
         personPath,
       );
+      if (contact.resultDate)
+        add(
+          `${prefix}-outcome`,
+          'result',
+          `结果 · ${person.name}`,
+          contact.resultDate,
+          contact.resultDate,
+          contact.status === 'closed' && contact.finalResult !== 'pending',
+          contact.resultNotes.slice(0, 4000),
+          '',
+          personPath,
+        );
     }
     for (const task of lab.tasks ?? [])
       add(
@@ -236,7 +280,14 @@ export function buildPlannerEvents(targets: LabTarget[], year = 'latest') {
           originSource: event.source,
         })),
     );
-    for (const entry of timeline?.events ?? [])
+    for (const entry of timeline?.events ?? []) {
+      const canonical = entry.linkContact
+        ? events.find(
+            (event) =>
+              event.labId === target.lab.id && event.source === entry.replaces,
+          )
+        : undefined;
+      if (entry.linkContact && !canonical) continue;
       merged.push({
         id: `${target.lab.id}-timeline-${entry.id}`,
         source: `timeline-${target.lab.id}-${entry.id}`,
@@ -245,17 +296,19 @@ export function buildPlannerEvents(targets: LabTarget[], year = 'latest') {
         universityName: target.university.name,
         title: entry.title,
         kind: entry.kind,
-        start: entry.start,
-        end: entry.end,
-        at: entry.at,
-        endAt: entry.endAt,
-        complete: entry.complete,
-        details: entry.notes,
+        start: canonical?.start ?? entry.start,
+        end: canonical?.end ?? entry.end,
+        at: canonical?.at ?? entry.at,
+        endAt: canonical?.endAt ?? entry.endAt,
+        complete: canonical?.complete ?? entry.complete,
+        details: entry.notes || canonical?.details || '',
+        contextTitle: canonical?.title,
         path: `${labPathForTimeline(target)}?tab=admissions`,
         entryId: entry.id,
         imported: false,
         originSource: entry.replaces || undefined,
       });
+    }
   }
   return merged.toSorted(
     (a, b) =>

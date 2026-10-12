@@ -60,6 +60,7 @@ await cp(
 );
 for (const name of [
   'analysis-service.mjs',
+  'experience-service.mjs',
   'admission-analysis.mjs',
   'admission-parser-worker.mjs',
   'admission-fields.json',

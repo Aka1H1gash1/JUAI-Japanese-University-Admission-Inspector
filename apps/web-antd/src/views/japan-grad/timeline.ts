@@ -15,6 +15,7 @@ export interface TimelineEntry {
   complete: boolean;
   notes: string;
   replaces: string;
+  linkContact?: boolean;
 }
 export interface LabTimeline {
   events: TimelineEntry[];

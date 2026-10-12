@@ -6,22 +6,27 @@ import { App, Button, Input, Modal, Select, Spin } from 'ant-design-vue';
 import { jsonOptions, localApi } from '../local-api';
 import ExplorerIcon from './explorer-icon.vue';
 
-interface MailRecord {
-  id: string;
+import type { MailRecord } from '../communications';
+import { useCommunicationsStore } from '../communications';
+import { useExplorerStore } from '../explorer';
+const props = defineProps<{
   professorId: string;
-  direction: 'received' | 'sent';
-  subject: string;
-  body: string;
-  address: string;
-  date: string;
-  notes: string;
-  nextAction: string;
-  followUpDate: string;
-  createdAt: string;
-}
-const props = defineProps<{ professorId: string; email: string }>();
+  email: string;
+  experienceId?: string;
+}>();
 const { message, modal } = App.useApp();
-const records = ref<MailRecord[]>([]);
+const communications = useCommunicationsStore(),
+  store = useExplorerStore();
+const person = computed(() =>
+  store.professors.find((p) => p.id === props.professorId),
+);
+const experiences = computed(() =>
+  [person.value?.contact, ...(person.value?.contactHistory ?? [])].filter(
+    (c): c is NonNullable<typeof person.value>['contact'] & {} => !!c,
+  ),
+);
+const experienceFilter = ref('');
+const records = computed(() => communications.mails[props.professorId] ?? []);
 const loading = ref(false);
 const feedback = ref('');
 const query = ref('');
@@ -30,15 +35,26 @@ const editorOpen = ref(false);
 const busy = ref(false);
 const editError = ref('');
 const expanded = ref<string[]>([]);
-const localNow = () => {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000)
-    .toISOString()
-    .slice(0, 16);
-};
+const localNow = () =>
+  new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+    .format(new Date())
+    .replace(' ', 'T');
 const blank = (): MailRecord => ({
   id: '',
   professorId: props.professorId,
+  experienceId:
+    props.experienceId ||
+    experienceFilter.value ||
+    person.value?.contact?.experienceId ||
+    '',
   direction: 'sent',
   subject: '',
   body: '',
@@ -51,11 +67,19 @@ const blank = (): MailRecord => ({
 });
 const form = ref<MailRecord>(blank());
 let generation = 0;
+const scopedRecords = computed(() =>
+  records.value.filter(
+    (item) =>
+      !experienceFilter.value || item.experienceId === experienceFilter.value,
+  ),
+);
 const visible = computed(() =>
-  records.value
+  scopedRecords.value
     .filter(
       (item) =>
         (!direction.value || item.direction === direction.value) &&
+        (!experienceFilter.value ||
+          item.experienceId === experienceFilter.value) &&
         [item.subject, item.body, item.address, item.notes, item.nextAction]
           .join(' ')
           .toLowerCase()
@@ -71,12 +95,10 @@ async function load() {
   const current = ++generation;
   loading.value = true;
   feedback.value = '';
-  records.value = [];
   try {
-    const data = await localApi<MailRecord[]>(
-      `/messages?professorId=${encodeURIComponent(props.professorId)}`,
-    );
-    if (current === generation) records.value = data;
+    await communications.load([props.professorId]);
+    if (communications.error && current === generation)
+      feedback.value = communications.error;
   } catch (error) {
     if (current === generation)
       feedback.value =
@@ -86,10 +108,16 @@ async function load() {
   }
 }
 watch(
-  () => props.professorId,
+  () => [
+    props.professorId,
+    props.experienceId,
+    person.value?.contact?.experienceId,
+  ],
   () => {
     query.value = '';
     direction.value = undefined;
+    experienceFilter.value =
+      props.experienceId || person.value?.contact?.experienceId || '';
     expanded.value = [];
     editorOpen.value = false;
     void load();
@@ -119,12 +147,13 @@ async function save() {
       input.id ? `/messages/${input.id}` : '/messages',
       jsonOptions(input.id ? 'PUT' : 'POST', input),
     );
-    if (item.professorId === props.professorId) {
-      const index = records.value.findIndex((record) => record.id === item.id);
-      if (index === -1) records.value.push(item);
-      else records.value[index] = item;
-      if (!expanded.value.includes(item.id)) expanded.value.push(item.id);
-    }
+    await store.refresh();
+    await communications.load([props.professorId]);
+    if (
+      item.professorId === props.professorId &&
+      !expanded.value.includes(item.id)
+    )
+      expanded.value.push(item.id);
     editorOpen.value = false;
     message.success('邮件记录已保存到本地。');
   } catch (error) {
@@ -136,14 +165,15 @@ async function save() {
 function remove(item: MailRecord) {
   modal.confirm({
     title: '删除这条邮件记录？',
-    content: `将从本地工作区删除「${item.subject}」的复制内容。`,
+    content: `将删除「${item.subject}」的邮件记录。若内诺或结果引用了此邮件，将保留当时的原文副本。`,
     okText: '确认删除',
     cancelText: '取消',
     okButtonProps: { danger: true },
     async onOk() {
       try {
         await localApi(`/messages/${item.id}`, { method: 'DELETE' });
-        records.value = records.value.filter((record) => record.id !== item.id);
+        await store.refresh();
+        await communications.load([props.professorId]);
       } catch (error) {
         feedback.value =
           error instanceof Error ? error.message : '邮件删除失败。';
@@ -164,7 +194,7 @@ function toggle(id: string) {
     <header class="archive-heading">
       <div>
         <h2>
-          邮件往来<span>{{ records.length }}</span>
+          邮件往来<span>{{ scopedRecords.length }}</span>
         </h2>
         <p>粘贴已发送或收到的邮件，留存沟通记录与下一步行动。</p>
       </div>
@@ -180,6 +210,19 @@ function toggle(id: string) {
       <button class="text-button" @click="load()">重新加载</button>
     </p>
     <div v-if="records.length" class="archive-toolbar">
+      <Select
+        v-if="!experienceId"
+        v-accessible-select
+        v-model:value="experienceFilter"
+        :options="[
+          { value: '', label: '全部考学经历' },
+          ...experiences.map((c) => ({
+            value: c.experienceId,
+            label: c.experienceTitle || '考学经历',
+          })),
+        ]"
+        aria-label="筛选邮件所属经历"
+      />
       <Input
         v-model:value="query"
         aria-label="搜索邮件"
@@ -257,11 +300,11 @@ function toggle(id: string) {
       <div v-else-if="!loading" class="archive-empty">
         <ExplorerIcon name="book" />
         <h3>
-          {{ records.length ? '没有找到相关邮件' : '留下第一封沟通记录' }}
+          {{ scopedRecords.length ? '没有找到相关邮件' : '留下第一封沟通记录' }}
         </h3>
         <p>
           {{
-            records.length
+            scopedRecords.length
               ? '试试其他关键词或收发方向。'
               : '复制邮件正文，记录日期、收发方向和后续行动。'
           }}
@@ -279,6 +322,21 @@ function toggle(id: string) {
     >
       <form class="explorer-form mail-editor" @submit.prevent="save">
         <div class="form-fields">
+          <div class="field full">
+            <label for="mail-experience">所属考学经历</label
+            ><Select
+              id="mail-experience"
+              v-accessible-select
+              v-model:value="form.experienceId"
+              :options="
+                experiences.map((c) => ({
+                  value: c.experienceId,
+                  label: c.experienceTitle || '考学经历',
+                }))
+              "
+              :disabled="busy || !!experienceId"
+            />
+          </div>
           <div class="field">
             <label for="mail-direction">收发方向</label
             ><Select
@@ -292,7 +350,7 @@ function toggle(id: string) {
             />
           </div>
           <div class="field">
-            <label for="mail-date">邮件日期 *</label
+            <label for="mail-date">邮件时间（按原邮件记录）*</label
             ><input
               id="mail-date"
               v-model="form.date"

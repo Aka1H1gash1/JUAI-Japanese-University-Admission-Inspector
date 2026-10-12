@@ -27,17 +27,17 @@
 
 「Agent 工作区接入」生成按专攻授权的 STDIO MCP 配置，支持通用 JSON / Codex TOML。令牌只创建时返回，服务端存 hash，可撤销。升级后客户端重新连接加载工具。
 
-| 工具 | 能力 |
-| --- | --- |
-| search_workspace | 搜索授权专攻、研究室与分析任务 |
-| get_major_context | 大学、专攻、研究室、当前报考资料及任务 |
-| list_documents | 授权专攻的募集要项清单 |
-| create_analysis_task | 选择专攻、资料与分析对象建立读取任务 |
-| get_analysis_task | 状态、来源与最近提取草稿 |
-| read_document_pages | 1–5 页文字，超长页有截取标记 |
-| read_document_page_image | PDF 指定页 PNG |
-| get_analysis_result_schema | 当前任务结果 Schema |
-| submit_analysis_proposal | 带幂等 requestKey 提交待核对草稿 |
+| 工具                       | 能力                                   |
+| -------------------------- | -------------------------------------- |
+| search_workspace           | 搜索授权专攻、研究室与分析任务         |
+| get_major_context          | 大学、专攻、研究室、当前报考资料及任务 |
+| list_documents             | 授权专攻的募集要项清单                 |
+| create_analysis_task       | 选择专攻、资料与分析对象建立读取任务   |
+| get_analysis_task          | 状态、来源与最近提取草稿               |
+| read_document_pages        | 1–5 页文字，超长页有截取标记           |
+| read_document_page_image   | PDF 指定页 PNG                         |
+| get_analysis_result_schema | 当前任务结果 Schema                    |
+| submit_analysis_proposal   | 带幂等 requestKey 提交待核对草稿       |
 
 服务端校验范围，正式采纳不向 Agent 开放。邮件正文与教授联络草稿不通过这些工具提供。模型是否联网取决于客户端配置。
 
@@ -52,3 +52,10 @@
 迁移 1–3 保持原样，追加 migration 4，将旧分析任务关联到专攻，并将旧资料中已关联研究室的明确日期和清单保留到研究室。已采纳旧结果变为待核对，重新选择正式资料位置，避免自动覆盖现有要求。旧表作为历史存档保留，不提供轮次操作接口。
 
 分析要求与历史使用 analysis_requirements / analysis_history。开发执行 `pnpm setup:japangrad-server` 安装独立锁定的解析器与 MCP 依赖；打包内置依赖。
+
+### 教授考学经历与阶段内容（2026-10-13）
+
+- 每位老师自动拥有当前经历；按阶段展示研究 / 论文 / 要求、首封、往来信件、预约面试 / 准备、实际面试 / 问答、内诺原文 / 签署文件、结果。完整总表保留全部阶段。
+- 邮件按经历归属，预约面试前自动联动早期状态；已进入面试或后续阶段不自动倒退。内诺 / 结果引用实际来信，删除来源保留正文快照。
+- 可新建仅带名称的经历并保留历史，不引入申请轮次或批次配置。历史邮件与文件隔离，日期可手改、来源节点可联动，冲突保存提示核对。
+- 当前升级追加数据库版本 5；升级前备份工作区。Agent / MCP 授权范围维持原有专攻资料权限，不自动开放邮件正文与草稿。

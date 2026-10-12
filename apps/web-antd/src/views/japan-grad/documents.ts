@@ -1,5 +1,13 @@
-export type DocumentKind = 'answer' | 'guidelines' | 'paper' | 'question';
+export type DocumentKind =
+  | 'answer'
+  | 'guidelines'
+  | 'paper'
+  | 'question'
+  | 'consent';
 export interface StoredDocument {
+  experienceId?: string;
+  signed?: boolean;
+  signedDate?: string;
   id: string;
   ownerType: 'major' | 'professor';
   ownerId: string;
@@ -23,6 +31,7 @@ export const kindLabels: Record<DocumentKind, string> = {
   question: '过去问',
   answer: '对应答案',
   paper: '论文',
+  consent: '内诺文件',
 };
 export function fileUrl(id: string) {
   return `/api/japangrad/documents/${encodeURIComponent(id)}/file`;

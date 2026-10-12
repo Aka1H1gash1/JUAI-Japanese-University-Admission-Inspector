@@ -12,6 +12,8 @@ import { upgradeResearchLabs } from './research-labs.mjs';
 import { planningError } from './planning-fields.mjs';
 import { timelineError } from './timeline-fields.mjs';
 import { createAnalysisService } from './analysis-service.mjs';
+import { createExperienceService } from './experience-service.mjs';
+import { validPlannerDay, validPlannerMinute } from './planning-fields.mjs';
 import {
   deliveryProperties,
   fileProperties,
@@ -416,6 +418,15 @@ export async function createLocalApp({
     jsonBody,
     validateExplorer,
   });
+  const experiences = createExperienceService({
+    db,
+    snapshot,
+    transaction,
+    fail,
+    json,
+    jsonBody,
+    validateExplorer,
+  });
   const server = createServer(async (req, res) => {
     try {
       const host = req.headers.host;
@@ -439,6 +450,7 @@ export async function createLocalApp({
           req.headers['x-japangrad-client'] !== '1'
         )
           fail('缺少本地工作台请求标识。', 403);
+        if (await experiences.handle(req, res, route)) return;
         if (await analysis.handle(req, res, route)) return;
         if (route === '/api/japangrad/workspace' && req.method === 'GET')
           return json(res, snapshot());
@@ -473,6 +485,18 @@ export async function createLocalApp({
               previous?.contact !== undefined
             )
               person.contact = previous.contact;
+          }
+          for (const person of data.professors) {
+            const previous = previousPeople.get(person?.id);
+            if (
+              previous?.contact &&
+              person.contact &&
+              (!person.contact.experienceId ||
+                person.contact.experienceId === previous.contact.experienceId)
+            )
+              person.contact = { ...previous.contact, ...person.contact };
+            if (person.contactHistory === undefined && previous?.contactHistory)
+              person.contactHistory = previous.contactHistory;
           }
           const previousLabs = new Map(
             (current.data.labs ?? []).map((item) => [item.id, item]),
@@ -564,6 +588,8 @@ export async function createLocalApp({
             fail('工作区已在其他页面更新，请刷新后重试。', 409);
           const majors = new Set(data.majors.map((item) => item.id));
           const professors = new Set(data.professors.map((item) => item.id));
+          experiences.prepare(data, current.data);
+          validateExplorer(data);
           transaction(() => {
             // Remove metadata atomically with parent records. Original files remain recoverable on disk.
             for (const row of db
@@ -660,10 +686,11 @@ export async function createLocalApp({
           )
             fail('所属记录不存在。', 404);
           if (
-            !['guidelines', 'question', 'answer', 'paper'].includes(
+            !['guidelines', 'question', 'answer', 'paper', 'consent'].includes(
               meta.kind,
             ) ||
-            (meta.ownerType === 'professor') !== (meta.kind === 'paper')
+            (meta.ownerType === 'professor') !==
+              ['paper', 'consent'].includes(meta.kind)
           )
             fail('文件分类不合法。');
           if (
@@ -675,6 +702,8 @@ export async function createLocalApp({
             !text(meta.filename, 240)
           )
             fail('请填写标题和有效年份。');
+          const consentMeta =
+            meta.kind === 'consent' ? experiences.consentMetadata(meta) : {};
           if (meta.kind === 'answer') {
             const question = document(meta.questionId);
             if (
@@ -713,6 +742,11 @@ export async function createLocalApp({
           await writeFile(target, content, { flag: 'wx' });
           if (!ownerExists(meta.ownerType, meta.ownerId))
             fail('所属记录已删除，原文件保留在工作区。', 409);
+          if (meta.kind === 'consent')
+            experiences.consentMetadata({
+              ...meta,
+              experienceId: consentMeta.experienceId,
+            });
           const record = {
             id,
             ownerType: meta.ownerType,
@@ -725,6 +759,7 @@ export async function createLocalApp({
             size: content.length,
             ...properties,
             sha256: createHash('sha256').update(content).digest('hex'),
+            ...consentMeta,
             questionId: meta.kind === 'answer' ? meta.questionId : '',
             notes: '',
             authors: '',
@@ -778,6 +813,16 @@ export async function createLocalApp({
                 record[field] = input[field].trim();
               }
             }
+            if (record.kind === 'consent')
+              Object.assign(
+                record,
+                experiences.consentMetadata({
+                  ...record,
+                  experienceId: input.experienceId ?? record.experienceId,
+                  signed: input.signed ?? record.signed,
+                  signedDate: input.signedDate ?? record.signedDate,
+                }),
+              );
             if (input.analysis !== undefined)
               fail('募集要项自动提取暂未启用。');
             db.prepare('UPDATE documents SET data = ? WHERE id = ?').run(
@@ -850,9 +895,8 @@ export async function createLocalApp({
             !text(input.address, 300) ||
             !text(input.notes, 8000) ||
             !text(input.nextAction, 2000) ||
-            !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(input.date) ||
-            (input.followUpDate &&
-              !/^\d{4}-\d{2}-\d{2}$/.test(input.followUpDate))
+            !validPlannerMinute(input.date) ||
+            (input.followUpDate && !validPlannerDay(input.followUpDate))
           )
             fail('请填写主题、正文和有效日期。');
           const existing =
@@ -881,9 +925,11 @@ export async function createLocalApp({
               ? JSON.parse(existing.data).createdAt
               : new Date().toISOString(),
           };
-          db.prepare(
-            'INSERT INTO messages VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data',
-          ).run(record.id, record.professorId, JSON.stringify(record));
+          experiences.writeMessage(
+            record,
+            input.experienceId,
+            existing ? JSON.parse(existing.data) : undefined,
+          );
           return json(res, record);
         }
         if (mailMatch && req.method === 'DELETE') {
@@ -893,7 +939,7 @@ export async function createLocalApp({
               .get(mailMatch[1])
           )
             fail('邮件记录不存在。', 404);
-          db.prepare('DELETE FROM messages WHERE id = ?').run(mailMatch[1]);
+          experiences.removeMessage(mailMatch[1]);
           return json(res, { removed: mailMatch[1] });
         }
         fail('接口不存在。', 404);

@@ -1,23 +1,22 @@
+import type { ContactRecord } from '../../../../../local-server/planning-fields.mjs';
 import {
   CONTACT_STATUSES,
+  CONTACT_EDITABLE_FIELDS,
+  CONTACT_RESULTS,
+  emptyContactRecord,
   validPlannerDay,
   validPlannerMinute,
 } from '../../../../../local-server/planning-fields.mjs';
 import type { LabTarget } from './lab-targets';
-export { CONTACT_STATUSES, validPlannerDay, validPlannerMinute };
+export {
+  CONTACT_STATUSES,
+  CONTACT_EDITABLE_FIELDS,
+  CONTACT_RESULTS,
+  validPlannerDay,
+  validPlannerMinute,
+};
 export type ContactStatus = (typeof CONTACT_STATUSES)[number];
-export interface ProfessorContact {
-  status: ContactStatus;
-  plannedDate: string;
-  firstSentDate: string;
-  interviewAt: string;
-  consentDate: string;
-  followUpDate: string;
-  draftSubject: string;
-  draftBody: string;
-  replySummary: string;
-  notes: string;
-}
+export type ProfessorContact = ContactRecord;
 export interface ApplicationTask {
   id: string;
   title: string;
@@ -31,31 +30,33 @@ export const CONTACT_LABELS: Record<ContactStatus, string> = {
   first_sent: '已发首封',
   replied: '已回复',
   interview_scheduled: '已约面试',
+  interview_completed: '已面试',
   consent: '已拿内诺',
-  closed: '已结束 / 暂停',
+  closed: '已结束',
 };
 export const CONTACT_OPTIONS = CONTACT_STATUSES.map((value) => ({
   label: CONTACT_LABELS[value],
   value,
 }));
+export const CONTACT_RESULT_LABELS = {
+  pending: '待记录',
+  admitted: '录取 / 合格',
+  rejected: '未录取 / 不合格',
+  withdrawn: '主动放弃',
+  other: '其他结果',
+};
 export function emptyContact(): ProfessorContact {
-  return {
-    status: 'not_contacted',
-    plannedDate: '',
-    firstSentDate: '',
-    interviewAt: '',
-    consentDate: '',
-    followUpDate: '',
-    draftSubject: '',
-    draftBody: '',
-    replySummary: '',
-    notes: '',
-  };
+  return emptyContactRecord();
 }
 export function normalizedContact(
   value?: Partial<ProfessorContact>,
 ): ProfessorContact {
-  return { ...emptyContact(), ...value };
+  return {
+    ...emptyContact(),
+    ...value,
+    interviewQA: value?.interviewQA ?? [],
+    stageHistory: value?.stageHistory ?? [],
+  };
 }
 export function japanToday(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -135,4 +136,15 @@ export function firstMailTemplate(name: string) {
     subject: '大学院への進学・研究についてのご相談（[氏名]）',
     body: `${name} 先生\n\n突然のご連絡、失礼いたします。\n私は[所属・学年]の[氏名]と申します。[入学希望時期・課程]への進学を検討しております。\n\n先生の[論文・研究テーマ]を拝見し、特に[関心を持った点]に興味を持ちました。私は[自身の研究経験・関心]について学んでおり、今後は[研究したい内容]に取り組みたいと考えております。\n\n先生の研究室における学生の受け入れや、事前相談の機会について伺えますでしょうか。必要でしたら、履歴書や研究計画書をお送りいたします。\n\nお忙しいところ恐縮ですが、ご検討いただけますと幸いです。\n何卒よろしくお願いいたします。\n\n[氏名]\n[所属]\n[メールアドレス]`,
   };
+}
+
+export const CONTACT_TIMELINE_KINDS = {
+  planned: 'contact',
+  sent: 'sent',
+  followup: 'followup',
+  interview: 'teacher_interview',
+  consent: 'consent',
+} as const;
+export function contactTimelinePrefix(personId: string, experienceId: string) {
+  return experienceId ? `${personId}-${experienceId}` : personId;
 }

@@ -128,7 +128,11 @@ async function load() {
     const rows = await localApi<StoredDocument[]>(
       `/documents?ownerType=${owner.type}&ownerId=${encodeURIComponent(owner.id)}`,
     );
-    if (current === generation) documents.value = rows;
+    if (current === generation)
+      documents.value =
+        props.ownerType === 'professor'
+          ? rows.filter((row) => row.kind === 'paper')
+          : rows;
   } catch (error) {
     if (current === generation)
       feedback.value =

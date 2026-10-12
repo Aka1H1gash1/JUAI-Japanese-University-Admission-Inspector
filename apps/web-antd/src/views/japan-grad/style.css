@@ -3960,9 +3960,9 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 .contact-board-columns {
   display: grid;
-  grid-template-columns: repeat(6, minmax(224px, 1fr));
+  grid-template-columns: repeat(7, minmax(270px, 1fr));
   gap: 14px;
-  min-width: 1420px;
+  min-width: 1960px;
   align-items: start;
 }
 .contact-board-column {
@@ -4371,4 +4371,14 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: var(--jg-secondary);
+}
+
+.contact-status.contact-interview_completed {
+  color: var(--jg-accent-text);
+}
+.contact-board-card {
+  min-width: 0;
+}
+.contact-board-card > .ant-btn {
+  margin-top: 6px;
 }

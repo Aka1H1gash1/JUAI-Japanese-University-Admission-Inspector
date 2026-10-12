@@ -43,6 +43,8 @@ export function timelineError(value) {
       typeof event.notes !== 'string' ||
       event.notes.length > 4000 ||
       typeof event.complete !== 'boolean' ||
+      (event.linkContact !== undefined &&
+        typeof event.linkContact !== 'boolean') ||
       !validPlannerDay(event.start) ||
       !validPlannerDay(event.end) ||
       event.end < event.start ||

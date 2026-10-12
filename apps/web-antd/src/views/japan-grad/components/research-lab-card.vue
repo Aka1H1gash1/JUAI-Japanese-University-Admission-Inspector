@@ -111,7 +111,7 @@ async function toggle() {
         type="text"
         :disabled="store.saving"
         @click="emit('contact', labId)"
-        >联络与草稿</Button
+        >考学经历</Button
       ><RouterLink :to="`${labPath(target)}?tab=tasks`"
         >材料与待办 →</RouterLink
       >

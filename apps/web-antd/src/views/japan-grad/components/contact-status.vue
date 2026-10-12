@@ -11,8 +11,18 @@ const step = computed(
       first_sent: 1,
       replied: 1,
       interview_scheduled: 2,
+      interview_completed: 2,
       consent: 3,
-      closed: -1,
+      closed: value.value.consentDate
+        ? 3
+        : value.value.actualInterviewAt ||
+            value.value.actualInterviewDate ||
+            value.value.interviewAt ||
+            value.value.interviewDate
+          ? 2
+          : value.value.firstSentDate
+            ? 1
+            : 0,
     })[value.value.status],
 );
 const shortDate = (date: string) =>
