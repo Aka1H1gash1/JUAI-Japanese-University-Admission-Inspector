@@ -66,6 +66,7 @@
     "update:deps": "npx taze -r -w",
     "version": "pnpm exec changeset version && pnpm install --no-frozen-lockfile",
     "catalog": "pnpm dlx codemod pnpm/catalog",
+    "setup:japangrad-server": "npm ci --prefix local-server --ignore-scripts --no-audit --no-fund",
     "dev:japangrad": "cross-env JAPANGRAD_DEV=1 node local-server/server.mjs",
     "build:japangrad": "pnpm -F @vben/web-antd exec vite build --mode workspace",
     "start:japangrad": "node local-server/server.mjs --open",

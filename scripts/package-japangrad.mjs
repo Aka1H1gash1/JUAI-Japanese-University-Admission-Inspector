@@ -57,6 +57,24 @@ await cp(
   path.join(root, 'local-server/planning-fields.mjs'),
   path.join(target, 'local-server/planning-fields.mjs'),
 );
+for (const name of [
+  'admissions-service.mjs',
+  'admission-analysis.mjs',
+  'admission-parser-worker.mjs',
+  'admission-fields.json',
+  'agent-mcp.mjs',
+  'package.json',
+  'package-lock.json',
+])
+  await cp(
+    path.join(root, 'local-server', name),
+    path.join(target, 'local-server', name),
+  );
+await cp(
+  path.join(root, 'local-server/node_modules'),
+  path.join(target, 'local-server/node_modules'),
+  { recursive: true },
+);
 const nextWeb = path.join(target, `.web-next-${Date.now()}`);
 await cp(path.join(root, 'apps/web-antd/dist'), nextWeb, {
   recursive: true,

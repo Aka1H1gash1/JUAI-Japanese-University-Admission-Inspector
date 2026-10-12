@@ -10,6 +10,7 @@ import { execFile } from 'node:child_process';
 import geography from './japan-geography.json' with { type: 'json' };
 import { upgradeResearchLabs } from './research-labs.mjs';
 import { planningError } from './planning-fields.mjs';
+import { createAdmissionsService } from './admissions-service.mjs';
 import {
   deliveryProperties,
   fileProperties,
@@ -261,7 +262,11 @@ async function body(
 }
 async function jsonBody(req) {
   try {
-    const content = await body(req, 8 * 1024 * 1024);
+    const content = await body(
+      req,
+      8 * 1024 * 1024,
+      '请求内容过大，最多 8 MB。',
+    );
     return JSON.parse(content.toString());
   } catch (error) {
     if (error instanceof HttpError) throw error;
@@ -395,6 +400,16 @@ export async function createLocalApp({
       throw error;
     }
   };
+  const admissions = createAdmissionsService({
+    db,
+    snapshot,
+    document,
+    safeFile,
+    transaction,
+    fail,
+    json,
+    jsonBody,
+  });
   const server = createServer(async (req, res) => {
     try {
       const host = req.headers.host;
@@ -418,6 +433,7 @@ export async function createLocalApp({
           req.headers['x-japangrad-client'] !== '1'
         )
           fail('缺少本地工作台请求标识。', 403);
+        if (await admissions.handle(req, res, route)) return;
         if (route === '/api/japangrad/workspace' && req.method === 'GET')
           return json(res, snapshot());
         if (route === '/api/japangrad/workspace' && req.method === 'PUT') {
@@ -933,7 +949,10 @@ export async function createLocalApp({
       }
     }
   });
-  server.on('close', () => db.close());
+  server.on('close', () => {
+    admissions.close();
+    db.close();
+  });
   return server;
 }
 

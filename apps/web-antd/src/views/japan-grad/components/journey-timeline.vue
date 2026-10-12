@@ -3,6 +3,8 @@ import { computed, ref } from 'vue';
 import { useNow } from '@vueuse/core';
 import { App, Button, Input, Modal, Select } from 'ant-design-vue';
 import type { LabTarget } from '../lab-targets';
+import { useAdmissionsStore } from '../admissions';
+import { buildCyclePlannerEvents } from '../admission-calendar';
 import { labPath } from '../lab-targets';
 import type { PlannerEvent } from '../application-calendar';
 import {
@@ -26,7 +28,21 @@ const startMonth = ref(today.value.slice(0, 7));
 const monthCount = ref(6);
 const selectedEvent = ref<PlannerEvent>();
 const detailsOpen = ref(false);
-const events = computed(() => buildPlannerEvents(props.targets, props.year));
+const admissions = useAdmissionsStore();
+const events = computed(() => {
+  const cycleEvents = buildCyclePlannerEvents(admissions.cycles, props.targets);
+  const keys = new Set(
+    cycleEvents.map((e) => `${e.labId}|${e.kind}|${e.start}|${e.end}`),
+  );
+  return [
+    ...buildPlannerEvents(props.targets, props.year).filter(
+      (e) => !keys.has(`${e.labId}|${e.kind}|${e.start}|${e.end}`),
+    ),
+    ...cycleEvents,
+  ].toSorted(
+    (a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end),
+  );
+});
 const bounds = computed(() => {
   const start = validPlannerDay(`${startMonth.value}-01`)
     ? `${startMonth.value}-01`

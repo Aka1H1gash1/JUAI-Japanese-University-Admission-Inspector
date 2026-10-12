@@ -27,6 +27,8 @@ void store.load();
 const route = useRoute();
 const router = useRouter();
 const parentNavigation = computed(() => {
+  if (route.params.cycleId)
+    return { path: '/japan-grad/journey?view=admissions', label: '申请轮次' };
   const { universityId, schoolId, majorId, labId, professorId } = route.params;
   const universityPath = `/japan-grad/universities/${universityId}`;
   const schoolPath = `${universityPath}/schools/${schoolId}`;
@@ -127,19 +129,21 @@ const saveLabel = computed(() =>
         : '已连接本地工作区',
 );
 const contextLabel = computed(() =>
-  route.path === '/japan-grad/journey'
-    ? '修考之路'
-    : route.params.professorId
-      ? '老师资料'
-      : route.params.labId
-        ? '研究室资料'
-        : route.params.majorId
-          ? '专攻资料'
-          : route.params.schoolId
-            ? '研究科'
-            : route.params.universityId
-              ? '大学详情'
-              : '大学清单',
+  route.params.cycleId
+    ? '申请轮次'
+    : route.path === '/japan-grad/journey'
+      ? '修考之路'
+      : route.params.professorId
+        ? '老师资料'
+        : route.params.labId
+          ? '研究室资料'
+          : route.params.majorId
+            ? '专攻资料'
+            : route.params.schoolId
+              ? '研究科'
+              : route.params.universityId
+                ? '大学详情'
+                : '大学清单',
 );
 const appearanceLabel = computed(
   () =>

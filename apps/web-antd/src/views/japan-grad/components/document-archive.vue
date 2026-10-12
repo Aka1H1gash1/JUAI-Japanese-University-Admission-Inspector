@@ -500,6 +500,20 @@ function remove(record: StoredDocument) {
             >{{ readerLabel(selected) }} <ExplorerIcon name="link"
           /></a>
         </div>
+        <RouterLink
+          v-if="selected.kind === 'guidelines'"
+          class="archive-reader-link"
+          :to="{
+            path: '/japan-grad/journey',
+            query: {
+              view: 'admissions',
+              majorId: selected.ownerId,
+              documentId: selected.id,
+            },
+          }"
+          @click="detailOpen = false"
+          >分析这份募集要项 → 选择申请轮次</RouterLink
+        >
         <dl class="archive-detail-fields">
           <div>
             <dt>文件名</dt>

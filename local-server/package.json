@@ -1,0 +1,14 @@
+{
+  "name": "@juai/local-server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "JUAI admissions analysis and local MCP bridge",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "fflate": "0.8.3",
+    "mammoth": "1.13.0",
+    "pdfjs-dist": "6.4.299",
+    "zod": "^4.0.0"
+  }
+}

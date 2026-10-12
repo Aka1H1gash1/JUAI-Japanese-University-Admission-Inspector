@@ -69,3 +69,6 @@ JapanGradWorkspace/
 *.db
 *.db-shm
 *.db-wal
+
+# Local parser and MCP dependencies have their own reproducible install.
+!local-server/package-lock.json

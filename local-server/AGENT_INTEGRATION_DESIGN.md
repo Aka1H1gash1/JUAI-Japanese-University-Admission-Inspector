@@ -1,104 +1,69 @@
-# JapanGrad 资料分析与外部 Agent 接入方案
+# JUAI 募集要项分析与 Agent 工作区接入
 
-状态：方案讨论，尚未实现分析任务、结果导入、MCP 或模型调用。本次实现仅扩展文件管理。
+状态：申请轮次、原文读取 / 初步字段定位、核对采纳、任务包和本地 STDIO MCP 已实现。独立 OCR、应用内模型 API 与本地模型调用尚未实现。
 
-## 建议的产品职责
+## 使用入口
 
-JapanGrad 管理原始资料、学校/专攻/老师上下文、结构化结果、核对与采纳。分析执行器可由用户选择，不绑定单一 Agent 或模型。
+修考之路 →「申请年度与资料分析」，或专攻详情 → 申请轮次。新增轮次后，在「募集要项分析」选择募集要项 / 补充资料，生成待核对草稿。文件详情中的「分析这份募集要项」可带入资料选择。
 
-资料分析分成两步：先读取文档内容，再结合年度、专攻与选拔类别理解招生要求。文档转成文字，并不等于已经正确理解考试科目、资格或截止时间。
+轮次独立保存入学年月、学位、选拔类别与批次、关联研究室、要求、材料准备、提交编号与结果。明确日期进入本轮日程与所关联想考研究室的时间线；通用要求保留独立维护入口。
 
-所有分析执行器使用同一个结果格式。原文件保持不变，结果先成为草稿，由用户核对并采纳。
+## 原文与草稿
 
-## 方案比较
+- PDF.js 在 Worker 中提取文字和分页位置，按需渲染 PDF 页面 PNG；每文件最多 300 页、200 万字，读取 / 渲染超时 90 秒，Worker 堆限制 512 MB。
+- DOCX 使用 Mammoth 提取全文，逻辑块 1 不代表 Word 排版页码。MD / TXT 支持 UTF-8 / UTF-16，每 100 行一个逻辑块并保留行号说明。旧 DOC 需转换后分析。
+- 本地按标题、完整明确日期和检定料数值定位候选字段，不判断资格或选择对应选拔类别。扫描页、表格和内容解释由用户或支持图片理解的 Agent 核对。
+- 状态区分 found、not_found、unreadable、conflict；非 found 值留空，found 必须带原文证据。核对页可人工补录，并记录为核对修改。
+- 来源证据含资料 ID、SHA256、逻辑页 / 块、原文。可匹配提取文本时标为 text_matched，否则标为 visual_review，要求对照原图。
 
-| 方案 | 用户操作 | 优点 | 限制与适用场景 |
-| --- | --- | --- | --- |
-| 外部 Agent + 分析任务文件 | 让有本地文件能力的 Agent 打开导出的任务目录，再导入结果 JSON | 不要求系统内置模型或 API Key；兼容面广，第一步开发成本较低 | 用户需要启动自己的 Agent；它能否读取 Word、扫描 PDF，取决于自身工具 |
-| 外部 Agent + MCP | 在支持 MCP 的客户端连接 JapanGrad，读取资料并提交分析草稿 | 读写入口明确，支持后续查询、笔记与申请管理，不需要直接改 SQLite | 需要客户端支持 MCP，并处理连接、授权与错误反馈 |
-| 系统调用用户选择的模型 API | 选择资料、配置服务，点击生成草稿 | 普通用户操作更直接，不要求会使用 Agent | 联网与调用费用由服务决定；只有用户选择的资料应发送给对应服务 |
-| 可选本地模型 | 用户安装本地模型运行器，选择模型后生成草稿 | 配置完成后可离线处理，资料留在本机 | 对内存、速度、模型能力有要求；不作为开箱即用软件的必需依赖 |
-| 本地解析 + 人工标注 | 阅读原文，把选中的内容填入字段 | 不依赖生成模型，可提供稳定的基础录入体验 | 解析/OCR 只解决读取，不保证理解；大部分内容仍需要人工确认 |
+每个任务 1–10 份已选募集要项，总计最多 100 MB，单文件 50 MB，最多同时排队 / 读取 4 个任务。读取为异步队列，服务重启后中断任务可手动重试。
 
-推荐先实现分析任务导出和结果导入，再实现 MCP。模型 API 和本地模型作为后续可选执行器，避免每个入口各自生成不兼容的数据。
+## 任务包
 
-## 第一阶段：分析任务包
-
-用户在募集要项详情点击“交给我的 Agent 分析”，先确认目标专攻、招生年度、学位和选拔类别。一次任务可以关联多个明确选中的资料，例如正式募集要项、修订通知、专攻补充说明。
-
-任务包建议结构：
+读取完成后可下载 ZIP：
 
 ```text
-analysis/jobs/<task-id>/
-├── task.json                 # 任务 ID、资料 ID/hash、目标和需要提取的字段
-├── context.json              # 选中的大学、研究科、专攻和年度上下文
-├── instructions.md           # 分析要求和原文引用规则
-├── sources/                  # 所选原文件的副本或受控读取引用
-├── result.schema.json        # 结果格式说明
-└── result.json               # Agent 输出，系统导入时验证
+AGENTS.md                  # 分析与原文引用要求
+context.json               # 大学、专攻、关联研究室和当前轮次
+task.json                  # 固定任务上下文和来源 hash
+sources/<资料ID>.<格式>    # 所选原文件
+parsed/<资料ID>.json      # 分页文字、位置说明和读取警告
+result.schema.json         # 当前任务专属结果 Schema
+result.template.json       # Agent 可填写的模板
 ```
 
-任务文件是业务数据工作区中的导出物，与应用源码、安装目录独立。Agent 可以读取选中的原文件，写入结果和补充笔记；不需要修改 `workspace.db`。不建议用数据库文件监听来推测 Agent 改了什么。
+Agent 输出 result.json，再拖拽 / 选择单个 JSON 文件导入（最大 8 MB）。系统验证任务、来源、字段长度、状态和页码；结果进入草稿，不直接修改正式记录。资料中的操作指令作为文档内容处理。
 
-资料副本便于把整个任务包交给其他工具；受控引用适合已连接本机服务的 Agent，避免复制大文件。提供云端执行器时，明确显示将发送哪些资料。
+## 本地 MCP
 
-## 结果草稿
+UI 的「Agent 工作区接入」创建按专攻授权的连接，生成通用 MCP JSON 或 Codex TOML。令牌仅创建时返回，数据库保存 SHA256，列表不返回明文或 hash；支持即时撤销后续请求。
 
-每份结果至少保存：任务 ID、来源资料 ID 与 SHA256、目标专攻、招生年度、选拔类别、提取时间、执行器信息、字段值、原文证据、待确认事项。
+`agent-mcp.mjs` 使用维护中的官方 SDK v1.32.1，STDIO 传输；HTTP 请求只允许本机工作台地址，重定向关闭，并携带 Bearer 令牌。标准输出仅用于 MCP 协议。
 
-建议提取的业务字段：
+| 工具 | 能力 |
+| --- | --- |
+| search_workspace | 搜索授权专攻、研究室与申请轮次，分页返回 |
+| get_admission_cycle | 轮次及所属大学 / 专攻、关联研究室、已有任务 |
+| list_documents | 指定授权专攻的募集要项清单 |
+| create_analysis_task | 给已有轮次选择资料创建读取任务 |
+| get_analysis_task | 状态、来源与最近 20 份提取草稿 |
+| read_document_pages | 每次 1–5 页文字，超长页返回截取标记 |
+| read_document_page_image | PDF 指定页 PNG，供支持图片的模型核对 |
+| get_analysis_result_schema | 本任务结果 Schema |
+| submit_analysis_proposal | 带幂等 requestKey 提交草稿 |
 
-- 申请资格、学位、入学时间和选拔类别。
-- 出愿开始、截止时间、考试/面试时间和结果公布时间。
-- 考试科目、范围、语言成绩要求与成绩有效期。
-- 申请材料、费用、提交方式和教授事前联系要求。
+服务端逐次检查授权专攻与资料所属关系。邮件正文、教授联络草稿不通过这些工具提供。采纳接口不向 Agent 开放，模型不直接改 SQLite 或整份工作区快照。
 
-每个字段都有出处：PDF 页码和原文；Word 的章节/段落与原文；MD/TXT 的行号或段落与原文。Word 的稳定页码需要固定排版或转换后的 PDF，不能根据 XML 自行猜页码。
+## 保存与核对约束
 
-缺失信息用空值表示，并列入待确认事项。区分“文件没有写”和“模型没能识别”。不同选拔类别不能混合，日历年不能直接替代日本年度，截止日期要区分必着、消印有效、在线提交和材料邮寄。时区以原文件说明为准，不能用应用电脑时区覆盖。
+- SQLite 追加 migration 3：admission_cycles、analysis_jobs、analysis_proposals、analysis_documents、admission_history、agent_connections。沿用原资料目录，升级保留既有数据。
+- 正式采纳前重新读取来源计算 hash；来源变化或轮次入学年月、学位、选拔类别、批次变化时拒绝旧结果，要求新建任务。
+- 轮次保存 / 采纳检查 revision，事务内保存要求、来源和历史版本。已有值替换需用户确认；未选字段保留。
+- 采纳材料可按核对后的逐行内容生成当前轮次清单，去重且最多 200 项；明确日期才进入日历。
+- 外部 Agent 可独立使用自己的模型服务。本地连接不承诺模型推理离线；处理方式由 Agent / 模型配置决定。
 
-来源文件 hash 变化、目标专攻不同或年度不匹配时，结果不应自动应用。JSON Schema 可以验证数据结构，业务规则和原文核对仍是必要步骤。
+## 开发与打包
 
-## 核对和采纳
+在仓库根目录执行 `pnpm setup:japangrad-server`（等价于 `npm ci --prefix local-server --ignore-scripts --no-audit --no-fund`）。本地服务依赖有独立 package-lock.json，打包复制解析器、MCP 桥接与 node_modules，终端用户不需安装开发依赖。
 
-草稿进入“待核对”，用户可以对照原文逐项修改和采纳。原文中没有依据的字段明确保留为待确认；不靠模型自行补全。
-
-采纳时保存一个结果版本，并记录相对上一版本的变化。已有人工修改不得被后台重新分析直接覆盖。
-
-当正式 Admission、Application、Task 与 Timeline 模块实现后，由用户选择是否把已确认的截止日期、材料和考试信息生成对应事项，采用系统正常的事务与校验入口。
-
-## 第二阶段：MCP
-
-以同一任务与草稿模型提供资源和工具，例如：
-
-```text
-list_documents                 # 查找可分析的资料
-get_document_context           # 读取所属专攻、年度与关联资料
-read_document                  # 读取选中的原文/原文件
-create_analysis_task           # 创建有明确资料范围的分析任务
-submit_analysis_proposal       # 提交结构化结果草稿
-list_analysis_proposals        # 查看尚未采纳的结果
-```
-
-MCP 负责连接与约定读写行为，不会自动替客户端增加 PDF、Word 或 OCR 能力。客户端可以使用它自身的解析工具，也可以调用未来系统提供的可选本地解析器。
-
-MCP 接入层调用 JapanGrad 的业务服务，由系统处理数据库、文件路径、版本与校验。初期不提供任意 SQL 或 Shell 工具。读写范围可按资料/任务授权；申请记录的正式变更采用核对后的采纳流程。
-
-如未来使用 MCP Sampling，由支持此能力的客户端提供模型调用，可以减少单独配置服务的步骤；客户端兼容性和用户授权方式需要逐一确认，不能假定每个 Agent 都支持。
-
-## 本地解析的定位
-
-- MD/TXT：直接读取文本并记录行号，处理编码。
-- DOCX：读取文档内容及表格，保留段落/表格位置。
-- DOC：可通过可选 Office 转换工具转换后读取，不要求核心软件内置整套 Office。
-- PDF：文字型文件读取文字与位置；扫描型文件按需 OCR；复杂表格需要版面分析。
-
-Docling 可作为后续本地解析/OCR 候选，但需要评估日本招生资料的真实样本、表格保真度、模型资源与打包成本。它不是无需评估即可代替招生规则理解的组件。
-
-## 参考
-
-- [MCP Resources](https://modelcontextprotocol.io/specification/2025-06-18/server/resources)
-- [MCP Tools](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
-- [MCP Sampling](https://modelcontextprotocol.io/specification/2025-06-18/client/sampling)
-- [Docling 官方项目](https://github.com/docling-project/docling)
-- [Ollama Structured Outputs](https://docs.ollama.com/capabilities/structured-outputs)
+参考：[MCP SDK v1](https://ts.sdk.modelcontextprotocol.io/)、[PDF.js](https://mozilla.github.io/pdf.js/)、[Codex MCP](https://developers.openai.com/codex/mcp)。
