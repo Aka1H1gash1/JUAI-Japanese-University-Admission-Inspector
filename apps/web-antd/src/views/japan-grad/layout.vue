@@ -21,6 +21,7 @@ import ExplorerIcon from './components/explorer-icon.vue';
 import WorkspaceNavigation from './components/workspace-navigation.vue';
 import { useExplorerStore } from './explorer';
 import './style.css';
+import './visual.css';
 
 const store = useExplorerStore();
 void store.load();
@@ -109,17 +110,17 @@ const theme = computed(() => ({
     ? antdTheme.darkAlgorithm
     : antdTheme.defaultAlgorithm,
   token: {
-    colorPrimary: '#b65335',
-    colorInfo: '#b65335',
-    colorBgContainer: isDark.value ? '#1c212a' : '#fdfefe',
-    colorBgElevated: isDark.value ? '#252c37' : '#fcfcfd',
-    colorText: isDark.value ? '#edf0f5' : '#252b36',
-    colorTextLightSolid: '#fffdfb',
-    colorTextSecondary: isDark.value ? '#acb6c6' : '#5e6878',
-    colorTextPlaceholder: isDark.value ? '#a2adbf' : '#687487',
-    colorBorder: isDark.value ? '#66758b' : '#8490a1',
-    colorBorderSecondary: isDark.value ? '#353e4b' : '#dbe0e7',
-    colorFillAlter: isDark.value ? '#252c37' : '#f5f6f8',
+    colorPrimary: isDark.value ? '#5368cc' : '#4355b9',
+    colorInfo: isDark.value ? '#5368cc' : '#4355b9',
+    colorBgContainer: isDark.value ? '#1e2536' : '#fdfdff',
+    colorBgElevated: isDark.value ? '#283147' : '#fdfdff',
+    colorText: isDark.value ? '#edf1fb' : '#222b45',
+    colorTextLightSolid: '#fdfdff',
+    colorTextSecondary: isDark.value ? '#a9b7cf' : '#4d5972',
+    colorTextPlaceholder: isDark.value ? '#a5b2cb' : '#68748b',
+    colorBorder: isDark.value ? '#6d7e9e' : '#8996b0',
+    colorBorderSecondary: isDark.value ? '#35425b' : '#dce2ef',
+    colorFillAlter: isDark.value ? '#283147' : '#e9edf6',
     colorError: isDark.value ? '#ffaaa0' : '#b73832',
     borderRadius: 8,
     controlHeight: 36,

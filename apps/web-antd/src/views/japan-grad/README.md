@@ -126,3 +126,7 @@ node scripts/japangrad-design-review.mjs
 浏览器测试使用独立会话、临时工作区和构建页面，不触碰用户工作区；新增资料测试还会阻断外部网络，验证卡片选择、多格式原文件读取、文件落盘、原文件下载、服务重启和新浏览器恢复。
 
 手动日程、提取任务和本地 MCP 接入见 [Agent 说明](../../../../../local-server/AGENT_INTEGRATION_DESIGN.md)。开发前在仓库根目录执行 `pnpm setup:japangrad-server` 安装独立锁定的解析与 MCP 依赖；打包会复制这些依赖，终端用户无需安装。
+
+## 视觉主题
+
+统一靛蓝强调色与蓝灰中性色，浅色 / 深色使用语义变量。基础布局在 `style.css`，展示层在 `visual.css`，Ant Design Vue 的控件主题在 `layout.vue`。首页真实概览和预算复用已有工作区数据；无额外外部字体、装饰图或新组件库依赖。设计判断见 `design/VISUAL-REFRESH-2026-10.md`。

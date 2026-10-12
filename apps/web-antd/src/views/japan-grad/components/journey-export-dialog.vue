@@ -391,7 +391,7 @@ async function download() {
                   :key="fields[index]!.id"
                 >
                   <span :title="String(value)">{{
-                    value === '' ? '—' : value
+                    value === '' ? '-' : value
                   }}</span>
                 </td>
               </tr>

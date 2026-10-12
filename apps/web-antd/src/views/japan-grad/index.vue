@@ -9,10 +9,30 @@ import ExplorerIcon from './components/explorer-icon.vue';
 import UniversityComparison from './components/university-comparison.vue';
 import UniversityLogo from './components/university-logo.vue';
 import { useExplorerStore } from './explorer';
+import { formatYen, universityBudgetTotals } from './university-fees';
 import { geographySearchTerms, universityLocation } from './japan-geography';
 
 const store = useExplorerStore();
 const { message } = App.useApp();
+const budgetByUniversity = computed(
+  () =>
+    new Map(
+      store.universities.map((university) => [
+        university.id,
+        universityBudgetTotals(university),
+      ]),
+    ),
+);
+const collectionStats = computed(() => [
+  { label: '大学', value: store.universities.length, icon: 'building' },
+  { label: '专攻', value: store.majors.length, icon: 'book' },
+  { label: '研究室', value: store.labs.length, icon: 'folder' },
+  {
+    label: '想考研究室',
+    value: store.labs.filter((lab) => lab.wantApply).length,
+    icon: 'heart',
+  },
+]);
 const query = ref('');
 const order = ref('recent');
 const editorOpen = ref(false);
@@ -67,8 +87,8 @@ function toggleCompare(id: string) {
 </script>
 
 <template>
-  <section class="explorer-page">
-    <header class="page-heading">
+  <section class="explorer-page university-collection-page">
+    <header class="page-heading workspace-page-heading">
       <div>
         <h1>我的大学清单<span class="heading-dot">。</span></h1>
         <p class="page-description">
@@ -85,6 +105,19 @@ function toggleCompare(id: string) {
       </Button>
     </header>
 
+    <dl
+      v-if="store.universities.length"
+      class="collection-stats"
+      aria-label="工作区概览"
+    >
+      <div v-for="stat in collectionStats" :key="stat.label">
+        <span class="collection-stat-icon" aria-hidden="true"
+          ><ExplorerIcon :name="stat.icon"
+        /></span>
+        <dt>{{ stat.label }}</dt>
+        <dd>{{ stat.value }}</dd>
+      </div>
+    </dl>
     <template v-if="store.universities.length">
       <div class="list-toolbar">
         <Input
@@ -176,6 +209,25 @@ function toggleCompare(id: string) {
           <p v-if="university.notes" class="university-card-note">
             {{ university.notes }}
           </p>
+          <div class="university-card-budget">
+            <span>{{
+              budgetByUniversity.get(university.id)?.complete
+                ? '首年总预算'
+                : '首年已知费用'
+            }}</span>
+            <strong v-if="budgetByUniversity.get(university.id)?.firstYear"
+              >¥
+              {{
+                formatYen(budgetByUniversity.get(university.id)!.firstYear)
+              }}</strong
+            >
+            <strong v-else class="not-filled">待补充</strong>
+            <small>{{
+              budgetByUniversity.get(university.id)?.complete
+                ? '含学费、住宿与生活费'
+                : '预算尚有缺项'
+            }}</small>
+          </div>
           <div class="university-card-footer">
             <div class="university-content-count">
               <span

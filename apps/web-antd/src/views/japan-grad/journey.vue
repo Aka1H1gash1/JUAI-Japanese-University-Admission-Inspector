@@ -113,7 +113,7 @@ function openExport() {
 </script>
 <template>
   <section class="explorer-page journey-page">
-    <header class="page-heading">
+    <header class="page-heading workspace-page-heading">
       <div>
         <h1>修考之路<span class="heading-dot">。</span></h1>
         <p class="page-description">
@@ -171,7 +171,7 @@ function openExport() {
           </div>
           <div class="list-caption">
             <span
-              >当前显示 {{ visible.length }} 个 · 勾选 2–6
+              >当前显示 {{ visible.length }} 个 · 勾选 2-6
               个研究室进行对比</span
             ><span>导出时可自选研究室、属性与考试年份</span>
           </div>

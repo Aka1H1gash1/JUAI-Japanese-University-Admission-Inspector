@@ -113,6 +113,7 @@ function drop(event: DragEvent, status: ContactStatus) {
           v-for="status in CONTACT_STATUSES"
           :key="status"
           class="contact-board-column"
+          :data-contact-stage="status"
           @dragover.prevent
           @drop.prevent="drop($event, status)"
         >
