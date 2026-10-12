@@ -3,7 +3,12 @@ import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { App, Button, Tabs } from 'ant-design-vue';
 import { useExplorerStore, websiteUrl } from './explorer';
-import { annualBudgetText, labContext, majorPath } from './lab-targets';
+import {
+  annualBudgetText,
+  labContext,
+  labLanguageRequirements,
+  majorPath,
+} from './lab-targets';
 import EntityEditor from './components/entity-editor.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import MajorAdmissions from './components/major-admissions.vue';
@@ -140,6 +145,21 @@ function remove() {
               }}」，请结合研究室的特殊要求确认。
             </p>
             <dl>
+              <div>
+                <dt>
+                  语言要求
+                  <small
+                    >（{{
+                      target.lab.languageRequirements?.trim()
+                        ? '研究室单独要求'
+                        : '参考所属专攻'
+                    }}）</small
+                  >
+                </dt>
+                <dd>
+                  {{ labLanguageRequirements(target) || '尚未填写语言要求' }}
+                </dd>
+              </div>
               <div>
                 <dt>考试特殊说明</dt>
                 <dd>{{ target.lab.examNotes || '尚未记录额外考核要求' }}</dd>

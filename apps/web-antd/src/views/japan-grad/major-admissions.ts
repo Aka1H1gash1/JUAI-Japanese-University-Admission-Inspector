@@ -2,12 +2,14 @@ export interface MajorAdmissionFields {
   applicationStart: string;
   applicationEnd: string;
   applicationMaterials: string;
+  languageRequirements?: string;
 }
 
 export const MAJOR_ADMISSION_LIMITS = {
   applicationStart: 120,
   applicationEnd: 120,
   applicationMaterials: 8000,
+  languageRequirements: 4000,
 };
 
 export function validAdmissionFields(value: Partial<MajorAdmissionFields>) {
@@ -23,7 +25,7 @@ export function validAdmissionFields(value: Partial<MajorAdmissionFields>) {
 
 export function admissionRangeError(fields: MajorAdmissionFields) {
   if (!validAdmissionFields(fields))
-    return '出愿时间或材料内容过长，请精简后保存。';
+    return '出愿时间、材料或语言要求内容过长，请精简后保存。';
   if (
     /^\d{4}-\d{2}-\d{2}$/.test(fields.applicationStart) &&
     /^\d{4}-\d{2}-\d{2}$/.test(fields.applicationEnd) &&

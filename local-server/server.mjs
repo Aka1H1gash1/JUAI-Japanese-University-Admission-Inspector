@@ -154,9 +154,10 @@ export function validateExplorer(data) {
       applicationStart: 120,
       applicationEnd: 120,
       applicationMaterials: 8000,
+      languageRequirements: 4000,
     })) {
       if (major[key] !== undefined && !text(major[key], max))
-        fail('出愿时间或所需材料格式错误。');
+        fail('出愿时间、所需材料或语言要求格式错误。');
     }
     if (
       /^\d{4}-\d{2}-\d{2}$/.test(major.applicationStart ?? '') &&
@@ -457,7 +458,11 @@ export async function createLocalApp({
           for (const lab of data.labs) {
             if (!lab) continue;
             const previous = previousLabs.get(lab.id);
-            for (const key of ['tasks', 'mainProfessorId'])
+            for (const key of [
+              'tasks',
+              'mainProfessorId',
+              'languageRequirements',
+            ])
               if (lab[key] === undefined && previous?.[key] !== undefined)
                 lab[key] = previous[key];
             if (
@@ -493,6 +498,7 @@ export async function createLocalApp({
               'applicationStart',
               'applicationEnd',
               'applicationMaterials',
+              'languageRequirements',
             ]) {
               if (
                 major[key] === undefined &&

@@ -9,6 +9,7 @@ import { vAccessibleSelect } from './select-accessibility';
 import ExplorerIcon from './components/explorer-icon.vue';
 import ResearchLabCard from './components/research-lab-card.vue';
 import JourneyLabPicker from './components/journey-lab-picker.vue';
+import JourneyExportDialog from './components/journey-export-dialog.vue';
 import JourneyContactBoard from './components/journey-contact-board.vue';
 import JourneyContactDialog from './components/journey-contact-dialog.vue';
 import JourneyTimeline from './components/journey-timeline.vue';
@@ -36,7 +37,8 @@ const query = ref('');
 const year = ref('latest');
 const comparisonOpen = ref(false);
 const pickerOpen = ref(false);
-const exporting = ref(false);
+const exportOpen = ref(false);
+const exportInitialIds = ref<string[]>([]);
 const selected = ref<string[]>([]);
 const targets = computed(() =>
   store.labs
@@ -99,20 +101,10 @@ function select(id: string) {
   else if (selected.value.length < 6) selected.value.push(id);
   else message.info('一次最多对比 6 个研究室，请先取消一个已选目标。');
 }
-async function exportWorkbook(scope: 'visible' | 'selected') {
-  exporting.value = true;
-  try {
-    const { downloadJourneyWorkbook } = await import('./journey-export');
-    const data = scope === 'selected' ? selectedTargets.value : visible.value;
-    downloadJourneyWorkbook(data, year.value);
-    message.success(`已导出 ${data.length} 个研究室，包含对比和历年考试明细。`);
-  } catch (error) {
-    message.error(
-      error instanceof Error ? error.message : '导出失败，请重试。',
-    );
-  } finally {
-    exporting.value = false;
-  }
+function openExport() {
+  exportInitialIds.value = [...selected.value];
+  comparisonOpen.value = false;
+  exportOpen.value = true;
 }
 </script>
 <template>
@@ -130,9 +122,8 @@ async function exportWorkbook(scope: 'visible' | 'selected') {
         >
         <Button
           class="icon-button"
-          :disabled="!visible.length"
-          :loading="exporting"
-          @click="exportWorkbook('visible')"
+          :disabled="!targets.length"
+          @click="openExport"
           ><ExplorerIcon name="export" />导出 Excel</Button
         >
       </div>
@@ -177,12 +168,11 @@ async function exportWorkbook(scope: 'visible' | 'selected') {
             <span
               >当前显示 {{ visible.length }} 个 · 勾选 2–6
               个研究室进行对比</span
-            ><span>导出范围为当前搜索结果；考试明细包含历年全部记录</span>
+            ><span>导出时可自选研究室、属性与考试年份</span>
           </div>
           <div v-if="selected.length" class="journey-selection">
             <span>已选 {{ selected.length }} 个研究室</span
-            ><Button :loading="exporting" @click="exportWorkbook('selected')"
-              >导出所选</Button
+            ><Button @click="openExport">导出所选</Button
             ><Button type="text" @click="selected = []">清空选择</Button>
           </div>
           <Tabs v-model:active-key="view" class="journey-workspace-tabs"
@@ -234,6 +224,12 @@ async function exportWorkbook(scope: 'visible' | 'selected') {
         ><ExplorerIcon name="plus" />新增研究室</Button
       >
     </section>
+    <JourneyExportDialog
+      v-model:open="exportOpen"
+      :targets="targets"
+      :initial-ids="exportInitialIds"
+      :initial-year="year"
+    />
     <JourneyContactDialog v-model:open="contactOpen" :lab-id="contactLabId" />
     <JourneyLabPicker v-model:open="pickerOpen" @added="query = ''" />
     <Modal
@@ -283,10 +279,7 @@ async function exportWorkbook(scope: 'visible' | 'selected') {
       </div>
       <div class="journey-comparison-footer">
         <span>共 {{ selectedTargets.length }} 个研究室 · 所有金额均为日元</span
-        ><Button
-          type="primary"
-          :loading="exporting"
-          @click="exportWorkbook('selected')"
+        ><Button type="primary" @click="openExport"
           >导出这份对比（Excel）</Button
         >
       </div>

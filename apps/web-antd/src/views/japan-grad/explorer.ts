@@ -87,6 +87,7 @@ export interface Major extends MajorAdmissionFields {
 }
 
 export interface ResearchLab {
+  languageRequirements?: string;
   mainProfessorId?: string;
   tasks?: ApplicationTask[];
   id: string;
@@ -448,6 +449,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
       applicationStart: item.applicationStart ?? '',
       applicationEnd: item.applicationEnd ?? '',
       applicationMaterials: item.applicationMaterials ?? '',
+      languageRequirements: item.languageRequirements ?? '',
     }));
     professors.value = data.professors.map((item) => ({
       ...item,
@@ -456,6 +458,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     labs.value = (data.labs ?? []).map((item) => ({
       ...item,
       mainProfessorId: item.mainProfessorId ?? '',
+      languageRequirements: item.languageRequirements ?? '',
       tasks: item.tasks ?? [],
     }));
   }
@@ -677,6 +680,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           applicationStart: previous?.applicationStart ?? '',
           applicationEnd: previous?.applicationEnd ?? '',
           applicationMaterials: previous?.applicationMaterials ?? '',
+          languageRequirements: previous?.languageRequirements ?? '',
         };
         const index = majors.value.findIndex((item) => item.id === id);
         if (index === -1) majors.value.push(value);
@@ -692,6 +696,10 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           research: get('research'),
           examNotes: get('examNotes'),
           applicationNotes: get('applicationNotes'),
+          languageRequirements:
+            fields.languageRequirements === undefined
+              ? (previous?.languageRequirements ?? '')
+              : get('languageRequirements'),
           wantApply: previous?.wantApply ?? false,
           mainProfessorId: previous?.mainProfessorId ?? '',
           tasks: previous?.tasks ?? [],
@@ -880,6 +888,10 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
         applicationStart: fields.applicationStart.trim(),
         applicationEnd: fields.applicationEnd.trim(),
         applicationMaterials: fields.applicationMaterials.trim(),
+        languageRequirements:
+          fields.languageRequirements?.trim() ??
+          major.languageRequirements ??
+          '',
       };
       const error = admissionRangeError(input);
       if (error) throw new Error(error);

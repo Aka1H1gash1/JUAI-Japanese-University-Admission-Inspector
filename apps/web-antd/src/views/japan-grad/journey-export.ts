@@ -1,23 +1,18 @@
 import { strToU8, zipSync } from 'fflate';
 import type { LabTarget } from './lab-targets';
-import { recurringBudget, targetExams, targetExamText } from './lab-targets';
-import { universityGeography } from './japan-geography';
-import {
-  CONTACT_LABELS,
-  normalizedContact,
-  primaryProfessor,
-} from './application-planning';
-import {
-  dormitoryLabel,
-  universityBudgetTotals,
-  universityFees,
-} from './university-fees';
+import { targetExams } from './lab-targets';
+import type {
+  JourneyExportFieldId,
+  JourneyExportOptions,
+} from './journey-export-fields';
+import { selectedExportFields } from './journey-export-fields';
 
 type Cell =
   | string
   | number
   | { formula: string; value: number | '' }
-  | { input: number };
+  | { input: number }
+  | { calculated: number };
 interface Sheet {
   name: string;
   rows: Cell[][];
@@ -59,11 +54,13 @@ function worksheet(sheet: Sheet) {
           const ref = `${column(col)}${index + 1}`;
           if (typeof cell === 'object' && 'input' in cell)
             return `<c r="${ref}" s="5"><v>${cell.input}</v></c>`;
+          if (typeof cell === 'object' && 'calculated' in cell)
+            return `<c r="${ref}" s="4"><v>${cell.calculated}</v></c>`;
           if (typeof cell === 'object')
             return `<c r="${ref}" s="4"${cell.value === '' ? ' t="str"' : ''}><f>${xml(cell.formula)}</f><v>${cell.value}</v></c>`;
           if (typeof cell === 'number')
             return `<c r="${ref}" s="2"><v>${cell}</v></c>`;
-          return `<c r="${ref}" s="${index === 0 ? 1 : index % 2 ? 0 : 3}" t="inlineStr"><is><t xml:space="preserve">${xml(cell.length > 32767 ? cell.slice(0, 32000).replace(/[\uD800-\uDBFF]$/, '') + '\n…长文本已截取，请查看历年考试明细或本地原记录。' : cell)}</t></is></c>`;
+          return `<c r="${ref}" s="${index === 0 ? 1 : index % 2 ? 0 : 3}" t="inlineStr"><is><t xml:space="preserve">${xml(cell.length > 32767 ? cell.slice(0, 32000).replace(/[\uD800-\uDBFF]$/, '') + '\n…长文本已截取，请查看本地原记录。' : cell)}</t></is></c>`;
         })
         .join('')}</row>`;
     })
@@ -76,280 +73,175 @@ const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleShe
 export function createJourneyWorkbook(
   targets: LabTarget[],
   year: string,
+  options: JourneyExportOptions,
   exportedAt = new Date(),
 ) {
-  const date = exportedAt.toLocaleString('zh-CN', { hour12: false });
-  const headers = [
-    '研究室名称',
-    '大学',
-    '研究科',
-    '专攻',
-    '研究室研究方向',
-    '老师',
-    'QS 排名',
-    'QS 榜单年份',
-    '所在地域',
-    '都道府县',
-    '具体所在地',
-    '大学类型',
-    '年度开销（日元，不含入学金）',
-    '首年总费用（日元）',
-    '两年总费用（日元）',
-    '入学金（日元）',
-    '年度学费（日元）',
-    '月房租（日元）',
-    '月生活费（日元，不含房租）',
-    '预算完整性',
-    '寮申请',
-    '寮说明',
-    '考试年份 / 批次',
-    '考试科目',
-    '笔试时间',
-    '面试时间',
-    '结果发布时间',
-    '原考试时间（旧记录）',
-    '出愿开始',
-    '出愿截止',
-    '出愿所需材料',
-    '研究室考试特殊说明',
-    '研究室出愿特殊说明',
-    '考试年度备注',
-    '研究室官网',
-    '大学官网',
-    '费用备注',
-    '个人备注',
-    '导出时间',
-    '主要联系老师',
-    '联系状态',
-    '首封发送日期',
-    '教授面试约定（JST）',
-    '下次跟进',
-    '教授回复要点',
-    '材料 / 待办逐项进度',
+  const fields = selectedExportFields(options.fieldIds);
+  if (!targets.length) throw new Error('请选择至少一个研究室。');
+  if (!fields.length) throw new Error('请选择至少一个导出属性。');
+  if (options.fieldIds.some((id) => !fields.some((field) => field.id === id)))
+    throw new Error('导出属性已变化，请重新选择。');
+  const uniqueTargets = [
+    ...new Map(targets.map((t) => [t.lab.id, t])).values(),
   ];
-  const summary: Cell[][] = [headers];
-  const materials: Cell[][] = [
-    [
-      '大学',
-      '研究科',
-      '专攻',
-      '研究室',
-      '项目',
-      '类型',
-      '准备进度（%）',
-      '截止日期（JST）',
-      '备注',
-    ],
-  ];
-  const exams: Cell[][] = [
-    [
-      '研究室名称',
-      '大学',
-      '研究科',
-      '专攻',
-      '考试年份',
-      '考试批次',
-      '考试科目',
-      '笔试时间',
-      '面试时间',
-      '结果发布时间',
-      '原考试时间（旧记录）',
-      '年度备注',
-      '来源链接',
-      '研究室考试特殊说明',
-    ],
-  ];
-  const amount = (value: string): Cell => (value === '' ? '' : Number(value));
-  targets.forEach((target, index) => {
-    const { lab, university, school, major, professors } = target;
-    const geography = universityGeography(university);
-    const fees = universityFees(university);
-    const annual = recurringBudget(university);
-    const budget = universityBudgetTotals(university);
-    const row = index + 2;
-    const person = primaryProfessor(target);
-    const contact = normalizedContact(person?.contact);
-    summary.push([
-      lab.name,
-      university.name,
-      school.name,
-      major.name,
-      lab.research,
-      professors
-        .map((item) => [item.name, item.title].filter(Boolean).join(' · '))
-        .join('\n'),
-      university.qsRank,
-      university.qsYear,
-      geography.region,
-      geography.prefecture,
-      university.location,
-      university.category,
-      {
-        formula: `IF(COUNT(Q${row}:S${row})=3,Q${row}+12*SUM(R${row}:S${row}),"")`,
-        value: annual.complete ? (annual.value ?? '') : '',
-      },
-      {
-        formula: `IF(COUNT(P${row}:S${row})=4,P${row}+M${row},"")`,
-        value: budget.complete ? Number(budget.firstYear) : '',
-      },
-      {
-        formula: `IF(COUNT(P${row}:S${row})=4,P${row}+2*M${row},"")`,
-        value: budget.complete ? Number(budget.twoYears) : '',
-      },
-      amount(fees.admissionFee),
-      amount(fees.annualTuition),
-      amount(university.monthlyRent),
-      amount(university.monthlyLivingExpenses),
-      budget.complete
-        ? '已填写完整'
-        : `待补充：${budget.missingFields.join('、')}；缺项的总费用留空`,
-      dormitoryLabel(university.dormitoryStatus),
-      university.dormitoryNotes,
-      targetExams(target, year)
-        .map((item) => [item.year, item.session].filter(Boolean).join(' / '))
-        .join('\n'),
-      targetExamText(target, 'subjects', year),
-      targetExamText(target, 'writtenDate', year),
-      targetExamText(target, 'interviewDate', year),
-      targetExamText(target, 'resultDate', year),
-      targetExamText(target, 'examDate', year),
-      major.applicationStart,
-      major.applicationEnd,
-      major.applicationMaterials,
-      lab.examNotes,
-      lab.applicationNotes,
-      targetExams(target, year)
-        .filter((item) => item.notes)
-        .map((item) => `${item.year} ${item.session}：${item.notes}`)
-        .join('\n'),
-      lab.website,
-      university.website,
-      university.feeNotes,
-      lab.notes,
-      date,
-      person?.name ?? '',
-      person ? CONTACT_LABELS[contact.status] : '',
-      contact.firstSentDate,
-      contact.interviewAt.replace('T', ' '),
-      contact.followUpDate,
-      contact.replySummary,
-      (lab.tasks ?? [])
-        .map(
-          (task) =>
-            `${task.title} · ${task.progress}%${task.dueDate ? ` · 截止 ${task.dueDate}` : ''}`,
-        )
-        .join('\n'),
-    ]);
-    for (const task of lab.tasks ?? [])
-      materials.push([
-        university.name,
-        school.name,
-        major.name,
-        lab.name,
-        task.title,
-        task.kind === 'material' ? '申请材料' : '其他待办',
-        { input: task.progress },
-        task.dueDate,
-        task.notes,
-      ]);
-    for (const record of major.examHistory.toSorted(
-      (a, b) =>
-        b.year.localeCompare(a.year) || a.session.localeCompare(b.session),
-    ))
-      exams.push([
-        lab.name,
-        university.name,
-        school.name,
-        major.name,
-        record.year,
-        record.session,
-        record.subjects,
-        record.writtenDate,
-        record.interviewDate,
-        record.resultDate,
-        record.examDate,
-        record.notes,
-        record.sourceUrl,
-        lab.examNotes,
-      ]);
+  const date = exportedAt.toLocaleString('zh-CN', {
+    hour12: false,
+    timeZone: 'Asia/Tokyo',
   });
+  const ref = (id: JourneyExportFieldId, row: number) => {
+    const index = fields.findIndex((field) => field.id === id);
+    return index < 0 ? undefined : `${column(index + 2)}${row}`;
+  };
+  function budgetFormula(
+    id: JourneyExportFieldId,
+    row: number,
+  ): string | undefined {
+    if (!['annualCost', 'firstYearCost', 'twoYearCost'].includes(id)) return;
+    const inputs = ['annualTuition', 'monthlyRent', 'monthlyLiving'] as const;
+    const annual = ref('annualCost', row);
+    const admission = ref('admissionFee', row);
+    const multiplier = id === 'twoYearCost' ? '2*' : '';
+    if (id !== 'annualCost' && annual && admission)
+      return `IF(COUNT(${admission},${annual})=2,${admission}+${multiplier}${annual},"")`;
+    const cells = inputs.map((input) => ref(input, row));
+    if (cells.some((cell) => !cell) || (id !== 'annualCost' && !admission))
+      return;
+    const [tuition, rent, living] = cells;
+    const result = `${tuition}+12*SUM(${rent},${living})`;
+    const all = id === 'annualCost' ? cells : [admission, ...cells];
+    return `IF(COUNT(${all.join(',')})=${all.length},${id === 'annualCost' ? result : `${admission}+${multiplier}(${result})`},"")`;
+  }
+  const summary: Cell[][] = [
+    ['大学', '研究室名称', ...fields.map((field) => field.label)],
+    ...uniqueTargets.map((target, index) => [
+      target.university.name,
+      target.lab.name,
+      ...fields.map((field): Cell => {
+        const value = field.value(target, year);
+        const formula = budgetFormula(field.id, index + 2);
+        if (formula)
+          return { formula, value: typeof value === 'number' ? value : '' };
+        if (typeof value !== 'number') return value;
+        if (field.calculated) return { calculated: value };
+        return field.money ? value : { input: value };
+      }),
+    ]),
+  ];
   const sheets: Sheet[] = [
     {
       name: '研究室对比',
       rows: summary,
-      widths: headers.map((_, index) =>
-        [4, 5, 23, 30, 31, 32, 33, 37].includes(index)
-          ? 40
-          : index < 4
-            ? 24
-            : 22,
-      ),
+      widths: [26, 28, ...fields.map((field) => field.width)],
     },
-    {
-      name: '历年考试',
-      rows: exams,
-      widths: exams[0]!.map((_, index) =>
-        [6, 11, 12, 13].includes(index) ? 40 : 24,
-      ),
-    },
-    {
+  ];
+  const examFields = fields.filter((field) => field.examField);
+  if (options.examDetails && examFields.length) {
+    sheets.push({
+      name: '考试明细',
+      widths: [26, 28, 14, 22, ...examFields.map((field) => field.width)],
+      rows: [
+        [
+          '大学',
+          '研究室名称',
+          '考试年份',
+          '考试批次',
+          ...examFields.map((field) => field.label),
+        ],
+        ...uniqueTargets.flatMap((target) =>
+          targetExams(target, year).map((exam) => [
+            target.university.name,
+            target.lab.name,
+            exam.year,
+            exam.session,
+            ...examFields.map((field) => exam[field.examField!] ?? ''),
+          ]),
+        ),
+      ],
+    });
+  }
+  const taskFields = fields.filter((field) => field.taskField);
+  if (options.taskDetails && taskFields.length) {
+    sheets.push({
       name: '材料与待办',
-      rows: materials,
-      widths: [24, 24, 24, 24, 36, 16, 18, 22, 48],
-    },
-    {
-      name: '字段说明',
+      widths: [26, 28, 36, ...taskFields.map((field) => field.width)],
+      rows: [
+        [
+          '大学',
+          '研究室名称',
+          '项目',
+          ...taskFields.map((field) => field.label),
+        ],
+        ...uniqueTargets.flatMap((target) =>
+          (target.lab.tasks ?? []).map((task) => [
+            target.university.name,
+            target.lab.name,
+            task.title,
+            ...taskFields.map((field): Cell => {
+              const value = task[field.taskField!];
+              return field.taskField === 'kind'
+                ? value === 'material'
+                  ? '申请材料'
+                  : '其他待办'
+                : typeof value === 'number'
+                  ? { input: value }
+                  : value;
+            }),
+          ]),
+        ),
+      ],
+    });
+  }
+  if (options.includeNotes)
+    sheets.push({
+      name: '导出说明',
       widths: [30, 95],
       rows: [
         ['项目', '说明'],
-        [
-          '联络与材料',
-          '联系状态与日期来自研究室主要联系老师；材料与待办明细保留各项目进度与截止日期。未设主要老师时采用该研究室第一位老师。草稿正文不包含在清单导出中。',
-        ],
-        ['导出时间', date],
-        [
-          '导出范围',
-          `${targets.length} 个研究室；对比表考试年份：${year === 'latest' ? '每个研究室所属专攻的最新已记录年份' : year}`,
-        ],
-        [
-          '资料来源',
-          'JapanGrad 本地工作区中手动维护的大学、研究科、专攻、研究室与老师资料；不是实时招生数据。',
-        ],
-        [
-          '年度开销',
-          '年度学费 + 12 ×（月房租 + 月生活费），不含一次性入学金。金额均为日元。',
-        ],
-        [
-          '首年 / 两年总费用',
-          '首年 = 入学金 + 年度开销；两年 = 入学金 + 2 × 年度开销。入学金只计算一次。',
-        ],
-        [
-          '缺失费用',
-          '未知输入保留空白。所需输入缺失时，对应费用合计也留空，并在预算完整性列标出待补充项；零元是已知金额，显示为“-”。',
-        ],
-        [
-          '费用公式',
-          'M、N、O 列为可重新计算的 Excel 公式；P 至 S 列为可编辑的费用输入。蓝字表示费用输入，黑字表示计算结果。',
-        ],
-        [
-          '考试信息',
-          '考试时间、科目、年度备注和出愿信息来自研究室所属专攻；研究室的特殊要求另列。未记录考试时留空。',
-        ],
+        ['导出时间（日本时间）', date],
+        ['研究室数量', String(uniqueTargets.length)],
+        ['所选属性', fields.map((field) => field.label).join('、')],
         [
           '考试年份',
-          '对比表使用所选年份，并保留同年度全部批次；历年考试表包含所有已记录年份，不受对比年份筛选影响。',
+          year === 'latest'
+            ? '各专攻最新已记录年份（同年全部批次）'
+            : year === 'all'
+              ? '全部已记录年份'
+              : `${year} 年（同年全部批次）`,
         ],
         [
-          '共同专攻',
-          '不同研究室可共享同一专攻的考试信息；历年考试表按研究室分别列出，便于筛选。',
+          '数据来源',
+          '本地工作区手动维护的资料。未勾选的属性不写入文件，也不写入隐藏列或其他工作表。大学与研究室名称固定用于识别记录。',
         ],
-        [
-          'QS 排名',
-          '使用大学中保存的排名及榜单年份，支持排名区间；未填写时留空。',
-        ],
+        ...(fields.some((field) => field.money)
+          ? [
+              [
+                '费用口径',
+                '金额单位为日元。年度开销 = 年度学费 + 12 ×（月房租 + 月生活费）；首年 = 入学金 + 年度开销；两年 = 入学金 + 2 × 年度开销。未知费用留空，零元显示为“-”。',
+              ],
+              [
+                '费用公式',
+                '已勾选合计所需的输入列时生成可重算公式；仅勾选合计时导出当前数值快照，不附带未选费用明细。蓝字为数字输入，黑字为合计。',
+              ],
+            ]
+          : []),
+        ...(fields.some((field) => field.id === 'languageRequirements')
+          ? [
+              [
+                '语言要求',
+                '优先使用研究室单独填写的要求，留空时参考所属专攻。未维护的要求留空。',
+              ],
+            ]
+          : []),
+        ...(fields.some((field) => field.group === '教授联络')
+          ? [
+              [
+                '联络口径',
+                '联络字段来自研究室主要联系老师；未设置时采用第一位老师。邮件草稿正文不包含在导出中。',
+              ],
+            ]
+          : []),
       ],
-    },
-  ];
+    });
   const files: Record<string, Uint8Array> = {};
   const put = (name: string, content: string) => {
     files[name] = strToU8(content);
@@ -377,9 +269,12 @@ export function createJourneyWorkbook(
   return zipSync(files, { level: 6 });
 }
 
-export function downloadJourneyWorkbook(targets: LabTarget[], year: string) {
-  if (!targets.length) throw new Error('请先标记想考的研究室。');
-  const bytes = createJourneyWorkbook(targets, year);
+export function downloadJourneyWorkbook(
+  targets: LabTarget[],
+  year: string,
+  options: JourneyExportOptions,
+) {
+  const bytes = createJourneyWorkbook(targets, year, options);
   const url = URL.createObjectURL(
     new Blob([new Uint8Array(bytes).buffer], {
       type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

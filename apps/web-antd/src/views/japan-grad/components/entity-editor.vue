@@ -201,6 +201,7 @@ watch(open, (value) => {
     labId: props.kind === 'professor' ? (props.parentId ?? '') : '',
     examNotes: '',
     applicationNotes: '',
+    languageRequirements: '',
     email: '',
     website: '',
     personalWebsite: '',
@@ -643,6 +644,16 @@ async function save() {
           </div>
         </template>
         <template v-if="kind === 'lab'">
+          <div class="field full">
+            <label for="entity-lab-language">研究室语言要求</label>
+            <Input.TextArea
+              id="entity-lab-language"
+              v-model:value="form.languageRequirements"
+              :maxlength="4000"
+              :rows="3"
+              placeholder="留空则参考所属专攻；如有单独要求，在此填写。"
+            />
+          </div>
           <div class="field full">
             <label for="entity-lab-exams">考试特殊说明</label
             ><Input.TextArea

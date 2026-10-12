@@ -46,6 +46,14 @@ export function labContext(store: LabWorkspace, id: string) {
 
 export type LabTarget = NonNullable<ReturnType<typeof labContext>>;
 
+export function labLanguageRequirements(target: LabTarget) {
+  return (
+    target.lab.languageRequirements?.trim() ||
+    target.major.languageRequirements?.trim() ||
+    ''
+  );
+}
+
 export function majorPath(target: LabTarget) {
   return `/japan-grad/universities/${target.university.id}/schools/${target.school.id}/majors/${target.major.id}`;
 }
@@ -61,7 +69,9 @@ export function targetExams(target: LabTarget, year = 'latest') {
       a.session.localeCompare(b.session, 'zh-CN'),
   );
   return records.filter(
-    (item) => item.year === (year === 'latest' ? records[0]?.year : year),
+    (item) =>
+      year === 'all' ||
+      item.year === (year === 'latest' ? records[0]?.year : year),
   );
 }
 
@@ -119,6 +129,7 @@ export function labComparisonRows(targets: LabTarget[], year: string) {
     ['大学', (item) => item.university.name],
     ['研究科 / 专攻', (item) => `${item.school.name} / ${item.major.name}`],
     ['研究室研究方向', (item) => item.lab.research],
+    ['语言要求', labLanguageRequirements],
     [
       '老师',
       (item) =>

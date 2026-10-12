@@ -66,6 +66,11 @@ export function planningError(data) {
   }
   for (const lab of data.labs ?? []) {
     if (
+      lab.languageRequirements !== undefined &&
+      !text(lab.languageRequirements, 4000)
+    )
+      return '研究室语言要求格式错误或超过 4000 字。';
+    if (
       lab.mainProfessorId !== undefined &&
       (typeof lab.mainProfessorId !== 'string' ||
         (lab.mainProfessorId &&

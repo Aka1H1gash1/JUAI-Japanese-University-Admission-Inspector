@@ -4355,3 +4355,20 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
     flex-basis: 100%;
   }
 }
+
+.admission-language {
+  margin-top: 16px;
+  padding: 20px 24px;
+  border: 1px solid var(--jg-line);
+  border-radius: var(--jg-control-radius);
+  background: var(--jg-surface);
+}
+.admission-language h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+.admission-language p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--jg-secondary);
+}

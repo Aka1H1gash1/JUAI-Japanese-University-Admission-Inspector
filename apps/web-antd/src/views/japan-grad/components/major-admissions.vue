@@ -25,6 +25,7 @@ const form = ref<MajorAdmissionFields>({
   applicationStart: '',
   applicationEnd: '',
   applicationMaterials: '',
+  languageRequirements: '',
 });
 function edit() {
   if (!major.value) return;
@@ -32,6 +33,7 @@ function edit() {
     applicationStart: major.value.applicationStart,
     applicationEnd: major.value.applicationEnd,
     applicationMaterials: major.value.applicationMaterials,
+    languageRequirements: major.value.languageRequirements ?? '',
   };
   feedback.value = '';
   open.value = true;
@@ -42,6 +44,7 @@ async function save() {
     applicationStart: form.value.applicationStart.trim(),
     applicationEnd: form.value.applicationEnd.trim(),
     applicationMaterials: form.value.applicationMaterials.trim(),
+    languageRequirements: form.value.languageRequirements?.trim() ?? '',
   };
   feedback.value = admissionRangeError(input);
   if (feedback.value) return;
@@ -102,6 +105,15 @@ async function save() {
         </p>
       </div>
     </div>
+    <div class="admission-language">
+      <h3>语言要求</h3>
+      <p>
+        {{
+          major.languageRequirements ||
+          '待填写，可记录日语、英语成绩门槛、有效期与免除条件。'
+        }}
+      </p>
+    </div>
     <Modal
       v-model:open="open"
       title="编辑出愿信息"
@@ -118,6 +130,17 @@ async function save() {
           填写专攻的通用出愿安排；个别年份的日期、材料变化填写在考试表备注中。
         </p>
         <div class="form-fields">
+          <div class="field full">
+            <label for="admission-language">语言要求</label>
+            <Input.TextArea
+              id="admission-language"
+              v-model:value="form.languageRequirements"
+              :rows="3"
+              :maxlength="4000"
+              placeholder="记录 JLPT、TOEFL / TOEIC 等成绩要求、有效期或免除条件，以募集要项为准。"
+              :disabled="store.saving"
+            />
+          </div>
           <div class="field">
             <label for="admission-start">出愿开始时间</label
             ><Input
