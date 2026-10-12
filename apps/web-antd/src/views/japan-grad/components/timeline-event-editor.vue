@@ -4,7 +4,12 @@ import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
 import type { LabTarget } from '../lab-targets';
 import type { PlannerEvent } from '../application-calendar';
 import type { TimelineEntry, TimelineKind } from '../timeline';
-import { TIMELINE_LABELS, timelineError } from '../timeline';
+import {
+  TIMELINE_LABELS,
+  TIMELINE_OPTIONS,
+  timelineError,
+  timelineNodeLabel,
+} from '../timeline';
 import { useExplorerStore } from '../explorer';
 import { japanToday } from '../application-planning';
 import { vAccessibleSelect } from '../select-accessibility';
@@ -42,6 +47,14 @@ const options = computed(() =>
     label: `${t.university.name} / ${t.lab.name}`,
   })),
 );
+const kindOptions = computed(() =>
+  TIMELINE_OPTIONS.some((option) => option.value === form.value.kind)
+    ? TIMELINE_OPTIONS
+    : [
+        ...TIMELINE_OPTIONS,
+        { value: form.value.kind, label: TIMELINE_LABELS[form.value.kind] },
+      ],
+);
 const original = computed(() =>
   props.event?.entryId
     ? target.value?.lab.timeline?.events.find(
@@ -64,29 +77,43 @@ watch(open, (value) => {
   form.value = {
     id: entry?.id ?? '',
     kind: (event?.kind as TimelineKind) || 'contact',
-    title: event?.title || TIMELINE_LABELS.contact,
+    title: event ? timelineNodeLabel(event) : TIMELINE_LABELS.contact,
     start: event?.start || japanToday(),
     end: event?.end || '',
     at: event?.at || '',
     endAt: event?.endAt || '',
     complete: event?.complete || false,
-    notes: event?.details || '',
+    notes:
+      event?.imported && event.title !== timelineNodeLabel(event)
+        ? [event.title, event.details].filter(Boolean).join('\n')
+        : event?.details || '',
     replaces: entry?.replaces || (event?.imported ? event.source : ''),
   };
   startTime.value = form.value.at.slice(11, 16);
   endTime.value = form.value.endAt.slice(11, 16);
   feedback.value = '';
 });
-watch(
-  () => form.value.kind,
-  (value, previous) => {
-    if (
-      !props.event &&
-      (!form.value.title || form.value.title === TIMELINE_LABELS[previous])
-    )
-      form.value.title = TIMELINE_LABELS[value];
-  },
-);
+function changeKind(value: unknown) {
+  if (typeof value !== 'string' || !Object.hasOwn(TIMELINE_LABELS, value))
+    return;
+  const previous = form.value.kind;
+  const shortPrevious = timelineNodeLabel({
+    kind: previous,
+    title: TIMELINE_LABELS[previous],
+    start: '',
+    end: '',
+    at: '',
+    imported: true,
+  });
+  if (
+    !form.value.title ||
+    form.value.title === TIMELINE_LABELS[previous] ||
+    form.value.title === shortPrevious
+  )
+    form.value.title =
+      value === 'custom' ? '' : TIMELINE_LABELS[value as TimelineKind];
+  form.value.kind = value as TimelineKind;
+}
 watch(
   () => form.value.start,
   (value, previous) => {
@@ -152,7 +179,7 @@ function remove() {
     :keyboard="!store.saving"
     ><form class="explorer-form" @submit.prevent="save">
       <p class="form-context">
-        为研究室安排首次联系、内诺、出愿、考试与结果节点。日期与时间均按日本时间（JST）。
+        选择默认节点或自定义名称，日期与时间按日本时间（JST）。
       </p>
       <div class="form-fields">
         <div class="field full">
@@ -171,24 +198,24 @@ function remove() {
           ><Select
             id="timeline-kind"
             v-accessible-select
-            v-model:value="form.kind"
-            :options="
-              Object.entries(TIMELINE_LABELS).map(([value, label]) => ({
-                value,
-                label,
-              }))
-            "
+            :value="form.kind"
+            @change="changeKind"
+            :options="kindOptions"
             :disabled="store.saving"
           />
         </div>
         <div class="field">
-          <label for="timeline-title">标题</label
+          <label for="timeline-title">节点名称</label
           ><Input
             id="timeline-title"
             v-model:value="form.title"
             :maxlength="160"
             :disabled="store.saving"
-            placeholder="如首次联系田中教授"
+            :placeholder="
+              form.kind === 'custom'
+                ? '如提交研究计划、申请宿舍'
+                : '可修改为自己的节点名称'
+            "
           />
         </div>
         <div class="field">

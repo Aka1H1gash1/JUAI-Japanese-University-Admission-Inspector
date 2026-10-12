@@ -1,12 +1,13 @@
 import { validPlannerDay, validPlannerMinute } from './planning-fields.mjs';
 export const TIMELINE_LABELS = {
-  contact: '首次联系教授',
-  consent: '拿到内诺',
+  contact: '首次联络',
+  consent: '内诺',
   application: '出愿',
   exam: '考试',
   written: '笔试',
-  interview: '入试面试',
-  result: '结果公布',
+  interview: '面试',
+  result: '放榜',
+  custom: '自定义',
   teacher_interview: '教授面试',
   followup: '跟进教授',
   task: '材料 / 待办',

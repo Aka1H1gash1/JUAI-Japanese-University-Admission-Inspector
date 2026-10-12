@@ -7,6 +7,7 @@ export const TIMELINE_LABELS: Readonly<
     | 'written'
     | 'interview'
     | 'result'
+    | 'custom'
     | 'teacher_interview'
     | 'followup'
     | 'task'

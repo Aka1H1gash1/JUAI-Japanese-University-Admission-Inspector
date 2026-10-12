@@ -4,8 +4,16 @@ import { useNow } from '@vueuse/core';
 import { App, Button, Input, Select } from 'ant-design-vue';
 import type { LabTarget } from '../lab-targets';
 import TimelineEventEditor from './timeline-event-editor.vue';
+import TimelineEventTooltip from './timeline-event-tooltip.vue';
 import { useExplorerStore } from '../explorer';
-import { TIMELINE_LABELS } from '../timeline';
+import {
+  TIMELINE_LABELS,
+  TIMELINE_PRESETS,
+  TIMELINE_OPTIONS,
+  timelineCategory,
+  timelineNodeLabel,
+  timelineDateText,
+} from '../timeline';
 import { labPath } from '../lab-targets';
 import type { PlannerEvent } from '../application-calendar';
 import {
@@ -35,7 +43,9 @@ const eventKind = ref('');
 const listLimit = ref(30);
 const events = computed(() => buildPlannerEvents(props.targets, props.year));
 const listedEvents = computed(() =>
-  events.value.filter((e) => !eventKind.value || e.kind === eventKind.value),
+  events.value.filter(
+    (e) => !eventKind.value || timelineCategory(e.kind) === eventKind.value,
+  ),
 );
 function addEvent(labId = '') {
   selectedEvent.value = undefined;
@@ -101,7 +111,9 @@ const rows = computed(() =>
         const point = event.start === event.end;
         let lane = lanes.findIndex((until) => until < start);
         if (lane < 0) lane = lanes.length;
-        lanes[lane] = point ? start + 14 : end;
+        lanes[lane] = point
+          ? start + Math.max(14, Math.ceil(span.value / 8))
+          : end;
         const left =
           ((start - dayNumber(bounds.value.start)) / span.value) * 100;
         return {
@@ -135,9 +147,7 @@ function exportCalendar() {
     <header class="planner-timeline-heading">
       <div>
         <h2>修考时间线与日程</h2>
-        <p>
-          直接填写首次联系教授、内诺、出愿、考试和结果时间，点击任意节点即可编辑。
-        </p>
+        <p>悬停查看详情，点击编辑。</p>
       </div>
       <div class="detail-actions">
         <Button type="primary" :disabled="!targets.length" @click="addEvent()"
@@ -164,12 +174,12 @@ function exportCalendar() {
           { label: '6 个月', value: 6 },
           { label: '12 个月', value: 12 },
         ]"
-      /><Button @click="startMonth = today.slice(0, 7)">回到本月</Button
-      ><span
-        >出愿 <i class="legend-application" />考试
-        <i class="legend-written" />联络 <i class="legend-contact" />待办
-        <i class="legend-task"
-      /></span>
+      /><Button @click="startMonth = today.slice(0, 7)">回到本月</Button>
+      <div class="timeline-stage-legend">
+        <span v-for="kind in TIMELINE_PRESETS" :key="kind"
+          ><i :class="`stage-${kind}`" />{{ TIMELINE_LABELS[kind] }}</span
+        >
+      </div>
     </div>
     <div class="gantt-scroll">
       <div class="gantt-grid">
@@ -195,7 +205,7 @@ function exportCalendar() {
               class="text-button"
               @click="addEvent(row.target.lab.id)"
             >
-              + 添加日程
+              + 添加
             </button>
             <Button
               v-if="row.target.lab.timeline?.hiddenSources.length"
@@ -217,33 +227,47 @@ function exportCalendar() {
               class="gantt-today"
               :style="{ left: `${todayLeft}%` }"
               title="今天（日本时间）"
-            /><button
+            />
+            <TimelineEventTooltip
               v-for="item in row.items"
               :key="item.event.id"
-              class="gantt-event"
-              :class="[
-                `event-${item.event.kind}`,
-                { 'is-point': item.point, 'is-complete': item.event.complete },
-              ]"
-              :style="{
-                left: `${item.left}%`,
-                top: `${item.top}px`,
-                width: item.point ? undefined : `${item.width}%`,
-                maxWidth: `${100 - item.left}%`,
-              }"
-              :title="`${item.event.title} · ${item.event.start}${item.event.end !== item.event.start ? ` ～ ${item.event.end}` : ''}`"
-              @click="viewEvent(item.event)"
+              :event="item.event"
             >
-              {{ item.event.title }}</button
-            ><small v-if="!row.items.length" class="gantt-no-events"
+              <button
+                type="button"
+                class="gantt-event"
+                :class="[
+                  `event-${item.event.kind}`,
+                  {
+                    'is-point': item.point,
+                    'is-complete': item.event.complete,
+                  },
+                ]"
+                :style="{
+                  left: `${item.left}%`,
+                  top: `${item.top}px`,
+                  width: item.point ? undefined : `${item.width}%`,
+                  maxWidth: item.point
+                    ? `min(106px, ${100 - item.left}%)`
+                    : `${100 - item.left}%`,
+                }"
+                :aria-label="`${item.event.title}，${timelineDateText(item.event)}，点击编辑`"
+                @click="viewEvent(item.event)"
+              >
+                {{ timelineNodeLabel(item.event) }}
+              </button>
+            </TimelineEventTooltip>
+            <small v-if="!row.items.length" class="gantt-no-events"
               >此范围内暂无明确日期</small
             >
           </div>
         </div>
       </div>
     </div>
-    <section v-if="conflicts.length" class="planner-conflicts">
-      <h3>当前范围时间重叠提示 · {{ conflicts.length }}</h3>
+    <details v-if="conflicts.length" class="planner-conflicts timeline-fold">
+      <summary>
+        时间重叠 <span>{{ conflicts.length }}</span>
+      </summary>
       <p>
         同一专攻共享的同一场考试不会重复提示；同日安排需结合具体时段、地点和交通判断。
       </p>
@@ -257,9 +281,11 @@ function exportCalendar() {
           {{ conflict.b.start }} ～ {{ conflict.b.end }}</small
         >
       </article>
-    </section>
-    <section class="planner-reminder-section">
-      <h3>关键节点倒计时</h3>
+    </details>
+    <details class="planner-reminder-section timeline-fold">
+      <summary>
+        近期提醒 <span>{{ reminders.length }}</span>
+      </summary>
       <div v-if="reminders.length" class="planner-reminder-grid">
         <button
           v-for="event in reminders"
@@ -279,8 +305,11 @@ function exportCalendar() {
         </button>
       </div>
       <p v-else class="planner-muted">暂无 30 天内的已记录节点或逾期待办。</p>
-    </section>
-    <section class="timeline-records">
+    </details>
+    <details class="timeline-records timeline-fold">
+      <summary>
+        日程清单 <span>{{ events.length }}</span>
+      </summary>
       <header>
         <h3>
           已记录日程 <span>{{ listedEvents.length }}</span>
@@ -288,12 +317,7 @@ function exportCalendar() {
         <Select
           v-accessible-select
           :value="eventKind || undefined"
-          :options="
-            Object.entries(TIMELINE_LABELS).map(([value, label]) => ({
-              value,
-              label,
-            }))
-          "
+          :options="TIMELINE_OPTIONS"
           allow-clear
           placeholder="全部类型"
           aria-label="按日程类型筛选"
@@ -335,10 +359,8 @@ function exportCalendar() {
       <Button v-if="listedEvents.length > listLimit" @click="listLimit += 30"
         >显示更多日程</Button
       >
-    </section>
-    <p class="planner-date-hint">
-      手动日程独立保存到研究室。已记录的出愿、考试和教授联络日期也会显示，可直接编辑或隐藏；隐藏后可恢复来源日程。时间按日本时间（JST）维护，导出的日历采用当前日程。
-    </p>
+    </details>
+    <p class="planner-date-hint">日本时间（JST） · 支持自定义节点</p>
     <TimelineEventEditor
       v-model:open="detailsOpen"
       :targets="targets"
@@ -350,6 +372,71 @@ function exportCalendar() {
 </template>
 
 <style scoped>
+.timeline-stage-legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-left: auto;
+}
+.timeline-stage-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--jg-secondary);
+}
+.timeline-stage-legend i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--jg-muted);
+}
+.timeline-stage-legend :is(.stage-contact, .stage-application) {
+  background: var(--jg-accent);
+}
+.timeline-stage-legend .stage-consent {
+  background: var(--jg-success);
+}
+.timeline-stage-legend :is(.stage-written, .stage-interview) {
+  background: var(--jg-error);
+}
+.timeline-fold {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--jg-line);
+  border-radius: 8px;
+  background: var(--jg-surface);
+}
+.timeline-fold > summary {
+  cursor: pointer;
+  color: var(--jg-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+.timeline-fold > summary > span {
+  margin-left: 8px;
+  color: var(--jg-muted);
+  font-size: 12px;
+  font-weight: 400;
+}
+.timeline-fold[open] > summary {
+  margin-bottom: 18px;
+}
+.gantt-event {
+  font-size: 11px;
+}
+.gantt-event.event-custom {
+  border-color: var(--jg-border);
+  background: var(--jg-subtle);
+}
+.gantt-event.is-point {
+  max-width: 106px;
+}
+.timeline-stage-legend + span {
+  display: none;
+}
+
 .timeline-records {
   margin-top: 28px;
 }
@@ -379,10 +466,9 @@ function exportCalendar() {
 }
 .timeline-record-list > button {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(140px, 1fr) minmax(
-      100px,
-      0.6fr
-    ) auto;
+  grid-template-columns:
+    minmax(0, 1.5fr) minmax(140px, 1fr) minmax(100px, 0.6fr)
+    auto;
   align-items: center;
   gap: 18px;
   border: 0;

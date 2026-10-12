@@ -19,7 +19,8 @@ export type PlannerEventKind =
   | 'task'
   | 'sent'
   | 'consent'
-  | 'exam';
+  | 'exam'
+  | 'custom';
 export interface PlannerEvent {
   id: string;
   source: string;
@@ -269,7 +270,7 @@ export function eventCountdown(event: PlannerEvent, today = japanToday()) {
         ? '已记录'
         : '已结束';
   if (event.end < today)
-    return ['task', 'followup', 'contact'].includes(event.kind) ||
+    return ['task', 'followup', 'contact', 'custom'].includes(event.kind) ||
       (event.imported === false && ['consent', 'result'].includes(event.kind))
       ? `已逾期 ${Math.round(dayNumber(today) - dayNumber(event.end))} 天`
       : '日期已过';
@@ -288,7 +289,7 @@ export function plannerReminders(events: PlannerEvent[], today = japanToday()) {
     .filter(
       (event) =>
         !event.complete &&
-        (['task', 'followup', 'contact'].includes(event.kind) ||
+        (['task', 'followup', 'contact', 'custom'].includes(event.kind) ||
           (event.imported === false &&
             ['consent', 'result'].includes(event.kind)) ||
           event.end >= today) &&
