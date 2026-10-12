@@ -504,15 +504,13 @@ function remove(record: StoredDocument) {
           v-if="selected.kind === 'guidelines'"
           class="archive-reader-link"
           :to="{
-            path: '/japan-grad/journey',
+            path: `/japan-grad/analysis/${selected.ownerId}`,
             query: {
-              view: 'admissions',
-              majorId: selected.ownerId,
               documentId: selected.id,
             },
           }"
           @click="detailOpen = false"
-          >分析这份募集要项 → 选择申请轮次</RouterLink
+          >分析这份募集要项 →</RouterLink
         >
         <dl class="archive-detail-fields">
           <div>

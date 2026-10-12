@@ -1,25 +1,36 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { App, Button, Checkbox, Select } from 'ant-design-vue';
+import {
+  App,
+  Button,
+  Checkbox,
+  Input,
+  InputNumber,
+  Select,
+} from 'ant-design-vue';
 import type {
-  AdmissionCycle,
+  AnalysisContext,
   AnalysisJob,
   AnalysisProposal,
-  AdmissionContext,
-} from '../admissions';
-import { JOB_STATUS_LABELS } from '../admissions';
+} from '../analysis-types';
+import {
+  ADMISSION_FIELDS,
+  DEGREE_LABELS,
+  JOB_STATUS_LABELS,
+} from '../analysis-types';
 import type { StoredDocument } from '../documents';
+import { fileUrl } from '../documents';
 import { jsonOptions, localApi } from '../local-api';
 import { vAccessibleSelect } from '../select-accessibility';
 import AnalysisReview from './analysis-review.vue';
 import AgentConnections from './agent-connections.vue';
-const props = defineProps<{ cycle: AdmissionCycle }>();
-const emit = defineEmits<{ updated: [cycle: AdmissionCycle] }>();
+const props = defineProps<{ majorId: string }>();
 const route = useRoute(),
   router = useRouter(),
   { message } = App.useApp();
-const documents = ref<StoredDocument[]>([]),
+const context = ref<AnalysisContext>(),
+  documents = ref<StoredDocument[]>([]),
   jobs = ref<AnalysisJob[]>([]),
   ids = ref<string[]>([]),
   selectedJob = ref<AnalysisJob>(),
@@ -31,6 +42,10 @@ const reviewOpen = ref(false),
   loading = ref(false),
   feedback = ref(''),
   fileInput = ref<HTMLInputElement>();
+const admissionYear = ref(new Date().getFullYear() + 1),
+  degree = ref('master'),
+  selectionType = ref(''),
+  analysisNotes = ref('');
 let generation = 0,
   timer: ReturnType<typeof setTimeout> | undefined;
 const canRead = computed(
@@ -38,31 +53,36 @@ const canRead = computed(
     selectedJob.value &&
     ['ready', 'awaiting_review'].includes(selectedJob.value.status),
 );
+const accepted = computed(() =>
+  ADMISSION_FIELDS.filter((f) => context.value?.requirements.fields[f.id]),
+);
 async function load() {
   const current = ++generation;
   loading.value = true;
   feedback.value = '';
   clearTimeout(timer);
   try {
-    const [docs, detail] = await Promise.all([
+    const [docs, value] = await Promise.all([
       localApi<StoredDocument[]>(
-        `/documents?ownerType=major&ownerId=${props.cycle.majorId}`,
+        `/documents?ownerType=major&ownerId=${props.majorId}`,
       ),
-      localApi<AdmissionContext & { jobs: AnalysisJob[] }>(
-        `/admissions/cycles/${props.cycle.id}`,
-      ),
+      localApi<AnalysisContext>(`/analysis/majors/${props.majorId}`),
     ]);
     if (current !== generation) return;
     documents.value = docs.filter((d) => d.kind === 'guidelines');
-    jobs.value = detail.jobs.toSorted((a, b) =>
+    context.value = value;
+    jobs.value = value.jobs.toSorted((a, b) =>
       b.createdAt.localeCompare(a.createdAt),
     );
     const requested =
       typeof route.query.documentId === 'string' ? route.query.documentId : '';
-    if (requested && documents.value.some((d) => d.id === requested))
-      ids.value = [requested];
-    const nextId = selectedJob.value?.id || jobs.value[0]?.id;
-    if (nextId) await viewJob(nextId);
+    const doc = documents.value.find((d) => d.id === requested);
+    if (doc) {
+      ids.value = [doc.id];
+      admissionYear.value = doc.year;
+    }
+    if (selectedJob.value?.id || jobs.value[0]?.id)
+      await viewJob(selectedJob.value?.id || jobs.value[0]!.id);
   } catch (e) {
     if (current === generation)
       feedback.value = e instanceof Error ? e.message : '分析资料读取失败。';
@@ -77,11 +97,11 @@ async function viewJob(id: string) {
     const result = await localApi<{
       job: AnalysisJob;
       proposals: AnalysisProposal[];
-    }>(`/admissions/jobs/${id}`);
+    }>(`/analysis/jobs/${id}`);
     if (current !== generation) return;
     selectedJob.value = result.job;
     proposals.value = result.proposals;
-    const index = jobs.value.findIndex((j) => j.id === result.job.id);
+    const index = jobs.value.findIndex((j) => j.id === id);
     if (index >= 0) jobs.value[index] = result.job;
     if (['queued', 'parsing'].includes(result.job.status))
       timer = setTimeout(() => void viewJob(id), 2500);
@@ -91,11 +111,11 @@ async function viewJob(id: string) {
   }
 }
 watch(
-  () => props.cycle.id,
+  () => props.majorId,
   () => {
     selectedJob.value = undefined;
-    ids.value = [];
     jobs.value = [];
+    ids.value = [];
     proposals.value = [];
     void load();
   },
@@ -109,18 +129,31 @@ function toggle(id: string) {
   ids.value = ids.value.includes(id)
     ? ids.value.filter((value) => value !== id)
     : [...ids.value, id];
+  if (ids.value.length === 1)
+    admissionYear.value =
+      documents.value.find((d) => d.id === ids.value[0])?.year ??
+      admissionYear.value;
 }
 async function create() {
   busy.value = true;
   feedback.value = '';
   try {
     const result = await localApi<AnalysisJob>(
-      '/admissions/jobs',
-      jsonOptions('POST', { cycleId: props.cycle.id, documentIds: ids.value }),
+      '/analysis/jobs',
+      jsonOptions('POST', {
+        majorId: props.majorId,
+        documentIds: ids.value,
+        context: {
+          admissionYear: admissionYear.value,
+          degree: degree.value,
+          selectionType: selectionType.value,
+          notes: analysisNotes.value,
+        },
+      }),
     );
     jobs.value.unshift(result);
     await viewJob(result.id);
-    message.success('已创建读取任务，完成后可核对本地草稿或交给 Agent 分析。');
+    message.success('读取任务已创建，完成后可核对草稿或交给 Agent 分析。');
   } catch (e) {
     feedback.value = e instanceof Error ? e.message : '任务创建失败。';
   } finally {
@@ -133,7 +166,7 @@ async function retry() {
   feedback.value = '';
   try {
     await localApi(
-      `/admissions/jobs/${selectedJob.value.id}/retry`,
+      `/analysis/jobs/${selectedJob.value.id}/retry`,
       jsonOptions('POST', {}),
     );
     await viewJob(selectedJob.value.id);
@@ -157,7 +190,7 @@ async function importFile(file?: File) {
   try {
     const input = JSON.parse(await file.text());
     await localApi(
-      `/admissions/jobs/${selectedJob.value.id}/proposals`,
+      `/analysis/jobs/${selectedJob.value.id}/proposals`,
       jsonOptions('POST', { requestKey: crypto.randomUUID(), proposal: input }),
     );
     await viewJob(selectedJob.value.id);
@@ -178,29 +211,41 @@ function drop(e: DragEvent) {
   }
   void importFile(files[0]);
 }
-function review(item: AnalysisProposal) {
-  proposal.value = item;
-  reviewOpen.value = true;
+async function review(item: AnalysisProposal) {
+  busy.value = true;
+  feedback.value = '';
+  try {
+    context.value = await localApi<AnalysisContext>(
+      `/analysis/majors/${props.majorId}`,
+    );
+    proposal.value = item;
+    reviewOpen.value = true;
+  } catch (e) {
+    feedback.value = e instanceof Error ? e.message : '核对资料读取失败。';
+  } finally {
+    busy.value = false;
+  }
 }
-async function applied(cycle: AdmissionCycle) {
-  emit('updated', cycle);
+async function applied(value: AnalysisContext) {
+  context.value = { ...value, jobs: jobs.value };
   if (selectedJob.value) await viewJob(selectedJob.value.id);
 }
-async function goToMajor() {
-  const { university, school, major } = await localApi<AdmissionContext>(
-    `/admissions/cycles/${props.cycle.id}`,
-  );
-  await router.push(
-    `/japan-grad/universities/${university.id}/schools/${school.id}/majors/${major.id}`,
+function goToMajor() {
+  if (!context.value) return;
+  const c = context.value;
+  void router.push(
+    `/japan-grad/universities/${c.university.id}/schools/${c.school.id}/majors/${c.major.id}`,
   );
 }
 </script>
 <template>
-  <section class="admission-analysis">
+  <section class="document-analysis">
     <header class="collection-heading">
       <div>
         <h2>募集要项分析</h2>
-        <p>先读取原文，再核对要求；Agent 与本地读取使用同一套草稿格式。</p>
+        <p>
+          直接分析专攻资料，对照原文采纳要求，并更新考试表或研究室材料清单。
+        </p>
       </div>
       <div class="detail-actions">
         <Button :disabled="busy || loading" @click="load">刷新任务</Button
@@ -210,10 +255,43 @@ async function goToMajor() {
     <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
     <p v-if="loading">正在读取资料与分析任务…</p>
     <div class="analysis-setup">
-      <h3>选择本轮资料</h3>
-      <p>
-        请确认文件中的年度、学位和选拔类别；可同时选择通则、专攻补充说明与修订通知。
-      </p>
+      <h3>选择分析资料</h3>
+      <p>选择募集要项、专攻补充说明或修订通知，并说明这次要分析的对象。</p>
+      <div class="analysis-context-fields">
+        <label
+          >资料年度<InputNumber
+            v-model:value="admissionYear"
+            :min="1900"
+            :max="2200"
+            :precision="0"
+            :disabled="busy" /></label
+        ><label
+          >学位 / 身份<Select
+            v-accessible-select
+            v-model:value="degree"
+            :options="
+              Object.entries(DEGREE_LABELS).map(([value, label]) => ({
+                value,
+                label,
+              }))
+            "
+            :disabled="busy" /></label
+        ><label
+          >选拔类别<Input
+            v-model:value="selectionType"
+            :maxlength="100"
+            :disabled="busy"
+            placeholder="如外国人特别选拔；不确定可留空"
+        /></label>
+      </div>
+      <Input.TextArea
+        v-model:value="analysisNotes"
+        :maxlength="1000"
+        :rows="2"
+        :disabled="busy"
+        placeholder="可补充希望核对的范围或疑问"
+        aria-label="本次分析说明"
+      />
       <div class="analysis-document-list">
         <Checkbox
           v-for="doc in documents"
@@ -271,26 +349,20 @@ async function goToMajor() {
         <div v-if="canRead" class="analysis-agent-actions">
           <a
             class="analysis-package-link"
-            :href="`/api/japangrad/admissions/jobs/${selectedJob.id}/package`"
+            :href="`/api/japangrad/analysis/jobs/${selectedJob.id}/package`"
             >下载 Agent 任务包（ZIP）</a
           ><Button :disabled="busy" @click="viewJob(selectedJob.id)"
             >刷新 Agent 回传结果</Button
           >
           <p>
-            任务包解压后交给有本地文件能力的 Agent，按目录中的说明生成
-            result.json，再导入下方。连接 MCP 后 Agent
-            可直接读取页面并回传草稿。
+            任务包解压后交给有本地文件能力的 Agent 生成
+            result.json，再导入下方。连接 MCP 后可直接回传草稿。
           </p>
-          <div
-            class="analysis-import"
-            :aria-disabled="busy"
-            @dragover.prevent
-            @drop.prevent="drop"
-          >
-            <label :for="`analysis-result-${cycle.id}`"
+          <div class="analysis-import" @dragover.prevent @drop.prevent="drop">
+            <label :for="`analysis-result-${majorId}`"
               >拖拽一个结果 JSON 文件到这里，或点击选择文件</label
             ><input
-              :id="`analysis-result-${cycle.id}`"
+              :id="`analysis-result-${majorId}`"
               ref="fileInput"
               type="file"
               accept=".json,application/json"
@@ -323,9 +395,35 @@ async function goToMajor() {
         </div></template
       >
     </section>
+    <section v-if="accepted.length && context" class="analysis-accepted">
+      <h3>已确认的报考资料</h3>
+      <article v-for="field in accepted" :key="field.id">
+        <h4>{{ field.label }}</h4>
+        <p>{{ context.requirements.fields[field.id] }}</p>
+        <details
+          v-if="context.requirements.provenance[field.id]?.evidence.length"
+        >
+          <summary>查看原文依据</summary>
+          <blockquote
+            v-for="(e, i) in context.requirements.provenance[field.id]!
+              .evidence"
+            :key="i"
+          >
+            <a
+              :href="`${fileUrl(e.documentId)}#page=${e.page}`"
+              target="_blank"
+              rel="noopener noreferrer"
+              >来源定位 {{ e.page }} ↗</a
+            >
+            <p>{{ e.quote }}</p>
+          </blockquote>
+        </details>
+      </article>
+    </section>
     <AnalysisReview
+      v-if="context"
       v-model:open="reviewOpen"
-      :cycle="cycle"
+      :context="context"
       :job="selectedJob"
       :proposal="proposal"
       @applied="applied"
@@ -349,6 +447,20 @@ async function goToMajor() {
 .analysis-setup > small {
   color: var(--jg-muted);
   font-size: 13px;
+}
+.analysis-context-fields {
+  display: grid;
+  grid-template-columns: 140px 160px minmax(180px, 1fr);
+  gap: 16px;
+  margin: 18px 0;
+}
+.analysis-context-fields label {
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+}
+.analysis-context-fields :is(.ant-select, .ant-input-number) {
+  width: 100%;
 }
 .analysis-setup .detail-actions {
   margin: 16px 0;
@@ -428,5 +540,33 @@ async function goToMajor() {
 }
 .analysis-proposals small {
   font-size: 12px;
+}
+.analysis-accepted {
+  margin-top: 28px;
+}
+.analysis-accepted > article {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--jg-line);
+}
+.analysis-accepted p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.analysis-accepted details {
+  color: var(--jg-muted);
+  font-size: 12px;
+}
+.analysis-accepted summary {
+  cursor: pointer;
+}
+.analysis-accepted blockquote {
+  margin: 12px 0;
+  padding-left: 12px;
+  border-left: 2px solid var(--jg-accent-line);
+}
+@media (max-width: 680px) {
+  .analysis-context-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

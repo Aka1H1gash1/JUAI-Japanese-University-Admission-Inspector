@@ -9,7 +9,6 @@ import DocumentArchive from './components/document-archive.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import ExamHistory from './components/exam-history.vue';
 import MajorAdmissions from './components/major-admissions.vue';
-import AdmissionCycleList from './components/admission-cycle-list.vue';
 import ResearchLabCollection from './components/research-lab-collection.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
 
@@ -81,6 +80,9 @@ function deleteMajor() {
         </p>
       </div>
       <div class="detail-actions">
+        <Button @click="router.push(`/japan-grad/analysis/${major.id}`)"
+          >募集要项分析</Button
+        >
         <Button class="icon-button" @click="majorEditorOpen = true">
           <ExplorerIcon name="edit" />编辑专攻 </Button
         ><Button class="icon-button" aria-label="删除专攻" @click="deleteMajor">
@@ -104,7 +106,6 @@ function deleteMajor() {
       </div>
       <p v-if="major.notes" class="overview-notes">{{ major.notes }}</p>
     </section>
-    <AdmissionCycleList :key="`cycles-${major.id}`" :major-id="major.id" />
     <MajorAdmissions :key="`admissions-${major.id}`" :major-id="major.id" />
     <ExamHistory :key="`exams-${major.id}`" :major-id="major.id" />
     <DocumentArchive :key="major.id" owner-type="major" :owner-id="major.id" />

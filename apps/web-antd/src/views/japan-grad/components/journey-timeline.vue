@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useNow } from '@vueuse/core';
-import { App, Button, Input, Modal, Select } from 'ant-design-vue';
+import { App, Button, Input, Select } from 'ant-design-vue';
 import type { LabTarget } from '../lab-targets';
-import { useAdmissionsStore } from '../admissions';
-import { buildCyclePlannerEvents } from '../admission-calendar';
+import TimelineEventEditor from './timeline-event-editor.vue';
+import { useExplorerStore } from '../explorer';
+import { TIMELINE_LABELS } from '../timeline';
 import { labPath } from '../lab-targets';
 import type { PlannerEvent } from '../application-calendar';
 import {
@@ -28,21 +29,30 @@ const startMonth = ref(today.value.slice(0, 7));
 const monthCount = ref(6);
 const selectedEvent = ref<PlannerEvent>();
 const detailsOpen = ref(false);
-const admissions = useAdmissionsStore();
-const events = computed(() => {
-  const cycleEvents = buildCyclePlannerEvents(admissions.cycles, props.targets);
-  const keys = new Set(
-    cycleEvents.map((e) => `${e.labId}|${e.kind}|${e.start}|${e.end}`),
-  );
-  return [
-    ...buildPlannerEvents(props.targets, props.year).filter(
-      (e) => !keys.has(`${e.labId}|${e.kind}|${e.start}|${e.end}`),
-    ),
-    ...cycleEvents,
-  ].toSorted(
-    (a, b) => a.start.localeCompare(b.start) || a.end.localeCompare(b.end),
-  );
-});
+const store = useExplorerStore();
+const newLabId = ref('');
+const eventKind = ref('');
+const listLimit = ref(30);
+const events = computed(() => buildPlannerEvents(props.targets, props.year));
+const listedEvents = computed(() =>
+  events.value.filter((e) => !eventKind.value || e.kind === eventKind.value),
+);
+function addEvent(labId = '') {
+  selectedEvent.value = undefined;
+  newLabId.value = labId;
+  detailsOpen.value = true;
+}
+function saved(date: string) {
+  startMonth.value = date.slice(0, 7);
+}
+async function restoreSources(labId: string) {
+  try {
+    await store.restoreTimelineSources(labId);
+    message.success('已恢复隐藏的来源日程');
+  } catch (e) {
+    message.error(e instanceof Error ? e.message : '恢复失败。');
+  }
+}
 const bounds = computed(() => {
   const start = validPlannerDay(`${startMonth.value}-01`)
     ? `${startMonth.value}-01`
@@ -125,11 +135,17 @@ function exportCalendar() {
     <header class="planner-timeline-heading">
       <div>
         <h2>修考时间线与日程</h2>
-        <p>出愿、考试、教授联络和待办按日本时间整理；提醒显示已记录的日期。</p>
+        <p>
+          直接填写首次联系教授、内诺、出愿、考试和结果时间，点击任意节点即可编辑。
+        </p>
       </div>
-      <Button :disabled="!visibleEvents.length" @click="exportCalendar"
-        >导出日历（.ics）</Button
-      >
+      <div class="detail-actions">
+        <Button type="primary" :disabled="!targets.length" @click="addEvent()"
+          >新增日程</Button
+        ><Button :disabled="!visibleEvents.length" @click="exportCalendar"
+          >导出日历（.ics）</Button
+        >
+      </div>
     </header>
     <div class="timeline-controls">
       <label
@@ -174,6 +190,21 @@ function exportCalendar() {
               ><strong>{{ row.target.lab.name }}</strong></RouterLink
             >
             <small>{{ row.target.university.name }}</small>
+            <button
+              type="button"
+              class="text-button"
+              @click="addEvent(row.target.lab.id)"
+            >
+              + 添加日程
+            </button>
+            <Button
+              v-if="row.target.lab.timeline?.hiddenSources.length"
+              size="small"
+              type="text"
+              :disabled="store.saving"
+              @click="restoreSources(row.target.lab.id)"
+              >恢复来源日程</Button
+            >
           </div>
           <div class="gantt-track" :style="{ height: `${row.height}px` }">
             <span
@@ -249,49 +280,151 @@ function exportCalendar() {
       </div>
       <p v-else class="planner-muted">暂无 30 天内的已记录节点或逾期待办。</p>
     </section>
+    <section class="timeline-records">
+      <header>
+        <h3>
+          已记录日程 <span>{{ listedEvents.length }}</span>
+        </h3>
+        <Select
+          v-accessible-select
+          :value="eventKind || undefined"
+          :options="
+            Object.entries(TIMELINE_LABELS).map(([value, label]) => ({
+              value,
+              label,
+            }))
+          "
+          allow-clear
+          placeholder="全部类型"
+          aria-label="按日程类型筛选"
+          @change="
+            eventKind = typeof $event === 'string' ? $event : '';
+            listLimit = 30;
+          "
+        />
+      </header>
+      <div v-if="listedEvents.length" class="timeline-record-list">
+        <button
+          v-for="event in listedEvents.slice(0, listLimit)"
+          :key="event.id"
+          type="button"
+          @click="viewEvent(event)"
+        >
+          <div>
+            <strong>{{ event.title }}</strong
+            ><small>{{ event.universityName }} / {{ event.labName }}</small>
+          </div>
+          <span
+            >{{ event.at ? event.at.replace('T', ' ') : event.start
+            }}{{
+              event.endAt
+                ? ` ～ ${event.endAt.replace('T', ' ')}`
+                : event.end !== event.start
+                  ? ` ～ ${event.end}`
+                  : ''
+            }}</span
+          ><small>{{
+            event.complete ? '已完成 / 已记录' : eventCountdown(event, today)
+          }}</small
+          ><span class="timeline-record-edit">编辑 →</span>
+        </button>
+      </div>
+      <p v-else class="planner-muted">
+        还没有此类型的日程，可以点击新增日程填写。
+      </p>
+      <Button v-if="listedEvents.length > listLimit" @click="listLimit += 30"
+        >显示更多日程</Button
+      >
+    </section>
     <p class="planner-date-hint">
-      出愿与考试会读取所属专攻的信息。请填写含年份的明确日期（如
-      2027-02-05）；「每年 12
-      月」等常规时段会保留在报考资料中，不自动推测日期。页面内提醒在工作台打开时显示；后台提醒可通过导出的日历添加。
+      手动日程独立保存到研究室。已记录的出愿、考试和教授联络日期也会显示，可直接编辑或隐藏；隐藏后可恢复来源日程。时间按日本时间（JST）维护，导出的日历采用当前日程。
     </p>
-    <Modal
+    <TimelineEventEditor
       v-model:open="detailsOpen"
-      :title="selectedEvent?.title"
-      :footer="null"
-      :width="620"
-      ><dl v-if="selectedEvent" class="planner-event-details">
-        <div>
-          <dt>研究室</dt>
-          <dd>
-            {{ selectedEvent.universityName }} / {{ selectedEvent.labName }}
-          </dd>
-        </div>
-        <div>
-          <dt>日期（JST）</dt>
-          <dd>
-            {{
-              selectedEvent.at
-                ? selectedEvent.at.replace('T', ' ')
-                : `${selectedEvent.start} ～ ${selectedEvent.end}`
-            }}
-          </dd>
-        </div>
-        <div>
-          <dt>状态</dt>
-          <dd>{{ eventCountdown(selectedEvent, today) }}</dd>
-        </div>
-        <div v-if="selectedEvent.details">
-          <dt>科目 / 备注</dt>
-          <dd>{{ selectedEvent.details }}</dd>
-        </div>
-      </dl>
-      <RouterLink
-        v-if="selectedEvent"
-        :to="selectedEvent.path"
-        class="back-link"
-        @click="detailsOpen = false"
-        >查看 / 编辑来源记录 →</RouterLink
-      ></Modal
-    >
+      :targets="targets"
+      :event="selectedEvent"
+      :lab-id="newLabId"
+      @saved="saved"
+    />
   </section>
 </template>
+
+<style scoped>
+.timeline-records {
+  margin-top: 28px;
+}
+.timeline-records > header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.timeline-records h3 {
+  margin: 0;
+  font-size: 16px;
+}
+.timeline-records h3 span {
+  color: var(--jg-muted);
+  font-weight: 400;
+}
+.timeline-records .ant-select {
+  width: 200px;
+}
+.timeline-record-list {
+  display: grid;
+  border: 1px solid var(--jg-line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.timeline-record-list > button {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(140px, 1fr) minmax(
+      100px,
+      0.6fr
+    ) auto;
+  align-items: center;
+  gap: 18px;
+  border: 0;
+  border-bottom: 1px solid var(--jg-line);
+  padding: 16px;
+  text-align: left;
+  background: var(--jg-surface);
+  color: var(--jg-text);
+  cursor: pointer;
+}
+.timeline-record-list > button:last-child {
+  border: 0;
+}
+.timeline-record-list > button:hover {
+  background: var(--jg-subtle);
+}
+.timeline-record-list small {
+  display: block;
+  font-size: 12px;
+  margin-top: 4px;
+  color: var(--jg-muted);
+}
+.timeline-record-edit {
+  color: var(--jg-accent-text);
+  font-size: 12px;
+}
+.gantt-row-label > .text-button {
+  display: block;
+  font-size: 12px;
+  margin-top: 8px;
+}
+@media (max-width: 700px) {
+  .timeline-record-list > button {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+  }
+  .timeline-record-list > button > span:nth-child(2) {
+    grid-column: 1;
+  }
+  .timeline-record-edit {
+    grid-column: 2;
+    grid-row: 1 / 4;
+  }
+}
+</style>

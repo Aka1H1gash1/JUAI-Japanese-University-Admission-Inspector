@@ -1,14 +1,59 @@
 [
-  { "id": "applicationStart", "label": "出愿开始", "max": 120, "date": true },
-  { "id": "applicationEnd", "label": "出愿截止", "max": 120, "date": true },
-  { "id": "writtenDate", "label": "笔试时间", "max": 120, "date": true },
-  { "id": "interviewDate", "label": "面试时间", "max": 120, "date": true },
-  { "id": "resultDate", "label": "结果发布时间", "max": 120, "date": true },
-  { "id": "subjects", "label": "考试科目与范围", "max": 8000 },
-  { "id": "languageRequirements", "label": "语言要求", "max": 4000 },
-  { "id": "applicationMaterials", "label": "出愿所需材料", "max": 8000 },
-  { "id": "eligibility", "label": "申请资格", "max": 8000 },
-  { "id": "submissionMethod", "label": "提交方式与截止口径", "max": 4000 },
+  {
+    "id": "applicationStart",
+    "label": "出愿开始",
+    "max": 120,
+    "date": true
+  },
+  {
+    "id": "applicationEnd",
+    "label": "出愿截止",
+    "max": 120,
+    "date": true
+  },
+  {
+    "id": "writtenDate",
+    "label": "笔试时间",
+    "max": 120,
+    "date": true
+  },
+  {
+    "id": "interviewDate",
+    "label": "面试时间",
+    "max": 120,
+    "date": true
+  },
+  {
+    "id": "resultDate",
+    "label": "结果发布时间",
+    "max": 120,
+    "date": true
+  },
+  {
+    "id": "subjects",
+    "label": "考试科目与范围",
+    "max": 2000
+  },
+  {
+    "id": "languageRequirements",
+    "label": "语言要求",
+    "max": 4000
+  },
+  {
+    "id": "applicationMaterials",
+    "label": "出愿所需材料",
+    "max": 8000
+  },
+  {
+    "id": "eligibility",
+    "label": "申请资格",
+    "max": 8000
+  },
+  {
+    "id": "submissionMethod",
+    "label": "提交方式与截止口径",
+    "max": 4000
+  },
   {
     "id": "applicationFee",
     "label": "检定料（日元）",
@@ -20,5 +65,9 @@
     "label": "事前联系与内诺要求",
     "max": 4000
   },
-  { "id": "notes", "label": "本轮报考备注", "max": 8000 }
+  {
+    "id": "notes",
+    "label": "其他报考备注",
+    "max": 8000
+  }
 ]

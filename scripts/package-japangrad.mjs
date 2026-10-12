@@ -4,6 +4,7 @@ import {
   mkdir,
   readFile,
   rename,
+  rm,
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
@@ -58,10 +59,11 @@ await cp(
   path.join(target, 'local-server/planning-fields.mjs'),
 );
 for (const name of [
-  'admissions-service.mjs',
+  'analysis-service.mjs',
   'admission-analysis.mjs',
   'admission-parser-worker.mjs',
   'admission-fields.json',
+  'timeline-fields.mjs',
   'agent-mcp.mjs',
   'package.json',
   'package-lock.json',
@@ -76,6 +78,9 @@ await cp(
   { recursive: true },
 );
 const nextWeb = path.join(target, `.web-next-${Date.now()}`);
+await rm(path.join(target, 'local-server/admissions-service.mjs'), {
+  force: true,
+});
 await cp(path.join(root, 'apps/web-antd/dist'), nextWeb, {
   recursive: true,
 });

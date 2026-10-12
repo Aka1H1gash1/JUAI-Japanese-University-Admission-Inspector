@@ -11,12 +11,9 @@ import {
   plannerReminders,
 } from '../application-calendar';
 import { useExplorerStore } from '../explorer';
-import { useAdmissionsStore } from '../admissions';
-import { buildCyclePlannerEvents } from '../admission-calendar';
 const props = defineProps<{ targets: LabTarget[]; year?: string }>();
 const emit = defineEmits<{ timeline: [] }>();
 const store = useExplorerStore();
-const admissions = useAdmissionsStore();
 const { message } = App.useApp();
 const now = useNow({ interval: 60000 });
 const today = computed(() => japanToday(now.value));
@@ -69,10 +66,7 @@ const todos = computed(() =>
 );
 const reminders = computed(() =>
   plannerReminders(
-    [
-      ...buildPlannerEvents(props.targets, props.year ?? 'latest'),
-      ...buildCyclePlannerEvents(admissions.cycles, props.targets),
-    ],
+    buildPlannerEvents(props.targets, props.year ?? 'latest'),
     today.value,
   )
     .filter((item) => item.kind !== 'task')
@@ -92,7 +86,7 @@ async function complete(item: (typeof entries.value)[number]) {
 <template>
   <aside class="journey-task-panel" aria-label="全部想考研究室的准备进度">
     <header>
-      <h2>研究室通用准备</h2>
+      <h2>准备进度</h2>
       <span>全部 {{ targets.length }} 个想考研究室</span>
     </header>
     <div class="task-panel-total">
@@ -108,11 +102,7 @@ async function complete(item: (typeof entries.value)[number]) {
         >已建立材料清单：{{ coverage }} / {{ targets.length }} 个研究室</small
       >
     </div>
-    <p class="cycle-preparation-link">
-      <RouterLink to="/japan-grad/journey?view=admissions"
-        >查看按年度独立维护的申请清单 →</RouterLink
-      >
-    </p>
+
     <section v-if="grouped.length" class="task-panel-section">
       <h3>各类材料</h3>
       <div

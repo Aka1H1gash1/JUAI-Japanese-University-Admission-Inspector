@@ -27,8 +27,18 @@ void store.load();
 const route = useRoute();
 const router = useRouter();
 const parentNavigation = computed(() => {
-  if (route.params.cycleId)
-    return { path: '/japan-grad/journey?view=admissions', label: '申请轮次' };
+  if (route.params.analysisMajorId) {
+    const major = store.majors.find(
+      (m) => m.id === route.params.analysisMajorId,
+    );
+    const school = store.schools.find((s) => s.id === major?.schoolId);
+    return major && school
+      ? {
+          path: `/japan-grad/universities/${school.universityId}/schools/${school.id}/majors/${major.id}`,
+          label: '专攻资料',
+        }
+      : { path: '/japan-grad', label: '大学清单' };
+  }
   const { universityId, schoolId, majorId, labId, professorId } = route.params;
   const universityPath = `/japan-grad/universities/${universityId}`;
   const schoolPath = `${universityPath}/schools/${schoolId}`;
@@ -129,8 +139,8 @@ const saveLabel = computed(() =>
         : '已连接本地工作区',
 );
 const contextLabel = computed(() =>
-  route.params.cycleId
-    ? '申请轮次'
+  route.params.analysisMajorId
+    ? '募集要项分析'
     : route.path === '/japan-grad/journey'
       ? '修考之路'
       : route.params.professorId

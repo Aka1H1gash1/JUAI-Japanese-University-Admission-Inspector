@@ -4372,13 +4372,3 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   overflow-wrap: anywhere;
   color: var(--jg-secondary);
 }
-
-.journey-module-switch {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 28px;
-}
-.admission-cycle-list {
-  margin: 28px 0;
-}

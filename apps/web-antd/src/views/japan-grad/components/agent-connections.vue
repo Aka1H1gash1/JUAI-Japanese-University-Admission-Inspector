@@ -48,7 +48,7 @@ const text = computed(() =>
 );
 async function load() {
   try {
-    rows.value = await localApi<Connection[]>('/admissions/connections');
+    rows.value = await localApi<Connection[]>('/analysis/connections');
   } catch (e) {
     feedback.value = e instanceof Error ? e.message : '连接读取失败。';
   }
@@ -67,7 +67,7 @@ async function create() {
   feedback.value = '';
   try {
     const result = await localApi<{ connection: Connection; config: Config }>(
-      '/admissions/connections',
+      '/analysis/connections',
       jsonOptions('POST', { name: name.value, majorIds: ids.value }),
     );
     config.value = result.config;
@@ -83,7 +83,7 @@ async function revoke(id: string) {
   busy.value = true;
   feedback.value = '';
   try {
-    await localApi(`/admissions/connections/${id}`, jsonOptions('DELETE', {}));
+    await localApi(`/analysis/connections/${id}`, jsonOptions('DELETE', {}));
     config.value = undefined;
     await load();
     message.success('连接已撤销');
@@ -115,7 +115,7 @@ async function copy() {
     <div class="agent-connection-body">
       <p class="form-context">
         让支持本地 MCP 的 Agent
-        读取所选专攻的大学、研究室、申请轮次和募集要项，并提交分析草稿。每次正式采纳在
+        读取所选专攻的大学、研究室、报考资料和募集要项，并提交分析草稿。每次正式采纳在
         JUAI 中完成。
       </p>
       <div class="field">

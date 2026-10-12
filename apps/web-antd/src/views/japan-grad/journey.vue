@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { App, Button, Input, Modal, Select, Tabs } from 'ant-design-vue';
 import { useExplorerStore } from './explorer';
@@ -14,17 +14,14 @@ import JourneyContactBoard from './components/journey-contact-board.vue';
 import JourneyContactDialog from './components/journey-contact-dialog.vue';
 import JourneyTimeline from './components/journey-timeline.vue';
 import JourneyTaskPanel from './components/journey-task-panel.vue';
-import AdmissionCycleList from './components/admission-cycle-list.vue';
-import { useAdmissionsStore } from './admissions';
+import AgentConnections from './components/agent-connections.vue';
 const store = useExplorerStore();
-const admissions = useAdmissionsStore();
-onMounted(() => void admissions.load());
 const { message } = App.useApp();
 const route = useRoute();
 const router = useRouter();
 const view = computed({
   get: () =>
-    ['contacts', 'timeline', 'admissions'].includes(String(route.query.view))
+    ['contacts', 'timeline'].includes(String(route.query.view))
       ? String(route.query.view)
       : 'targets',
   set: (value: string) => {
@@ -41,6 +38,7 @@ const query = ref('');
 const year = ref('latest');
 const comparisonOpen = ref(false);
 const pickerOpen = ref(false);
+const agentOpen = ref(false);
 const exportOpen = ref(false);
 const exportInitialIds = ref<string[]>([]);
 const selected = ref<string[]>([]);
@@ -121,6 +119,7 @@ function openExport() {
         </p>
       </div>
       <div class="detail-actions">
+        <Button @click="agentOpen = true">Agent 工作区接入</Button>
         <Button type="primary" class="icon-button" @click="pickerOpen = true"
           ><ExplorerIcon name="plus" />新增研究室</Button
         >
@@ -132,19 +131,7 @@ function openExport() {
         >
       </div>
     </header>
-    <div class="journey-module-switch">
-      <Button
-        :type="view !== 'admissions' ? 'primary' : 'default'"
-        @click="view = 'targets'"
-        >研究室与联络</Button
-      ><Button
-        :type="view === 'admissions' ? 'primary' : 'default'"
-        @click="view = 'admissions'"
-        >申请年度与资料分析</Button
-      >
-    </div>
-    <AdmissionCycleList v-if="view === 'admissions'" />
-    <template v-if="view !== 'admissions' && targets.length">
+    <template v-if="targets.length">
       <div class="journey-summary">
         <span
           ><strong>{{ targets.length }}</strong> 个想考研究室</span
@@ -168,7 +155,7 @@ function openExport() {
             ><Select
               v-accessible-select
               v-model:value="year"
-              aria-label="对比与日程考试年份"
+              aria-label="对比与来源考试年份"
               class="journey-year-select"
               :options="yearOptions"
             /><Button
@@ -232,10 +219,7 @@ function openExport() {
         />
       </div>
     </template>
-    <section
-      v-else-if="view !== 'admissions'"
-      class="collection-empty journey-empty"
-    >
+    <section v-else class="collection-empty journey-empty">
       <span class="empty-symbol"><ExplorerIcon name="book" /></span>
       <h2>从一个想考的研究室开始</h2>
       <p>直接选择已整理的研究室，建立想考清单，再比较方向、考试和费用。</p>
@@ -243,6 +227,7 @@ function openExport() {
         ><ExplorerIcon name="plus" />新增研究室</Button
       >
     </section>
+    <AgentConnections v-model:open="agentOpen" />
     <JourneyExportDialog
       v-model:open="exportOpen"
       :targets="targets"

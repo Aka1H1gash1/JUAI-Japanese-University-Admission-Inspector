@@ -1,29 +1,31 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { App, Button, Checkbox, Input, Modal } from 'ant-design-vue';
+import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
 import type {
-  AdmissionCycle,
   AdmissionFieldId,
   AnalysisJob,
   AnalysisProposal,
   Evidence,
-} from '../admissions';
+  AnalysisContext,
+} from '../analysis-types';
 import {
   ADMISSION_FIELDS,
-  cycleLabel,
+  analysisObjectLabel,
+  EXAM_FIELDS,
   PROPOSAL_STATUS_LABELS,
-  useAdmissionsStore,
-} from '../admissions';
+} from '../analysis-types';
+import { useExplorerStore } from '../explorer';
+import { vAccessibleSelect } from '../select-accessibility';
 import { fileUrl } from '../documents';
 import { jsonOptions, localApi } from '../local-api';
 const props = defineProps<{
-  cycle: AdmissionCycle;
+  context: AnalysisContext;
   job?: AnalysisJob;
   proposal?: AnalysisProposal;
 }>();
 const open = defineModel<boolean>('open', { default: false });
-const emit = defineEmits<{ applied: [cycle: AdmissionCycle] }>();
-const admissions = useAdmissionsStore(),
+const emit = defineEmits<{ applied: [context: AnalysisContext] }>();
+const store = useExplorerStore(),
   { message } = App.useApp();
 const selected = ref<AdmissionFieldId[]>([]),
   values = ref<Partial<Record<AdmissionFieldId, string>>>({}),
@@ -47,11 +49,31 @@ const source = computed(() =>
 const pdf = computed(() =>
   source.value?.filename.toLowerCase().endsWith('.pdf'),
 );
+const examRecordId = ref(''),
+  examYear = ref(''),
+  examSession = ref(''),
+  labId = ref('');
+const hasExam = computed(() =>
+  selected.value.some((key) => EXAM_FIELDS.includes(key)),
+);
+function currentValue(key: AdmissionFieldId) {
+  return EXAM_FIELDS.includes(key)
+    ? (props.context.major.examHistory.find(
+        (e) => e.id === examRecordId.value,
+      )?.[key as 'subjects' | 'writtenDate' | 'interviewDate' | 'resultDate'] ??
+        '')
+    : (props.context.requirements.fields[key] ?? '');
+}
+watch(examRecordId, (id) => {
+  const record = props.context.major.examHistory.find((e) => e.id === id);
+  examYear.value = record?.year ?? '';
+  examSession.value = record?.session ?? '';
+  acknowledged.value = false;
+});
 const replacing = computed(() =>
   selected.value.some(
     (key) =>
-      props.cycle.fields[key] &&
-      props.cycle.fields[key] !== values.value[key]?.trim(),
+      currentValue(key) && currentValue(key) !== values.value[key]?.trim(),
   ),
 );
 const canApply = computed(
@@ -60,6 +82,8 @@ const canApply = computed(
     selected.value.length > 0 &&
     selected.value.every((key) => values.value[key]?.trim()) &&
     acknowledged.value &&
+    (!hasExam.value || /^\d{4}$/.test(examYear.value)) &&
+    (!createTasks.value || !!labId.value) &&
     (!replacing.value || allowReplace.value),
 );
 watch(open, (value) => {
@@ -76,6 +100,11 @@ watch(open, (value) => {
   );
   acknowledged.value = allowReplace.value = createTasks.value = false;
   feedback.value = '';
+  examRecordId.value = '';
+  examYear.value = '';
+  examSession.value = '';
+  labId.value =
+    props.context.labs.length === 1 ? props.context.labs[0]!.id : '';
   const evidence = Object.values(props.proposal?.fields ?? {}).flatMap(
     (item) => item?.evidence ?? [],
   )[0];
@@ -90,7 +119,7 @@ async function loadPage() {
   sourceError.value = '';
   try {
     const data = await localApi<{ pages: { text: string; locator: string }[] }>(
-      `/admissions/jobs/${props.job.id}/pages?documentId=${documentId.value}&start=${page.value}&count=1`,
+      `/analysis/jobs/${props.job.id}/pages?documentId=${documentId.value}&start=${page.value}&count=1`,
     );
     if (current === generation)
       sourceText.value = data.pages
@@ -122,10 +151,14 @@ async function apply() {
   busy.value = true;
   feedback.value = '';
   try {
-    const result = await localApi<{ cycle: AdmissionCycle }>(
-      `/admissions/proposals/${props.proposal.id}/apply`,
+    const result = await localApi<{ context: AnalysisContext }>(
+      `/analysis/proposals/${props.proposal.id}/apply`,
       jsonOptions('POST', {
-        revision: props.cycle.revision,
+        revision: props.context.revision,
+        examRecordId: examRecordId.value,
+        examYear: examYear.value,
+        examSession: examSession.value,
+        labId: labId.value,
         fields: Object.fromEntries(
           selected.value.map((key) => [key, values.value[key]?.trim()]),
         ),
@@ -133,10 +166,10 @@ async function apply() {
         createTasks: createTasks.value,
       }),
     );
-    admissions.upsert(result.cycle);
+    await store.refresh();
     open.value = false;
-    emit('applied', result.cycle);
-    message.success('所选要求已采纳到本轮申请');
+    emit('applied', result.context);
+    message.success('所选要求已采纳到专攻资料');
   } catch (e) {
     feedback.value = e instanceof Error ? e.message : '采纳失败。';
   } finally {
@@ -156,7 +189,10 @@ async function apply() {
   >
     <template v-if="proposal && job"
       ><p class="analysis-review-context">
-        {{ cycleLabel(job.context) }}<br />执行器：{{ proposal.executor }} ·
+        {{ analysisObjectLabel(job.context) }}<br />执行器：{{
+          proposal.executor
+        }}
+        ·
         {{ proposal.status === 'applied' ? '已采纳' : '待逐项核对' }}
       </p>
       <div class="analysis-review-body">
@@ -203,7 +239,7 @@ async function apply() {
               }}</span>
             </header>
             <p class="analysis-current">
-              当前值：{{ cycle.fields[field.id] || '未填写' }}
+              当前值：{{ currentValue(field.id) || '未填写' }}
             </p>
             <Input.TextArea
               v-model:value="values[field.id]"
@@ -245,6 +281,38 @@ async function apply() {
           </article>
         </section>
       </div>
+      <div
+        v-if="proposal.status === 'pending' && hasExam"
+        class="analysis-exam-destination"
+      >
+        <label>考试记录</label
+        ><Select
+          v-accessible-select
+          v-model:value="examRecordId"
+          :options="[
+            { value: '', label: '新增考试记录' },
+            ...context.major.examHistory.map((e) => ({
+              value: e.id,
+              label: `${e.year} 年 ${e.session || '未分批次'}`,
+            })),
+          ]"
+          aria-label="采纳到哪个考试记录"
+        />
+        <Input
+          v-model:value="examYear"
+          :disabled="!!examRecordId || busy"
+          :maxlength="4"
+          placeholder="确认考试年份，如 2027"
+          aria-label="采纳考试年份"
+        />
+        <Input
+          v-model:value="examSession"
+          :disabled="!!examRecordId || busy"
+          :maxlength="120"
+          placeholder="考试批次，可留空"
+          aria-label="采纳考试批次"
+        />
+      </div>
       <footer
         v-if="proposal.status === 'pending'"
         class="analysis-review-footer"
@@ -260,8 +328,16 @@ async function apply() {
           v-if="selected.includes('applicationMaterials')"
           v-model:checked="createTasks"
           :disabled="busy"
-          >按核对后的材料内容逐行生成本轮清单</Checkbox
+          >按核对后的材料内容生成研究室清单</Checkbox
         >
+        <Select
+          v-if="createTasks && selected.includes('applicationMaterials')"
+          v-accessible-select
+          v-model:value="labId"
+          :options="context.labs.map((l) => ({ value: l.id, label: l.name }))"
+          placeholder="选择接收材料清单的研究室"
+          aria-label="材料清单接收研究室"
+        />
         <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
         <div>
           <span>已选 {{ selected.length }} 项 · 未选字段保留当前内容</span
@@ -276,7 +352,7 @@ async function apply() {
         </div>
       </footer>
       <footer v-else class="form-footer">
-        <span>本草稿已采纳，结果和出处保存在本轮申请中。</span
+        <span>本草稿已采纳，结果和出处保存在专攻资料中。</span
         ><Button @click="open = false">关闭</Button>
       </footer>
     </template>
@@ -376,6 +452,18 @@ async function apply() {
   display: block;
   margin-top: 8px;
   color: var(--jg-muted);
+}
+.analysis-exam-destination {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+.analysis-exam-destination .ant-select {
+  min-width: 240px;
+}
+.analysis-exam-destination .ant-input {
+  max-width: 220px;
 }
 .analysis-review-footer {
   display: grid;

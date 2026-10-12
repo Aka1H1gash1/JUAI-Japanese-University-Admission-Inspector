@@ -59,10 +59,10 @@ const coreRoutes: RouteRecordRaw[] = [
         meta: { title: '修考之路' },
       },
       {
-        name: 'AdmissionCycleDetails',
-        path: 'admissions/:cycleId',
-        component: () => import('#/views/japan-grad/admission-cycle.vue'),
-        meta: { title: '申请轮次 · 募集要项分析' },
+        name: 'MajorGuidelineAnalysis',
+        path: 'analysis/:analysisMajorId',
+        component: () => import('#/views/japan-grad/major-analysis.vue'),
+        meta: { title: '募集要项分析' },
       },
       {
         name: 'UniversityDetails',

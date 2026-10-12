@@ -1,6 +1,8 @@
 import type { ApplicationTask } from './application-planning';
 import type { ExamHistoryRecord } from './exam-history';
 import type { LabTarget } from './lab-targets';
+import { buildPlannerEvents } from './application-calendar';
+import type { PlannerEventKind } from './application-calendar';
 import {
   CONTACT_LABELS,
   normalizedContact,
@@ -63,7 +65,51 @@ const tasksText = (
 
 // The picker, preview and workbook share this list, so unchecked fields cannot
 // accidentally reappear in an additional worksheet.
+const plannedDates = (target: LabTarget, kinds: PlannerEventKind[]) =>
+  buildPlannerEvents([target], 'all')
+    .filter((e) => kinds.includes(e.kind))
+    .map(
+      (e) =>
+        `${e.title}：${e.at ? e.at.replace('T', ' ') : e.start}${e.endAt ? ` ～ ${e.endAt.replace('T', ' ')}` : e.end !== e.start ? ` ～ ${e.end}` : ''}${e.complete ? '（已完成 / 已记录）' : '（计划中）'}`,
+    )
+    .join('\n');
 export const JOURNEY_EXPORT_FIELDS = [
+  field(
+    'plannedFirstContact',
+    '规划：首次联系教授',
+    '时间规划',
+    (t) => plannedDates(t, ['contact', 'sent']),
+    { width: 40 },
+  ),
+  field(
+    'plannedConsent',
+    '规划：拿到内诺',
+    '时间规划',
+    (t) => plannedDates(t, ['consent']),
+    { width: 40 },
+  ),
+  field(
+    'plannedApplication',
+    '规划：出愿时间',
+    '时间规划',
+    (t) => plannedDates(t, ['application']),
+    { width: 40 },
+  ),
+  field(
+    'plannedExams',
+    '规划：考试时间',
+    '时间规划',
+    (t) => plannedDates(t, ['exam', 'written', 'interview']),
+    { width: 40 },
+  ),
+  field(
+    'plannedResults',
+    '规划：结果公布',
+    '时间规划',
+    (t) => plannedDates(t, ['result']),
+    { width: 40 },
+  ),
+
   field('school', '研究科', '基本资料', (t) => t.school.name),
   field('major', '专攻', '基本资料', (t) => t.major.name),
   field('research', '研究方向', '基本资料', (t) => t.lab.research, {
@@ -359,6 +405,16 @@ export const JOURNEY_EXPORT_PRESETS: {
   label: string;
   ids: JourneyExportFieldId[];
 }[] = [
+  {
+    label: '修考日程',
+    ids: [
+      'plannedFirstContact',
+      'plannedConsent',
+      'plannedApplication',
+      'plannedExams',
+      'plannedResults',
+    ],
+  },
   { label: '常用对比', ids: DEFAULT_EXPORT_FIELDS },
   {
     label: '费用预算',

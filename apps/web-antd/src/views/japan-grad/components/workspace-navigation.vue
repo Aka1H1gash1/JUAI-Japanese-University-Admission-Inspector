@@ -76,8 +76,7 @@ const shortcuts = computed(() => {
         to="/japan-grad/journey"
         class="workspace-nav-link"
         :class="{
-          'is-active':
-            route.path === '/japan-grad/journey' || !!route.params.cycleId,
+          'is-active': route.path === '/japan-grad/journey',
         }"
         @click="emit('navigate')"
         ><ExplorerIcon name="book" /><span>修考之路</span

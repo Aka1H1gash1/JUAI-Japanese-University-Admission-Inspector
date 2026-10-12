@@ -1,3 +1,5 @@
+import type { LabTimeline, TimelineEntry } from './timeline';
+import { emptyTimeline, timelineError } from './timeline';
 import { ref } from 'vue';
 import type { ApplicationTask, ProfessorContact } from './application-planning';
 import { normalizedContact } from './application-planning';
@@ -87,6 +89,7 @@ export interface Major extends MajorAdmissionFields {
 }
 
 export interface ResearchLab {
+  timeline?: LabTimeline;
   languageRequirements?: string;
   mainProfessorId?: string;
   tasks?: ApplicationTask[];
@@ -283,6 +286,9 @@ function isExplorerData(value: unknown): value is ExplorerData {
             value.majors.some((major) => major.id === lab.majorId),
         ))) &&
     !planningError(value) &&
+    (value.labs ?? []).every(
+      (lab: ResearchLab) => !timelineError(lab.timeline),
+    ) &&
     value.majors.every(
       (item) =>
         hasStrings(item, [
@@ -460,6 +466,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
       mainProfessorId: item.mainProfessorId ?? '',
       languageRequirements: item.languageRequirements ?? '',
       tasks: item.tasks ?? [],
+      timeline: item.timeline ?? emptyTimeline(),
     }));
   }
   function load() {
@@ -703,6 +710,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           wantApply: previous?.wantApply ?? false,
           mainProfessorId: previous?.mainProfessorId ?? '',
           tasks: previous?.tasks ?? [],
+          timeline: previous?.timeline ?? emptyTimeline(),
         };
         const index = labs.value.findIndex((item) => item.id === id);
         if (index === -1) labs.value.push(value);
@@ -807,6 +815,73 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
       person.contact = next;
       if (lab) lab.mainProfessorId = person.id;
     });
+  }
+  function saveTimelineEvent(labId: string, entry: TimelineEntry) {
+    return mutate(() => {
+      const lab = labs.value.find((item) => item.id === labId);
+      if (!lab) throw new Error('研究室已不存在。');
+      const current = lab.timeline ?? emptyTimeline();
+      const value = {
+        ...entry,
+        id: entry.id || crypto.randomUUID(),
+        title: entry.title.trim(),
+        notes: entry.notes.trim(),
+      };
+      const timeline = {
+        events: [
+          ...current.events.filter(
+            (item) =>
+              item.id !== value.id &&
+              (!value.replaces || item.replaces !== value.replaces),
+          ),
+          value,
+        ],
+        hiddenSources: current.hiddenSources.filter(
+          (source) => source !== value.replaces,
+        ),
+      };
+      const error = timelineError(timeline);
+      if (error) throw new Error(error);
+      lab.timeline = timeline;
+    });
+  }
+  function removeTimelineEvent(labId: string, entryId = '', source = '') {
+    return mutate(() => {
+      const lab = labs.value.find((item) => item.id === labId);
+      if (!lab) throw new Error('研究室已不存在。');
+      const current = lab.timeline ?? emptyTimeline();
+      const previous = current.events.find((item) => item.id === entryId);
+      const hiddenSource = previous?.replaces || source;
+      const next = {
+        events: current.events.filter((item) => item.id !== entryId),
+        hiddenSources: [
+          ...new Set([
+            ...current.hiddenSources,
+            ...(hiddenSource ? [hiddenSource] : []),
+          ]),
+        ],
+      };
+      const error = timelineError(next);
+      if (error) throw new Error(error);
+      lab.timeline = next;
+    });
+  }
+  function restoreTimelineSources(labId: string) {
+    return mutate(() => {
+      const lab = labs.value.find((item) => item.id === labId);
+      if (!lab) throw new Error('研究室已不存在。');
+      lab.timeline = {
+        ...(lab.timeline ?? emptyTimeline()),
+        hiddenSources: [],
+      };
+    });
+  }
+  async function refresh() {
+    await pending;
+    const result = await localApi<WorkspaceSnapshot>('/workspace');
+    if (!isExplorerData(result.data)) throw new Error('工作区数据格式错误。');
+    apply(result.data);
+    revision = result.revision;
   }
   function saveLabTasks(labId: string, tasks: ApplicationTask[]) {
     return mutate(() => {
@@ -919,6 +994,10 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     toggleWantApply,
     addJourneyLabs,
     saveProfessorContact,
+    saveTimelineEvent,
+    removeTimelineEvent,
+    restoreTimelineSources,
+    refresh,
     saveLabTasks,
     saveLabTask,
     removeLabTask,

@@ -1,69 +1,54 @@
 # JUAI 募集要项分析与 Agent 工作区接入
 
-状态：申请轮次、原文读取 / 初步字段定位、核对采纳、任务包和本地 STDIO MCP 已实现。独立 OCR、应用内模型 API 与本地模型调用尚未实现。
+状态：资料分析直接关联专攻。申请轮次功能已移除，个人时间计划在研究室时间线中编辑。
 
 ## 使用入口
 
-修考之路 →「申请年度与资料分析」，或专攻详情 → 申请轮次。新增轮次后，在「募集要项分析」选择募集要项 / 补充资料，生成待核对草稿。文件详情中的「分析这份募集要项」可带入资料选择。
+专攻详情 →「募集要项分析」，或募集要项文件详情 →「分析这份募集要项」。选择资料、说明资料年度 / 学位 / 选拔类别后建立分析任务，不需要建立申请轮次。
 
-轮次独立保存入学年月、学位、选拔类别与批次、关联研究室、要求、材料准备、提交编号与结果。明确日期进入本轮日程与所关联想考研究室的时间线；通用要求保留独立维护入口。
+读取支持 PDF / DOCX / MD / TXT。PDF.js 在 Worker 中提取分页文字，并按需提供 PNG；DOCX 为全文逻辑块，MD / TXT 保留分块行号。扫描页与复杂表格交给支持图片理解的 Agent，旧 DOC 转换后分析。当前未内置独立 OCR 或模型 API。
 
-## 原文与草稿
+## 核对与采纳
 
-- PDF.js 在 Worker 中提取文字和分页位置，按需渲染 PDF 页面 PNG；每文件最多 300 页、200 万字，读取 / 渲染超时 90 秒，Worker 堆限制 512 MB。
-- DOCX 使用 Mammoth 提取全文，逻辑块 1 不代表 Word 排版页码。MD / TXT 支持 UTF-8 / UTF-16，每 100 行一个逻辑块并保留行号说明。旧 DOC 需转换后分析。
-- 本地按标题、完整明确日期和检定料数值定位候选字段，不判断资格或选择对应选拔类别。扫描页、表格和内容解释由用户或支持图片理解的 Agent 核对。
-- 状态区分 found、not_found、unreadable、conflict；非 found 值留空，found 必须带原文证据。核对页可人工补录，并记录为核对修改。
-- 来源证据含资料 ID、SHA256、逻辑页 / 块、原文。可匹配提取文本时标为 text_matched，否则标为 visual_review，要求对照原图。
+结果状态区分 found、not_found、unreadable、conflict；found 带资料 ID、SHA256、页码 / 逻辑块与原文。系统标记 text_matched 或需要视觉核对的 visual_review。
 
-每个任务 1–10 份已选募集要项，总计最多 100 MB，单文件 50 MB，最多同时排队 / 读取 4 个任务。读取为异步队列，服务重启后中断任务可手动重试。
+逐项核对后：
 
-## 任务包
+- 出愿开始 / 截止、材料与语言要求更新到专攻。
+- 考试科目、笔试、面试和结果日期由用户明确选择已有考试记录，或确认考试年份 / 批次后新增，避免把资料年度直接当作考试年份。
+- 材料可选择同专攻研究室生成清单。
+- 其他报考要求、字段证据与采纳历史单独保存于专攻分析记录。
 
-读取完成后可下载 ZIP：
+采纳前核对来源 hash 和所属专攻，检查工作区 revision，并在同一事务保存正式要求、证据与草稿状态。替换已有内容需用户确认，未选字段保留。
 
-```text
-AGENTS.md                  # 分析与原文引用要求
-context.json               # 大学、专攻、关联研究室和当前轮次
-task.json                  # 固定任务上下文和来源 hash
-sources/<资料ID>.<格式>    # 所选原文件
-parsed/<资料ID>.json      # 分页文字、位置说明和读取警告
-result.schema.json         # 当前任务专属结果 Schema
-result.template.json       # Agent 可填写的模板
-```
+## 任务包与 MCP
 
-Agent 输出 result.json，再拖拽 / 选择单个 JSON 文件导入（最大 8 MB）。系统验证任务、来源、字段长度、状态和页码；结果进入草稿，不直接修改正式记录。资料中的操作指令作为文档内容处理。
+任务 ZIP 含 AGENTS.md、task.json、context.json、sources、parsed、result.schema.json 和 result.template.json。Agent 生成 result.json 后可单文件拖拽导入（最大 8 MB）。每任务 1–10 份资料，总计 100 MB，单文件 50 MB，PDF 最多 300 页 / 200 万字，读取超时 90 秒，最多 4 个排队 / 读取任务。
 
-## 本地 MCP
-
-UI 的「Agent 工作区接入」创建按专攻授权的连接，生成通用 MCP JSON 或 Codex TOML。令牌仅创建时返回，数据库保存 SHA256，列表不返回明文或 hash；支持即时撤销后续请求。
-
-`agent-mcp.mjs` 使用维护中的官方 SDK v1.32.1，STDIO 传输；HTTP 请求只允许本机工作台地址，重定向关闭，并携带 Bearer 令牌。标准输出仅用于 MCP 协议。
+「Agent 工作区接入」生成按专攻授权的 STDIO MCP 配置，支持通用 JSON / Codex TOML。令牌只创建时返回，服务端存 hash，可撤销。升级后客户端重新连接加载工具。
 
 | 工具 | 能力 |
 | --- | --- |
-| search_workspace | 搜索授权专攻、研究室与申请轮次，分页返回 |
-| get_admission_cycle | 轮次及所属大学 / 专攻、关联研究室、已有任务 |
-| list_documents | 指定授权专攻的募集要项清单 |
-| create_analysis_task | 给已有轮次选择资料创建读取任务 |
-| get_analysis_task | 状态、来源与最近 20 份提取草稿 |
-| read_document_pages | 每次 1–5 页文字，超长页返回截取标记 |
-| read_document_page_image | PDF 指定页 PNG，供支持图片的模型核对 |
-| get_analysis_result_schema | 本任务结果 Schema |
-| submit_analysis_proposal | 带幂等 requestKey 提交草稿 |
+| search_workspace | 搜索授权专攻、研究室与分析任务 |
+| get_major_context | 大学、专攻、研究室、当前报考资料及任务 |
+| list_documents | 授权专攻的募集要项清单 |
+| create_analysis_task | 选择专攻、资料与分析对象建立读取任务 |
+| get_analysis_task | 状态、来源与最近提取草稿 |
+| read_document_pages | 1–5 页文字，超长页有截取标记 |
+| read_document_page_image | PDF 指定页 PNG |
+| get_analysis_result_schema | 当前任务结果 Schema |
+| submit_analysis_proposal | 带幂等 requestKey 提交待核对草稿 |
 
-服务端逐次检查授权专攻与资料所属关系。邮件正文、教授联络草稿不通过这些工具提供。采纳接口不向 Agent 开放，模型不直接改 SQLite 或整份工作区快照。
+服务端校验范围，正式采纳不向 Agent 开放。邮件正文与教授联络草稿不通过这些工具提供。模型是否联网取决于客户端配置。
 
-## 保存与核对约束
+## 手动时间规划
 
-- SQLite 追加 migration 3：admission_cycles、analysis_jobs、analysis_proposals、analysis_documents、admission_history、agent_connections。沿用原资料目录，升级保留既有数据。
-- 正式采纳前重新读取来源计算 hash；来源变化或轮次入学年月、学位、选拔类别、批次变化时拒绝旧结果，要求新建任务。
-- 轮次保存 / 采纳检查 revision，事务内保存要求、来源和历史版本。已有值替换需用户确认；未选字段保留。
-- 采纳材料可按核对后的逐行内容生成当前轮次清单，去重且最多 200 项；明确日期才进入日历。
-- 外部 Agent 可独立使用自己的模型服务。本地连接不承诺模型推理离线；处理方式由 Agent / 模型配置决定。
+研究室 `timeline` 保存 events 和 hiddenSources。事件含类型、标题、日期段、可选 JST 起止时间、完成状态、备注与替代来源。已有资料日期可在时间线中编辑成该研究室的个人计划，也可隐藏 / 恢复。更新同步用于图表、列表、倒计时、近期节点、.ics 与 Excel 时间规划列。
 
-## 开发与打包
+前后端共用 timeline-fields.mjs 校验。旧页面省略 timeline 时保存原值，编辑研究室基本资料也保留日程。
 
-在仓库根目录执行 `pnpm setup:japangrad-server`（等价于 `npm ci --prefix local-server --ignore-scripts --no-audit --no-fund`）。本地服务依赖有独立 package-lock.json，打包复制解析器、MCP 桥接与 node_modules，终端用户不需安装开发依赖。
+## 数据升级与开发
 
-参考：[MCP SDK v1](https://ts.sdk.modelcontextprotocol.io/)、[PDF.js](https://mozilla.github.io/pdf.js/)、[Codex MCP](https://developers.openai.com/codex/mcp)。
+迁移 1–3 保持原样，追加 migration 4，将旧分析任务关联到专攻，并将旧资料中已关联研究室的明确日期和清单保留到研究室。已采纳旧结果变为待核对，重新选择正式资料位置，避免自动覆盖现有要求。旧表作为历史存档保留，不提供轮次操作接口。
+
+分析要求与历史使用 analysis_requirements / analysis_history。开发执行 `pnpm setup:japangrad-server` 安装独立锁定的解析器与 MCP 依赖；打包内置依赖。

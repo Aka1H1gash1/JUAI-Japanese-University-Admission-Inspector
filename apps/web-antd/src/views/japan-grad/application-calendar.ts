@@ -31,9 +31,16 @@ export interface PlannerEvent {
   start: string;
   end: string;
   at: string;
+  endAt?: string;
+  entryId?: string;
+  imported?: boolean;
+  originSource?: string;
   complete: boolean;
   details: string;
   path: string;
+}
+function labPathForTimeline(target: LabTarget) {
+  return `/japan-grad/universities/${target.university.id}/schools/${target.school.id}/majors/${target.major.id}/labs/${target.lab.id}`;
 }
 function dateRange(text: string) {
   const parts = text.trim().split(/\s*(?:[~～〜]|至|到|—|–|\s-\s)\s*/);
@@ -207,7 +214,49 @@ export function buildPlannerEvents(targets: LabTarget[], year = 'latest') {
         `${path}?tab=tasks`,
       );
   }
-  return events.toSorted(
+  const merged: PlannerEvent[] = [];
+  for (const target of targets) {
+    const timeline = target.lab.timeline;
+    const replaced = new Set(
+      timeline?.events.map((entry) => entry.replaces).filter(Boolean) ?? [],
+    );
+    const hidden = new Set(timeline?.hiddenSources ?? []);
+    merged.push(
+      ...events
+        .filter(
+          (event) =>
+            event.labId === target.lab.id &&
+            !replaced.has(event.source) &&
+            !hidden.has(event.source),
+        )
+        .map((event) => ({
+          ...event,
+          imported: true,
+          originSource: event.source,
+        })),
+    );
+    for (const entry of timeline?.events ?? [])
+      merged.push({
+        id: `${target.lab.id}-timeline-${entry.id}`,
+        source: `timeline-${target.lab.id}-${entry.id}`,
+        labId: target.lab.id,
+        labName: target.lab.name,
+        universityName: target.university.name,
+        title: entry.title,
+        kind: entry.kind,
+        start: entry.start,
+        end: entry.end,
+        at: entry.at,
+        endAt: entry.endAt,
+        complete: entry.complete,
+        details: entry.notes,
+        path: `${labPathForTimeline(target)}?tab=admissions`,
+        entryId: entry.id,
+        imported: false,
+        originSource: entry.replaces || undefined,
+      });
+  }
+  return merged.toSorted(
     (a, b) =>
       a.start.localeCompare(b.start) || a.title.localeCompare(b.title, 'zh-CN'),
   );
@@ -220,7 +269,8 @@ export function eventCountdown(event: PlannerEvent, today = japanToday()) {
         ? '已记录'
         : '已结束';
   if (event.end < today)
-    return ['task', 'followup', 'contact'].includes(event.kind)
+    return ['task', 'followup', 'contact'].includes(event.kind) ||
+      (event.imported === false && ['consent', 'result'].includes(event.kind))
       ? `已逾期 ${Math.round(dayNumber(today) - dayNumber(event.end))} 天`
       : '日期已过';
   if (event.start < event.end && event.start <= today && event.end >= today) {
@@ -239,6 +289,8 @@ export function plannerReminders(events: PlannerEvent[], today = japanToday()) {
       (event) =>
         !event.complete &&
         (['task', 'followup', 'contact'].includes(event.kind) ||
+          (event.imported === false &&
+            ['consent', 'result'].includes(event.kind)) ||
           event.end >= today) &&
         dayNumber(event.start) - dayNumber(today) <= 30,
     )
@@ -281,8 +333,14 @@ export function plannerConflicts(events: PlannerEvent[]) {
       const sameExam =
         ['written', 'interview', 'exam'].includes(a.kind) &&
         ['written', 'interview', 'exam'].includes(b.kind) &&
-        a.source.replace(/-(?:written|interview|exam)$/, '') ===
-          b.source.replace(/-(?:written|interview|exam)$/, '');
+        (a.originSource || a.source).replace(
+          /-(?:written|interview|exam)$/,
+          '',
+        ) ===
+          (b.originSource || b.source).replace(
+            /-(?:written|interview|exam)$/,
+            '',
+          );
       if (
         a.labId === b.labId ||
         a.source === b.source ||
@@ -371,6 +429,8 @@ export function calendarText(events: PlannerEvent[]) {
         `DTSTART;VALUE=DATE:${event.start.replace(/-/g, '')}`,
         `DTEND;VALUE=DATE:${addDays(event.end, 1).replace(/-/g, '')}`,
       );
+    if (event.at && event.endAt)
+      lines.push(`DTEND;TZID=Asia/Tokyo:${event.endAt.replace(/[-:]/g, '')}00`);
     lines.push(
       `SUMMARY:${icsText(`${event.universityName} · ${event.title}`)}`,
       `DESCRIPTION:${icsText([...new Set(values.map((item) => [item.labName, item.details].filter(Boolean).join('：'))), '时间按日本时间维护；请结合学校最新通知确认。'].filter(Boolean).join('\n'))}`,
@@ -386,13 +446,13 @@ export function calendarText(events: PlannerEvent[]) {
     if (
       !event.complete &&
       event.kind === 'application' &&
-      event.end > event.start &&
+      (event.end > event.start || !!event.endAt) &&
       event.end >= today
     ) {
       // DATE DTEND is exclusive: two days before it is one day before the closing date.
       lines.push(
         'BEGIN:VALARM',
-        'TRIGGER;RELATED=END:-P2D',
+        event.at ? 'TRIGGER;RELATED=END:-P1D' : 'TRIGGER;RELATED=END:-P2D',
         'ACTION:DISPLAY',
         `DESCRIPTION:${icsText(`${event.title}截止前一天（${event.end} 截止）`)}`,
         'END:VALARM',

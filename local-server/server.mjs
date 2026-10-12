@@ -10,7 +10,8 @@ import { execFile } from 'node:child_process';
 import geography from './japan-geography.json' with { type: 'json' };
 import { upgradeResearchLabs } from './research-labs.mjs';
 import { planningError } from './planning-fields.mjs';
-import { createAdmissionsService } from './admissions-service.mjs';
+import { timelineError } from './timeline-fields.mjs';
+import { createAnalysisService } from './analysis-service.mjs';
 import {
   deliveryProperties,
   fileProperties,
@@ -208,6 +209,10 @@ export function validateExplorer(data) {
     )
   )
     fail('老师所属研究室不存在或与专攻不匹配。');
+  for (const lab of data.labs ?? []) {
+    const error = timelineError(lab.timeline);
+    if (error) fail(error);
+  }
   const plannerError = planningError(data);
   if (plannerError) fail(plannerError);
   return data;
@@ -400,7 +405,7 @@ export async function createLocalApp({
       throw error;
     }
   };
-  const admissions = createAdmissionsService({
+  const analysis = createAnalysisService({
     db,
     snapshot,
     document,
@@ -409,6 +414,7 @@ export async function createLocalApp({
     fail,
     json,
     jsonBody,
+    validateExplorer,
   });
   const server = createServer(async (req, res) => {
     try {
@@ -433,7 +439,7 @@ export async function createLocalApp({
           req.headers['x-japangrad-client'] !== '1'
         )
           fail('缺少本地工作台请求标识。', 403);
-        if (await admissions.handle(req, res, route)) return;
+        if (await analysis.handle(req, res, route)) return;
         if (route === '/api/japangrad/workspace' && req.method === 'GET')
           return json(res, snapshot());
         if (route === '/api/japangrad/workspace' && req.method === 'PUT') {
@@ -475,6 +481,7 @@ export async function createLocalApp({
             if (!lab) continue;
             const previous = previousLabs.get(lab.id);
             for (const key of [
+              'timeline',
               'tasks',
               'mainProfessorId',
               'languageRequirements',
@@ -950,7 +957,7 @@ export async function createLocalApp({
     }
   });
   server.on('close', () => {
-    admissions.close();
+    analysis.close();
     db.close();
   });
   return server;
