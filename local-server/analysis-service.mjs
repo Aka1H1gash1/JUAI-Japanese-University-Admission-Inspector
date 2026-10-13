@@ -16,6 +16,7 @@ import {
   proposalSchema,
 } from './admission-analysis.mjs';
 import { validPlannerDay } from './planning-fields.mjs';
+import { informationPermissions } from './information-service.mjs';
 
 const digest = (value) => createHash('sha256').update(value).digest('hex');
 const now = () => new Date().toISOString();
@@ -568,6 +569,11 @@ export function createAnalysisService({
           ),
       );
     if (!connection) fail('连接已撤销或令牌无效。', 401);
+    connection.lastUsedAt = now();
+    db.prepare('UPDATE agent_connections SET data = ? WHERE id = ?').run(
+      JSON.stringify(connection),
+      connection.id,
+    );
     return connection;
   }
   function checkScope(scope, majorId) {
@@ -603,6 +609,13 @@ export function createAnalysisService({
       json(res, value, status);
       return true;
     };
+    if (agent && endpoint === 'connection' && req.method === 'GET')
+      return respond({
+        ...publicConnection(scope),
+        connected: true,
+        informationAccess: scope.informationAccess ?? 'none',
+        writableKinds: scope.writableKinds ?? [],
+      });
     if (agent && endpoint === 'workspace' && req.method === 'GET') {
       const data = snapshot().data;
       const majors = data.majors.filter((m) => scope.majorIds.includes(m.id));
@@ -954,6 +967,7 @@ export function createAnalysisService({
     if (!agent && endpoint === 'connections' && req.method === 'POST') {
       const input = await jsonBody(req);
       if (
+        !input ||
         !isText(input.name, 100) ||
         !input.name.trim() ||
         !Array.isArray(input.majorIds) ||
@@ -962,8 +976,10 @@ export function createAnalysisService({
         input.majorIds.some((id) => !majorExists(id))
       )
         fail('请命名连接并选择授权专攻。');
+      const permissions = informationPermissions(input, fail);
       const token = randomBytes(32).toString('hex');
       const connection = {
+        ...permissions,
         id: randomUUID(),
         name: input.name.trim(),
         majorIds: [...new Set(input.majorIds)],
@@ -999,6 +1015,7 @@ export function createAnalysisService({
   }
   return {
     handle,
+    authenticate,
     close() {
       closed = true;
       for (const worker of active) void worker.terminate();

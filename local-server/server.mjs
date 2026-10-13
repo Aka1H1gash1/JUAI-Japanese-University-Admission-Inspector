@@ -13,6 +13,7 @@ import { planningError } from './planning-fields.mjs';
 import { timelineError } from './timeline-fields.mjs';
 import { createAnalysisService } from './analysis-service.mjs';
 import { createExperienceService } from './experience-service.mjs';
+import { createInformationService } from './information-service.mjs';
 import { validPlannerDay, validPlannerMinute } from './planning-fields.mjs';
 import {
   deliveryProperties,
@@ -427,6 +428,16 @@ export async function createLocalApp({
     jsonBody,
     validateExplorer,
   });
+  const information = createInformationService({
+    db,
+    snapshot,
+    transaction,
+    fail,
+    json,
+    jsonBody,
+    validateExplorer,
+    authenticate: analysis.authenticate,
+  });
   const server = createServer(async (req, res) => {
     try {
       const host = req.headers.host;
@@ -450,10 +461,15 @@ export async function createLocalApp({
           req.headers['x-japangrad-client'] !== '1'
         )
           fail('缺少本地工作台请求标识。', 403);
+        if (await information.handle(req, res, route)) return;
         if (await experiences.handle(req, res, route)) return;
         if (await analysis.handle(req, res, route)) return;
-        if (route === '/api/japangrad/workspace' && req.method === 'GET')
-          return json(res, snapshot());
+        if (route === '/api/japangrad/workspace' && req.method === 'GET') {
+          const current = snapshot();
+          if (url.searchParams.get('since') === String(current.revision))
+            return json(res, { unchanged: true, revision: current.revision });
+          return json(res, current);
+        }
         if (route === '/api/japangrad/workspace' && req.method === 'PUT') {
           const input = await jsonBody(req);
           const current = snapshot();

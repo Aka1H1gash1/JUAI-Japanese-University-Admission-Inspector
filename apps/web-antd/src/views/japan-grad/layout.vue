@@ -5,6 +5,8 @@ import {
   usePreferredDark,
   usePreferredReducedMotion,
   useStorage,
+  useEventListener,
+  useIntervalFn,
 } from '@vueuse/core';
 import {
   theme as antdTheme,
@@ -25,6 +27,34 @@ import './visual.css';
 
 const store = useExplorerStore();
 void store.load();
+let refreshingWorkspace = false;
+async function refreshWorkspace() {
+  if (
+    !store.loaded ||
+    store.saving ||
+    refreshingWorkspace ||
+    document.visibilityState === 'hidden'
+  )
+    return;
+  // Keep an open edit dialog stable; its save uses the original workspace revision.
+  if (
+    [...document.querySelectorAll('.ant-modal-wrap')].some(
+      (el) => el.getClientRects().length > 0,
+    )
+  )
+    return;
+  refreshingWorkspace = true;
+  try {
+    await store.refresh();
+  } catch {
+    /* Existing workspace remains visible; saving still reports connection failures. */
+  } finally {
+    refreshingWorkspace = false;
+  }
+}
+useIntervalFn(() => void refreshWorkspace(), 15000);
+useEventListener(window, 'focus', () => void refreshWorkspace());
+
 const route = useRoute();
 const router = useRouter();
 const parentNavigation = computed(() => {

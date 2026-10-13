@@ -1017,7 +1017,11 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
   }
   async function refresh() {
     await pending;
-    const result = await localApi<WorkspaceSnapshot>('/workspace');
+    const result = await localApi<
+      WorkspaceSnapshot | { unchanged: true; revision: number }
+    >(`/workspace?since=${revision}`);
+    await pending;
+    if ('unchanged' in result || result.revision <= revision) return;
     if (!isExplorerData(result.data)) throw new Error('工作区数据格式错误。');
     apply(result.data);
     revision = result.revision;
