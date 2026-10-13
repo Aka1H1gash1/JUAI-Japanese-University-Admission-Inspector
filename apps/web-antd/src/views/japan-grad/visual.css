@@ -502,3 +502,41 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
     background: none;
   }
 }
+
+/* The assistant shares the workspace palette and overlay layers. */
+.assistant-launch-button.ant-btn {
+  height: 32px;
+  font-size: 12px;
+  color: var(--jg-accent-text);
+  background: var(--jg-accent-soft);
+  border-color: var(--jg-accent-line);
+}
+.assistant-drawer .ant-drawer-body {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: 20px;
+}
+.assistant-drawer .assistant-shell {
+  flex: 1;
+}
+@media (max-width: 767px) {
+  .assistant-launch-button.ant-btn {
+    width: 32px;
+    padding: 7px;
+  }
+  .assistant-launch-button > span {
+    display: none;
+  }
+  .assistant-drawer .ant-drawer-body {
+    padding: 14px;
+  }
+  .topbar-inner {
+    gap: 8px;
+  }
+}
+@media (max-width: 359px) {
+  .topbar-inner .mobile-brand {
+    display: none;
+  }
+}

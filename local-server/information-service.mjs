@@ -371,7 +371,7 @@ export function createInformationService({
       }
     });
   }
-  function write(scope, input) {
+  function parseEdit(scope, input) {
     if (scope.informationAccess !== 'write')
       fail('此连接仅可读取信息文件。', 403);
     const entry = resolve(input.path, scope);
@@ -434,6 +434,10 @@ export function createInformationService({
       value,
       summary: input.summary,
     });
+    return { entry, value, requestHash };
+  }
+  function write(scope, input) {
+    const { entry, value, requestHash } = parseEdit(scope, input);
     const previous = db
       .prepare(
         'SELECT data FROM agent_information_history WHERE connection_id = ? AND request_key = ?',
@@ -659,5 +663,64 @@ export function createInformationService({
     }
     fail('信息修改记录操作不存在。', 404);
   }
-  return { handle };
+  function listFiles(scope, { query = '', offset = 0, limit = 30 } = {}) {
+    if (
+      typeof query !== 'string' ||
+      query.length > 200 ||
+      !Number.isSafeInteger(offset) ||
+      offset < 0 ||
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 50
+    )
+      fail('资料列表参数不合法。');
+    const all = entries(snapshot().data, scope).filter((e) =>
+      `${e.path} ${e.entity.name}`.toLowerCase().includes(query.toLowerCase()),
+    );
+    return {
+      total: all.length,
+      files: all.slice(offset, offset + limit).map((e) => {
+        const { content, jsonSchema, ...meta } = file(e, scope);
+        return meta;
+      }),
+      nextOffset: offset + limit < all.length ? offset + limit : null,
+    };
+  }
+  function preview(scope, input) {
+    const { entry, value } = parseEdit(scope, input);
+    const before = file(entry, scope);
+    if (before.sha256 !== input.expectedHash)
+      fail('资料已有新修改，请重新读取后再提出建议。', 409);
+    const data = structuredClone(snapshot().data),
+      entity = data[collections[entry.kind]].find(
+        (e) => e.id === entry.entity.id,
+      );
+    const changedFields = Object.keys(value.data).filter(
+      (key) => stable(entity[key]) !== stable(value.data[key]),
+    );
+    if (!changedFields.length) fail('建议与当前资料相同，无需修改。');
+    Object.assign(entity, value.data);
+    validateExplorer(data);
+    return {
+      path: entry.path,
+      name: entity.name,
+      summary: input.summary,
+      changedFields,
+      before: JSON.parse(before.content),
+      after: JSON.parse(file({ ...entry, entity }, scope).content),
+    };
+  }
+  return {
+    handle,
+    write,
+    preview,
+    listFiles,
+    describe: (scope) => ({
+      majorIds: scope.majorIds,
+      writableKinds: scope.writableKinds,
+      geography,
+      schema: schema(),
+    }),
+    readFile: (scope, path) => file(resolve(path, scope), scope),
+  };
 }

@@ -14,6 +14,7 @@ import { timelineError } from './timeline-fields.mjs';
 import { createAnalysisService } from './analysis-service.mjs';
 import { createExperienceService } from './experience-service.mjs';
 import { createInformationService } from './information-service.mjs';
+import { createAssistantService } from './assistant-service.mjs';
 import { validPlannerDay, validPlannerMinute } from './planning-fields.mjs';
 import {
   deliveryProperties,
@@ -438,6 +439,15 @@ export async function createLocalApp({
     validateExplorer,
     authenticate: analysis.authenticate,
   });
+  const assistant = createAssistantService({
+    db,
+    snapshot,
+    information,
+    json,
+    jsonBody,
+    fail,
+    transaction,
+  });
   const server = createServer(async (req, res) => {
     try {
       const host = req.headers.host;
@@ -461,6 +471,7 @@ export async function createLocalApp({
           req.headers['x-japangrad-client'] !== '1'
         )
           fail('缺少本地工作台请求标识。', 403);
+        if (await assistant.handle(req, res, route)) return;
         if (await information.handle(req, res, route)) return;
         if (await experiences.handle(req, res, route)) return;
         if (await analysis.handle(req, res, route)) return;
@@ -1019,6 +1030,7 @@ export async function createLocalApp({
     }
   });
   server.on('close', () => {
+    assistant.close();
     analysis.close();
     db.close();
   });

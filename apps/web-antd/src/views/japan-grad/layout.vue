@@ -21,6 +21,7 @@ import {
 import BrandMark from './components/brand-mark.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import WorkspaceNavigation from './components/workspace-navigation.vue';
+import AssistantChat from './components/assistant-chat.vue';
 import { useExplorerStore } from './explorer';
 import './style.css';
 import './visual.css';
@@ -92,6 +93,7 @@ function goToParent() {
   if (parentNavigation.value) void router.push(parentNavigation.value.path);
 }
 const navOpen = ref(false);
+const assistantOpen = ref(false);
 const workspaceOpen = ref(false);
 const pathCopied = ref(false);
 const copyError = ref('');
@@ -264,6 +266,13 @@ watch(workspaceOpen, () => {
                 ></i
                 ><span>{{ saveLabel }}</span></span
               >
+              <Button
+                class="icon-button assistant-launch-button"
+                :disabled="!store.loaded"
+                aria-label="打开 AI 资料助手"
+                @click="assistantOpen = true"
+                ><ExplorerIcon name="book" /><span>AI 助手</span></Button
+              >
               <Dropdown :trigger="['click']"
                 ><Button
                   class="appearance-button"
@@ -334,6 +343,7 @@ watch(workspaceOpen, () => {
             </button>
           </footer>
         </div>
+        <AssistantChat v-model:open="assistantOpen" />
         <Drawer
           v-model:open="navOpen"
           title="工作区导航"

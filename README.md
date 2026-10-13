@@ -138,3 +138,5 @@ LICENSES/              第三方许可声明
 在专攻详情或募集要项文件详情进入分析页，直接选择资料与分析对象。结果核对后可更新专攻出愿 / 语言要求、考试记录或研究室清单。Agent 可通过 ZIP 任务包或本地 STDIO MCP 接入，连接窗口生成通用 JSON / Codex TOML 配置。详见 [Agent 接入说明](local-server/AGENT_INTEGRATION_DESIGN.md)。
 
 Agent 支持按专攻授权的本地 MCP 信息文件读写：创建并下载配置，选择可编辑的资料类型，保存后同步界面并保留可对照、可撤销的修改记录。配置说明见[使用说明](local-server/USER_GUIDE.md#本地-agent-信息文件接入)。
+
+网页右上角提供「AI 助手」，配置自己的 Responses / OpenAI 兼容 API 后即可查询授权资料、生成修改建议并在对话中确认保存，支持历史对话、流式回答与停止。API 密钥仅保留在本地服务内存，重启后重填。
