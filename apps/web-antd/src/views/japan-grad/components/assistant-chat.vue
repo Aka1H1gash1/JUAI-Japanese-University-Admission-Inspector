@@ -1,15 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
-import { useWindowSize } from '@vueuse/core';
-import {
-  App,
-  Button,
-  Checkbox,
-  Drawer,
-  Input,
-  Modal,
-  Select,
-} from 'ant-design-vue';
+import { useWindowSize, useStorage, useEventListener } from '@vueuse/core';
+import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
 import { useExplorerStore } from '../explorer';
 import { jsonOptions, localApi } from '../local-api';
 import { vAccessibleSelect } from '../select-accessibility';
@@ -18,7 +10,8 @@ import AgentInformationHistory from './agent-information-history.vue';
 interface Provider {
   baseUrl: string;
   model: string;
-  protocol: 'responses' | 'chat_completions';
+  protocol: 'responses' | 'chat_completions' | 'codex';
+  codexPath?: string;
   stream: boolean;
   local?: boolean;
 }
@@ -73,7 +66,130 @@ interface SessionRow {
 }
 const open = defineModel<boolean>('open', { default: false });
 const { width: windowWidth } = useWindowSize();
-const drawerWidth = computed(() => Math.min(860, windowWidth.value));
+const storedWidth = useStorage('juai-assistant-pane-width', 440);
+const maxPaneWidth = computed(() =>
+  Math.max(
+    320,
+    Math.min(
+      740,
+      windowWidth.value - (windowWidth.value >= 1280 ? 232 : 0) - 400,
+    ),
+  ),
+);
+const paneWidth = computed(() =>
+  Math.min(
+    maxPaneWidth.value,
+    Math.max(320, Number.isFinite(storedWidth.value) ? storedWidth.value : 440),
+  ),
+);
+const panel = ref<HTMLElement>();
+watch(
+  [panel, paneWidth],
+  () => {
+    if (panel.value && !resizeStart)
+      panel.value.style.setProperty(
+        '--assistant-pane-width',
+        `${paneWidth.value}px`,
+      );
+  },
+  { flush: 'post' },
+);
+let resizeStart:
+  | { x: number; width: number; target: HTMLElement; pointerId: number }
+  | undefined;
+let resizeFrame = 0,
+  nextWidth = 440;
+function startResize(event: PointerEvent) {
+  if (windowWidth.value <= 900 || event.button !== 0) return;
+  const target = event.currentTarget as HTMLElement;
+  target.setPointerCapture(event.pointerId);
+  nextWidth = paneWidth.value;
+  resizeStart = {
+    x: event.clientX,
+    width: paneWidth.value,
+    target,
+    pointerId: event.pointerId,
+  };
+  event.preventDefault();
+}
+function moveResize(event: PointerEvent) {
+  if (!resizeStart) return;
+  nextWidth = Math.max(
+    320,
+    Math.min(
+      maxPaneWidth.value,
+      resizeStart.width + resizeStart.x - event.clientX,
+    ),
+  );
+  if (!resizeFrame)
+    resizeFrame = requestAnimationFrame(() => {
+      resizeFrame = 0;
+      panel.value?.style.setProperty(
+        '--assistant-pane-width',
+        `${nextWidth}px`,
+      );
+      resizeStart?.target.setAttribute(
+        'aria-valuenow',
+        String(Math.round(nextWidth)),
+      );
+    });
+}
+function stopResize() {
+  if (!resizeStart) return;
+  if (resizeFrame) cancelAnimationFrame(resizeFrame);
+  resizeFrame = 0;
+  if (resizeStart.target.hasPointerCapture(resizeStart.pointerId))
+    resizeStart.target.releasePointerCapture(resizeStart.pointerId);
+  storedWidth.value = nextWidth;
+  resizeStart = undefined;
+}
+function resizeKey(event: KeyboardEvent) {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  event.preventDefault();
+  storedWidth.value =
+    event.key === 'Home'
+      ? 320
+      : event.key === 'End'
+        ? maxPaneWidth.value
+        : Math.max(
+            320,
+            Math.min(
+              maxPaneWidth.value,
+              paneWidth.value + (event.key === 'ArrowLeft' ? 20 : -20),
+            ),
+          );
+}
+useEventListener(window, 'pointermove', moveResize);
+useEventListener(window, 'pointerup', stopResize);
+useEventListener(window, 'pointercancel', stopResize);
+onUnmounted(() => {
+  if (resizeFrame) cancelAnimationFrame(resizeFrame);
+});
+interface NativeState {
+  connected: boolean;
+  ready: boolean;
+  needsLogin: boolean;
+  models: Array<{ id: string; name: string; isDefault: boolean }>;
+  defaultModel?: string;
+  error?: string;
+  sessionId?: string;
+  loginPending?: boolean;
+  path?: string;
+  accountType?: string;
+}
+const nativeState = ref<NativeState>({
+    connected: false,
+    ready: false,
+    needsLogin: false,
+    models: [],
+  }),
+  nativeBusy = ref(false),
+  loginUrl = ref(''),
+  awaitingNative = ref(false);
+let invitationSession = '';
+let awaitingExternal = false;
+let nativeConnectCustom = false;
+
 const store = useExplorerStore(),
   { message, modal } = App.useApp();
 const settings = ref<Settings>(),
@@ -90,6 +206,8 @@ const settings = ref<Settings>(),
   acting = ref(''),
   scroll = ref<HTMLElement>();
 const form = ref({
+  source: 'codex' as 'api' | 'codex',
+  codexPath: '',
   baseUrl: 'https://api.openai.com/v1',
   model: '',
   protocol: 'responses' as 'responses' | 'chat_completions',
@@ -197,7 +315,14 @@ watch(open, (value) => {
   if (value) {
     if (!busy.value) void load();
     else keepBottom(true);
+    void refreshNative();
     refreshTimer = setInterval(() => {
+      if (
+        awaitingNative.value ||
+        nativeState.value.loginPending ||
+        nativeState.value.needsLogin
+      )
+        void refreshNative(true);
       if (!busy.value && session.value?.running)
         void loadSession(session.value.id).catch(() => {});
     }, 4000);
@@ -215,9 +340,17 @@ function editSettings() {
     provider = session.value?.provider ?? c?.provider,
     scope = session.value?.scope ?? c;
   form.value = {
-    baseUrl: provider?.baseUrl || 'https://api.openai.com/v1',
+    source: c?.configured && provider?.protocol !== 'codex' ? 'api' : 'codex',
+    codexPath: provider?.codexPath || '',
+    baseUrl:
+      provider?.protocol === 'codex'
+        ? 'https://api.openai.com/v1'
+        : provider?.baseUrl || 'https://api.openai.com/v1',
     model: provider?.model || '',
-    protocol: provider?.protocol || 'responses',
+    protocol:
+      provider?.protocol === 'codex'
+        ? 'responses'
+        : provider?.protocol || 'responses',
     stream: provider?.stream !== false,
     majorIds: (scope?.majorIds ?? majors.value.map((m) => m.value)).filter(
       (id) => store.majors.some((m) => m.id === id),
@@ -228,6 +361,21 @@ function editSettings() {
   };
   settingsOpen.value = true;
 }
+watch(
+  () => form.value.source,
+  (source) => {
+    if (source === 'codex')
+      form.value.model =
+        session.value?.provider.protocol === 'codex'
+          ? session.value.provider.model
+          : nativeState.value.defaultModel || '';
+    else
+      form.value.model =
+        session.value?.provider.protocol !== 'codex'
+          ? session.value?.provider.model || ''
+          : '';
+  },
+);
 watch(historyOpen, (value) => {
   if (!value && !busy.value && session.value)
     void loadSession(session.value.id).catch(() => {});
@@ -251,7 +399,134 @@ async function newSession() {
     editSettings();
   }
 }
+async function refreshNative(refresh = false) {
+  try {
+    const value = await localApi<NativeState>(
+      `/assistant/native/status${refresh ? '?refresh=1' : ''}`,
+    );
+    nativeState.value = value;
+    if (
+      awaitingNative.value &&
+      value.connected &&
+      !value.needsLogin &&
+      loginUrl.value
+    ) {
+      loginUrl.value = '';
+      await connectNative(nativeConnectCustom);
+    } else if (value.ready && awaitingNative.value) {
+      if (
+        awaitingExternal &&
+        value.sessionId &&
+        value.sessionId !== invitationSession
+      ) {
+        await loadSession(value.sessionId);
+        settings.value = await localApi<Settings>('/assistant/settings');
+        await listSessions();
+        awaitingNative.value = false;
+        awaitingExternal = false;
+        keepBottom(true);
+      } else if (loginUrl.value) {
+        loginUrl.value = '';
+        await connectNative(nativeConnectCustom);
+      }
+    }
+  } catch (e) {
+    if (refresh)
+      error.value = e instanceof Error ? e.message : '连接状态读取失败。';
+  }
+}
+async function connectNative(custom = false) {
+  if (nativeBusy.value || busy.value) return;
+  nativeBusy.value = true;
+  nativeConnectCustom = custom;
+  error.value = '';
+  try {
+    const result = await localApi<{
+      native: NativeState;
+      settings: Settings;
+      session: Session | null;
+    }>(
+      '/assistant/native/connect',
+      jsonOptions('POST', {
+        path: custom
+          ? form.value.codexPath
+          : settings.value?.provider.codexPath || '',
+        ...(custom
+          ? {
+              model: form.value.model || undefined,
+              majorIds: form.value.majorIds,
+              writableKinds: form.value.readOnly
+                ? []
+                : form.value.writableKinds,
+            }
+          : {}),
+      }),
+    );
+    nativeState.value = result.native;
+    if (!result.session) {
+      awaitingNative.value = true;
+      error.value = '本机 Codex 尚未登录，请完成登录后继续。';
+      return;
+    }
+    readGeneration++;
+    settings.value = result.settings;
+    session.value = result.session;
+    await listSessions();
+    awaitingNative.value = false;
+    loginUrl.value = '';
+    settingsOpen.value = false;
+    keepBottom(true);
+    message.success('已连接本机 Codex，直接输入问题即可');
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '本机 Codex 连接失败。';
+  } finally {
+    nativeBusy.value = false;
+  }
+}
+async function loginNative() {
+  nativeBusy.value = true;
+  error.value = '';
+  try {
+    const result = await localApi<{ authUrl: string }>(
+      '/assistant/native/login',
+      jsonOptions('POST', {
+        path: form.value.codexPath || settings.value?.provider.codexPath || '',
+      }),
+    );
+    loginUrl.value = result.authUrl;
+    awaitingNative.value = true;
+    nativeState.value.loginPending = true;
+    window.open(result.authUrl, '_blank', 'noopener,noreferrer');
+  } catch (e) {
+    error.value = e instanceof Error ? e.message : '无法打开 Codex 登录。';
+  } finally {
+    nativeBusy.value = false;
+  }
+}
+async function copyNativePrompt() {
+  const scope = session.value?.scope ?? settings.value;
+  const body = JSON.stringify({
+    majorIds: scope?.majorIds ?? majors.value.map((m) => m.value),
+    writableKinds: scope?.writableKinds ?? ['major', 'lab'],
+  });
+  const text = `请帮我把本机 Codex 连接到 JUAI 网页助手侧栏。JUAI 正在 ${window.location.origin} 运行。仅向 ${window.location.origin}/api/japangrad/assistant/native/connect 发送 POST，头为 Content-Type: application/json 和 X-JapanGrad-Client: 1，正文为 ${body}。该接口会检测本机 Codex、沿用已有登录并创建网页对话；不需要修改源码、SQLite 或 Codex 全局配置。返回 native.ready=true 后停止并告诉我回到网页；如果需要登录，只转述提示，不读取或复制账户凭据。不要调用 turns 或发起模型推理。`;
+  try {
+    await navigator.clipboard.writeText(text);
+    awaitingNative.value = true;
+    awaitingExternal = true;
+    nativeConnectCustom = settingsOpen.value;
+    invitationSession = nativeState.value.sessionId || '';
+    message.success('已复制，让本机 Agent 执行后此侧栏会加载新对话');
+  } catch {
+    error.value = '复制失败，请使用「连接本机 Codex」按钮。';
+  }
+}
 async function saveSettings() {
+  if (form.value.source === 'codex') {
+    await connectNative(true);
+    return;
+  }
+
   savingSettings.value = true;
   error.value = '';
   try {
@@ -423,6 +698,7 @@ async function send() {
     controller = undefined;
     if (error.value && !draft.value) draft.value = text;
     await listSessions().catch(() => {});
+    void refreshNative();
   }
 }
 async function stop() {
@@ -533,14 +809,37 @@ const proposalLabel = (status: string) =>
   })[status] || status;
 </script>
 <template>
-  <Drawer
-    v-model:open="open"
-    title="AI 资料助手"
-    placement="right"
-    :width="drawerWidth"
-    class="assistant-drawer"
-    :destroy-on-close="false"
+  <aside
+    v-if="open"
+    id="juai-assistant-panel"
+    ref="panel"
+    class="assistant-panel"
+    aria-label="AI 资料助手侧栏"
   >
+    <div
+      class="assistant-resizer"
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="调整助手侧栏宽度"
+      :aria-valuenow="Math.round(paneWidth)"
+      :aria-valuemin="320"
+      :aria-valuemax="maxPaneWidth"
+      tabindex="0"
+      title="拖动调整宽度，双击恢复"
+      @pointerdown="startResize"
+      @keydown="resizeKey"
+      @dblclick="storedWidth = 440"
+    ></div>
+    <header class="assistant-panel-heading">
+      <strong>{{
+        session?.provider.protocol === 'codex'
+          ? 'Codex 资料助手'
+          : 'AI 资料助手'
+      }}</strong
+      ><Button type="text" aria-label="收起助手侧栏" @click="open = false"
+        ><ExplorerIcon name="close"
+      /></Button>
+    </header>
     <div class="assistant-shell">
       <header class="assistant-toolbar">
         <Select
@@ -554,7 +853,7 @@ const proposalLabel = (status: string) =>
           aria-label="历史对话"
         />
         <Button :disabled="busy || loading" @click="newSession">新对话</Button
-        ><Button :disabled="busy" @click="editSettings">模型与权限</Button
+        ><Button :disabled="busy" @click="editSettings">设置</Button
         ><Button :disabled="busy" @click="historyOpen = true">修改记录</Button
         ><Button
           v-if="session"
@@ -565,7 +864,9 @@ const proposalLabel = (status: string) =>
         /></Button>
       </header>
       <p v-if="session" class="assistant-context">
-        <strong>{{ session.provider.model }}</strong
+        <strong
+          >{{ session.provider.protocol === 'codex' ? '本机 Codex / ' : ''
+          }}{{ session.provider.model }}</strong
         ><span>{{ session.scope.majorIds.length }} 个专攻</span
         ><span>{{
           session.scope.writableKinds.length ? '修改需确认' : '只读资料'
@@ -574,14 +875,27 @@ const proposalLabel = (status: string) =>
       </p>
       <p
         v-if="
-          !settings?.keyConfigured &&
-          !session?.provider.local &&
-          settings?.configured
+          session
+            ? !session.keyConfigured && !session.provider.local
+            : settings?.configured &&
+              settings.provider.protocol !== 'codex' &&
+              !settings.keyConfigured
         "
         class="assistant-notice"
       >
         本地服务未保存 API 密钥，请在「模型与权限」中重新填写。
       </p>
+      <div v-if="nativeState.needsLogin" class="assistant-native-login">
+        <span>Codex 尚未登录</span
+        ><Button :loading="nativeBusy" @click="loginNative">登录 Codex</Button
+        ><a
+          v-if="loginUrl"
+          :href="loginUrl"
+          target="_blank"
+          rel="noopener noreferrer"
+          >继续登录</a
+        >
+      </div>
       <div
         ref="scroll"
         class="assistant-conversation"
@@ -602,16 +916,42 @@ const proposalLabel = (status: string) =>
           <span class="assistant-welcome-icon"
             ><ExplorerIcon name="book"
           /></span>
-          <h2>把申请资料，聊清楚。</h2>
+          <h2>在这里，和本机 Agent 对话。</h2>
           <p>
             查找研究室、比较预算、整理考试与材料。每次修改先给你看，再由你确认。
           </p>
-          <Button
-            v-if="!settings?.configured"
-            type="primary"
-            @click="editSettings"
-            >配置自己的 API</Button
-          >
+          <div class="assistant-connect-actions">
+            <Button
+              v-if="
+                session?.messages.length &&
+                session.provider.protocol !== 'codex'
+              "
+              size="small"
+              :disabled="busy"
+              :loading="nativeBusy"
+              @click="connectNative(false)"
+              >连接 Codex</Button
+            >
+            <Button
+              v-if="
+                session?.provider.protocol !== 'codex' || !nativeState.ready
+              "
+              type="primary"
+              :loading="nativeBusy"
+              @click="connectNative(false)"
+              >连接本机 Codex</Button
+            ><span v-else class="assistant-native-ready"
+              ><ExplorerIcon name="check" />已连接本机 Codex，直接输入问题</span
+            ><Button :disabled="nativeBusy" @click="editSettings"
+              >其他连接方式</Button
+            ><button
+              type="button"
+              class="text-button"
+              @click="copyNativePrompt"
+            >
+              复制指令给本机 Agent
+            </button>
+          </div>
           <div class="assistant-suggestions">
             <button
               v-for="text in [
@@ -746,7 +1086,7 @@ const proposalLabel = (status: string) =>
         </footer>
       </form>
     </div>
-  </Drawer>
+  </aside>
   <Modal
     v-model:open="historyOpen"
     title="资料修改与撤销"
@@ -759,72 +1099,130 @@ const proposalLabel = (status: string) =>
     title="模型与资料权限"
     :width="700"
     :footer="null"
-    :mask-closable="!savingSettings"
-    :closable="!savingSettings"
-    :keyboard="!savingSettings"
+    :mask-closable="!savingSettings && !nativeBusy"
+    :closable="!savingSettings && !nativeBusy"
+    :keyboard="!savingSettings && !nativeBusy"
   >
     <form class="assistant-settings" @submit.prevent="saveSettings">
       <p class="form-context">
-        填写自己的
-        API，直接在网页对话。模型服务将接收对话和读取的授权资料；密钥只留在本地服务内存，重启后重新填写。
+        选择本机 Codex 或自己的
+        API，直接在侧栏对话。模型服务会接收对话和本轮读取的授权资料。
       </p>
       <div class="field">
-        <label for="assistant-base-url">API Base URL</label
-        ><Input
-          id="assistant-base-url"
-          v-model:value="form.baseUrl"
-          :maxlength="2048"
-          placeholder="https://api.openai.com/v1"
+        <label>助手来源</label
+        ><Select
+          v-accessible-select
+          v-model:value="form.source"
+          aria-label="助手来源"
+          :options="[
+            { value: 'codex', label: '本机 Codex（沿用已有登录）' },
+            { value: 'api', label: '自己的模型 API' },
+          ]"
         />
       </div>
-      <div class="assistant-setting-row">
+      <template v-if="form.source === 'api'">
         <div class="field">
-          <label>接口类型</label
+          <label for="assistant-base-url">API Base URL</label
+          ><Input
+            id="assistant-base-url"
+            v-model:value="form.baseUrl"
+            :maxlength="2048"
+            placeholder="https://api.openai.com/v1"
+          />
+        </div>
+        <div class="assistant-setting-row">
+          <div class="field">
+            <label>接口类型</label
+            ><Select
+              v-accessible-select
+              v-model:value="form.protocol"
+              aria-label="模型接口类型"
+              :options="[
+                { value: 'responses', label: 'OpenAI Responses' },
+                {
+                  value: 'chat_completions',
+                  label: 'OpenAI 兼容 Chat Completions',
+                },
+              ]"
+            />
+          </div>
+          <div class="field">
+            <label for="assistant-model">模型 ID</label
+            ><Input
+              id="assistant-model"
+              v-model:value="form.model"
+              :maxlength="160"
+              placeholder="填写服务商提供的模型 ID"
+            />
+          </div>
+        </div>
+        <p class="form-context">
+          较新的 OpenAI 模型选
+          Responses；其他兼容服务按其接口选择。模型需支持工具调用。本地服务可填写
+          http://localhost:11434/v1 等地址。
+        </p>
+        <div class="field">
+          <label for="assistant-key">API 密钥</label
+          ><Input.Password
+            id="assistant-key"
+            v-model:value="form.apiKey"
+            autocomplete="off"
+            :maxlength="4096"
+            :placeholder="
+              formKeyConfigured
+                ? '已在本次服务内存中保存，留空保留'
+                : '本地模型可留空，远程服务需填写'
+            "
+          />
+        </div>
+        <Checkbox v-model:checked="form.stream"
+          >流式显示回答（不兼容时可关闭）</Checkbox
+        >
+      </template>
+      <template v-else>
+        <p class="form-context">
+          直接使用本机 Codex 的登录和模型，无需填写 API 密钥。资料只通过 JUAI
+          工具访问，写入仍需确认。
+        </p>
+        <div class="field">
+          <label>Codex 模型</label
           ><Select
             v-accessible-select
-            v-model:value="form.protocol"
-            aria-label="模型接口类型"
-            :options="[
-              { value: 'responses', label: 'OpenAI Responses' },
-              {
-                value: 'chat_completions',
-                label: 'OpenAI 兼容 Chat Completions',
-              },
-            ]"
-          />
-        </div>
-        <div class="field">
-          <label for="assistant-model">模型 ID</label
-          ><Input
-            id="assistant-model"
             v-model:value="form.model"
-            :maxlength="160"
-            placeholder="填写服务商提供的模型 ID"
+            allow-clear
+            aria-label="Codex 模型"
+            placeholder="自动使用本机默认模型"
+            :options="
+              nativeState.models.map((m) => ({ value: m.id, label: m.name }))
+            "
           />
         </div>
-      </div>
-      <p class="form-context">
-        较新的 OpenAI 模型选
-        Responses；其他兼容服务按其接口选择。模型需支持工具调用。本地服务可填写
-        http://localhost:11434/v1 等地址。
-      </p>
-      <div class="field">
-        <label for="assistant-key">API 密钥</label
-        ><Input.Password
-          id="assistant-key"
-          v-model:value="form.apiKey"
-          autocomplete="off"
-          :maxlength="4096"
-          :placeholder="
-            formKeyConfigured
-              ? '已在本次服务内存中保存，留空保留'
-              : '本地模型可留空，远程服务需填写'
-          "
-        />
-      </div>
-      <Checkbox v-model:checked="form.stream"
-        >流式显示回答（不兼容时可关闭）</Checkbox
-      >
+        <details class="assistant-scope-details">
+          <summary>程序路径（自动检测失败时填写）</summary>
+          <div class="field">
+            <label for="assistant-codex-path">codex 程序绝对路径</label
+            ><Input
+              id="assistant-codex-path"
+              v-model:value="form.codexPath"
+              placeholder="留空自动检测"
+              :maxlength="2048"
+            />
+          </div>
+        </details>
+        <div v-if="nativeState.needsLogin" class="assistant-native-login">
+          <Button :loading="nativeBusy" @click="loginNative">登录 Codex</Button
+          ><a
+            v-if="loginUrl"
+            :href="loginUrl"
+            target="_blank"
+            rel="noopener noreferrer"
+            >继续登录</a
+          >
+        </div>
+        <button class="text-button" type="button" @click="copyNativePrompt">
+          复制连接指令给本机 Agent
+        </button>
+      </template>
       <details class="assistant-scope-details">
         <summary>
           资料权限：{{ form.majorIds.length }} 个专攻，{{
@@ -858,7 +1256,7 @@ const proposalLabel = (status: string) =>
       <p v-if="error" class="form-error" role="alert">{{ error }}</p>
       <div class="form-footer">
         <Button
-          v-if="formKeyConfigured"
+          v-if="form.source === 'api' && formKeyConfigured"
           :disabled="savingSettings"
           @click="clearKey"
           >清除本次密钥</Button
@@ -868,19 +1266,137 @@ const proposalLabel = (status: string) =>
         ><Button
           type="primary"
           html-type="submit"
-          :loading="savingSettings"
+          :loading="savingSettings || nativeBusy"
           :disabled="
-            !form.model.trim() ||
+            (form.source === 'api' && !form.model.trim()) ||
             !form.majorIds.length ||
             (!form.readOnly && !form.writableKinds.length)
           "
-          >保存并开始对话</Button
+          >{{
+            form.source === 'codex' ? '连接并开始对话' : '保存并开始对话'
+          }}</Button
         >
       </div>
     </form>
   </Modal>
 </template>
 <style scoped>
+.assistant-panel {
+  container-type: inline-size;
+  container-name: assistant-pane;
+  position: sticky;
+  top: 64px;
+  align-self: flex-start;
+  flex: 0 0 var(--assistant-pane-width, 440px);
+  width: var(--assistant-pane-width, 440px);
+  height: calc(100dvh - 64px);
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--jg-surface);
+  border-left: 1px solid var(--jg-line);
+}
+.assistant-panel-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--jg-line);
+}
+.assistant-panel-heading strong {
+  font-size: 14px;
+}
+.assistant-panel-heading svg {
+  width: 17px;
+  height: 17px;
+}
+.assistant-resizer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -4px;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 2;
+}
+.assistant-resizer:hover,
+.assistant-resizer:focus-visible {
+  background: var(--jg-accent-line);
+  outline: none;
+}
+.assistant-panel > .assistant-shell {
+  height: auto;
+  flex: 1;
+  min-height: 0;
+  padding: 14px;
+}
+.assistant-connect-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.assistant-connect-actions > .text-button {
+  width: 100%;
+  font-size: 12px;
+}
+.assistant-native-ready {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--jg-accent-text);
+}
+.assistant-native-ready svg {
+  width: 16px;
+  height: 16px;
+}
+.assistant-native-login {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px;
+  background: var(--jg-accent-soft);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: 12px;
+}
+.assistant-native-login a {
+  color: var(--jg-accent-text);
+}
+@container assistant-pane (max-width: 600px) {
+  .assistant-toolbar .ant-select {
+    flex-basis: 100%;
+  }
+  .assistant-welcome {
+    padding: 18px 2px;
+  }
+  .assistant-welcome h2 {
+    font-size: 20px;
+  }
+  .assistant-message {
+    padding: 14px;
+  }
+}
+@media (max-width: 900px) {
+  .assistant-panel {
+    top: 64px;
+    flex: 1;
+    width: 100%;
+    border-left: 0;
+  }
+  .assistant-resizer {
+    display: none;
+  }
+}
+@media (max-width: 767px) {
+  .assistant-panel {
+    top: 60px;
+    height: calc(100dvh - 60px);
+  }
+}
 .assistant-shell {
   display: flex;
   flex-direction: column;
@@ -941,7 +1457,7 @@ const proposalLabel = (status: string) =>
 }
 .assistant-welcome h2 {
   margin: 0;
-  font-size: 24px;
+  font-size: 22px;
   letter-spacing: -0.6px;
 }
 .assistant-welcome p {

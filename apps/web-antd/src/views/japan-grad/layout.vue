@@ -270,7 +270,9 @@ watch(workspaceOpen, () => {
                 class="icon-button assistant-launch-button"
                 :disabled="!store.loaded"
                 aria-label="打开 AI 资料助手"
-                @click="assistantOpen = true"
+                :aria-expanded="assistantOpen"
+                aria-controls="juai-assistant-panel"
+                @click="assistantOpen = !assistantOpen"
                 ><ExplorerIcon name="book" /><span>AI 助手</span></Button
               >
               <Dropdown :trigger="['click']"
@@ -308,42 +310,51 @@ watch(workspaceOpen, () => {
               重试连接
             </button>
           </div>
-          <main id="japangrad-main" class="explorer-main" tabindex="-1">
-            <p v-if="store.migrationNotice" class="workspace-notice">
-              {{ store.migrationNotice }}
-            </p>
-            <RouterView v-if="store.loaded" />
-            <section
-              v-else-if="store.loading"
-              class="workspace-skeleton"
-              aria-busy="true"
-              aria-label="正在打开本地工作区"
-            >
-              <span class="skeleton-title"></span
-              ><span class="skeleton-description"></span
-              ><span class="skeleton-toolbar"></span>
-              <div>
-                <span
-                  v-for="index in 4"
-                  :key="index"
-                  class="skeleton-card"
-                ></span>
-              </div>
-            </section>
-            <section v-else class="collection-empty">
-              <span class="empty-symbol"><ExplorerIcon name="drive" /></span>
-              <h2>等待本地服务连接</h2>
-              <p>请通过 JapanGrad 启动入口打开工作台。</p>
-            </section>
-          </main>
-          <footer class="explorer-footer">
-            <span>大学 → 研究科 → 专攻 → 研究室 → 老师</span
-            ><button class="text-button" @click="workspaceOpen = true">
-              <ExplorerIcon name="drive" />本地工作区
-            </button>
-          </footer>
+          <div
+            class="workspace-body"
+            :class="{ 'has-assistant': assistantOpen }"
+          >
+            <div class="workspace-document">
+              <main id="japangrad-main" class="explorer-main" tabindex="-1">
+                <p v-if="store.migrationNotice" class="workspace-notice">
+                  {{ store.migrationNotice }}
+                </p>
+                <RouterView v-if="store.loaded" />
+                <section
+                  v-else-if="store.loading"
+                  class="workspace-skeleton"
+                  aria-busy="true"
+                  aria-label="正在打开本地工作区"
+                >
+                  <span class="skeleton-title"></span
+                  ><span class="skeleton-description"></span
+                  ><span class="skeleton-toolbar"></span>
+                  <div>
+                    <span
+                      v-for="index in 4"
+                      :key="index"
+                      class="skeleton-card"
+                    ></span>
+                  </div>
+                </section>
+                <section v-else class="collection-empty">
+                  <span class="empty-symbol"
+                    ><ExplorerIcon name="drive"
+                  /></span>
+                  <h2>等待本地服务连接</h2>
+                  <p>请通过 JapanGrad 启动入口打开工作台。</p>
+                </section>
+              </main>
+              <footer class="explorer-footer">
+                <span>大学 → 研究科 → 专攻 → 研究室 → 老师</span
+                ><button class="text-button" @click="workspaceOpen = true">
+                  <ExplorerIcon name="drive" />本地工作区
+                </button>
+              </footer>
+            </div>
+            <AssistantChat v-model:open="assistantOpen" />
+          </div>
         </div>
-        <AssistantChat v-model:open="assistantOpen" />
         <Drawer
           v-model:open="navOpen"
           title="工作区导航"

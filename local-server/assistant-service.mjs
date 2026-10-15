@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { createCodexBridge } from './codex-bridge.mjs';
 import { informationPermissions } from './information-service.mjs';
 import {
   modelTurn,
@@ -90,6 +91,8 @@ export function createAssistantService({
     );
   const keys = new Map(),
     active = new Map();
+  const native = createCodexBridge();
+  let lastNativeSessionId = '';
   let closed = false;
   const settings = () => {
     const row = db
@@ -183,10 +186,15 @@ export function createAssistantService({
     );
     return { majorIds: [...new Set(input.majorIds)], ...permissions };
   }
-  function createSession() {
+  async function createSession() {
     const config = settings();
     const provider = providerConfig(config.provider, fail),
       scope = validateScope(config);
+    if (provider.protocol === 'codex') {
+      const state = await native.connect(provider.codexPath);
+      if (!state.ready) fail('本机 Codex 尚未登录，请先连接并完成登录。');
+      provider.model ||= state.defaultModel;
+    }
     if (!provider.local && !keys.has(provider.baseUrl))
       fail('请在助手设置中填写 API 密钥。本地服务重启后需要重新填写。');
     if (
@@ -394,15 +402,12 @@ export function createAssistantService({
         writableKinds: session.scope.writableKinds,
         recentSuggestions: recent,
       });
-      for (let round = 0; round < 8; round++) {
-        if (controller.signal.aborted) throw new Error('本次对话已停止。');
-        if (JSON.stringify(messages).length > 140000)
-          throw new Error('本轮资料上下文过长，请缩小问题或新建对话。');
-        send('status', { text: round ? '正在整理资料…' : '正在思考…' });
-        let firstChunk = true;
-        const result = await modelTurn({
+      if (JSON.stringify(messages).length > 140000)
+        throw new Error('本轮资料上下文过长，请缩小问题或新建对话。');
+      if (session.provider.protocol === 'codex') {
+        send('status', { text: '正在连接本机 Codex…' });
+        const result = await native.run({
           config: session.provider,
-          apiKey,
           messages,
           instructions:
             instructions + '\n本对话授权与最近建议状态：' + scopeDescription,
@@ -412,11 +417,6 @@ export function createAssistantService({
           signal: controller.signal,
           onText: (delta) => {
             if (typeof delta !== 'string' || !delta) return;
-            if (firstChunk && round && answer.text) {
-              answer.text += '\n\n';
-              send('delta', { text: '\n\n' });
-            }
-            firstChunk = false;
             if (answer.text.length + delta.length > 100000)
               throw new Error('回答过长，请缩小问题。');
             answer.text += delta;
@@ -426,89 +426,167 @@ export function createAssistantService({
             }
             send('delta', { text: delta });
           },
+          onTool: async (name, input) => {
+            if (++callCount > 20 || controller.signal.aborted)
+              throw new Error('本轮对话已停止或工具调用已达上限。');
+            const trace = {
+              id: randomUUID(),
+              label:
+                {
+                  get_workspace_rules: '查看资料规则',
+                  read_major_requirements: '读取报考要求',
+                  list_information_files: '查找资料',
+                  read_information_file: '读取资料',
+                  propose_information_edit: '准备修改建议',
+                }[name] || '处理资料',
+              status: 'running',
+            };
+            answer.tools.push(trace);
+            send('tool', trace);
+            let output, success;
+            try {
+              output = await runTool(
+                session,
+                name,
+                input,
+                answer,
+                send,
+                readVersions,
+              );
+              trace.status = 'complete';
+              success = true;
+            } catch (error) {
+              trace.status = 'error';
+              trace.error = String(error.message || '资料操作失败。').slice(
+                0,
+                500,
+              );
+              output = { error: trace.error };
+              success = false;
+            }
+            send('tool', trace);
+            saveSession(session);
+            return { output, success };
+          },
         });
-        if (!result.calls.length) {
-          if (!answer.text.trim())
-            throw new Error(
-              '模型没有返回回答，请更换支持工具调用的模型或接口类型。',
-            );
-          answer.status = 'complete';
-          break;
-        }
-        if (result.calls.length > 8 || callCount + result.calls.length > 20)
-          throw new Error('本轮工具调用已达到限制，请缩小问题后继续。');
-        if (session.provider.protocol === 'responses')
-          messages.push(...responseInput(result.output));
-        else
-          messages.push({
-            role: 'assistant',
-            content: result.text || null,
-            tool_calls: result.calls.map((c) => ({
-              id: c.id,
-              type: 'function',
-              function: { name: c.name, arguments: c.arguments },
-            })),
-          });
-        for (const call of result.calls) {
+        if (!result.text.trim()) throw new Error('Codex 没有返回回答。');
+        answer.status = 'complete';
+      } else
+        for (let round = 0; round < 8; round++) {
           if (controller.signal.aborted) throw new Error('本次对话已停止。');
-          if (
-            typeof call.id !== 'string' ||
-            !call.id ||
-            typeof call.name !== 'string' ||
-            typeof call.arguments !== 'string' ||
-            call.arguments.length > 110000
-          )
-            throw new Error('模型工具调用格式错误。');
-          callCount++;
-          const trace = {
-            id: randomUUID(),
-            label:
-              {
-                get_workspace_rules: '查看资料规则',
-                read_major_requirements: '读取报考要求',
-                list_information_files: '查找资料',
-                read_information_file: '读取资料',
-                propose_information_edit: '准备修改建议',
-              }[call.name] || '处理工具请求',
-            status: 'running',
-          };
-          answer.tools.push(trace);
-          send('tool', trace);
-          let output;
-          try {
-            output = await runTool(
-              session,
-              call.name,
-              JSON.parse(call.arguments),
-              answer,
-              send,
-              readVersions,
-            );
-            trace.status = 'complete';
-          } catch (error) {
-            trace.status = 'error';
-            trace.error = String(error.message || '资料操作失败。').slice(
-              0,
-              500,
-            );
-            output = { error: trace.error };
+          if (JSON.stringify(messages).length > 140000)
+            throw new Error('本轮资料上下文过长，请缩小问题或新建对话。');
+          send('status', { text: round ? '正在整理资料…' : '正在思考…' });
+          let firstChunk = true;
+          const result = await modelTurn({
+            config: session.provider,
+            apiKey,
+            messages,
+            instructions:
+              instructions + '\n本对话授权与最近建议状态：' + scopeDescription,
+            tools: session.scope.writableKinds.length
+              ? tools
+              : tools.filter((t) => t.name !== 'propose_information_edit'),
+            signal: controller.signal,
+            onText: (delta) => {
+              if (typeof delta !== 'string' || !delta) return;
+              if (firstChunk && round && answer.text) {
+                answer.text += '\n\n';
+                send('delta', { text: '\n\n' });
+              }
+              firstChunk = false;
+              if (answer.text.length + delta.length > 100000)
+                throw new Error('回答过长，请缩小问题。');
+              answer.text += delta;
+              if (Date.now() - lastPersisted > 1500) {
+                saveSession(session);
+                lastPersisted = Date.now();
+              }
+              send('delta', { text: delta });
+            },
+          });
+          if (!result.calls.length) {
+            if (!answer.text.trim())
+              throw new Error(
+                '模型没有返回回答，请更换支持工具调用的模型或接口类型。',
+              );
+            answer.status = 'complete';
+            break;
           }
-          send('tool', trace);
-          saveSession(session);
-          const value = JSON.stringify(output);
-          messages.push(
-            session.provider.protocol === 'responses'
-              ? {
-                  type: 'function_call_output',
-                  call_id: call.id,
-                  output: value,
-                }
-              : { role: 'tool', tool_call_id: call.id, content: value },
-          );
+          if (result.calls.length > 8 || callCount + result.calls.length > 20)
+            throw new Error('本轮工具调用已达到限制，请缩小问题后继续。');
+          if (session.provider.protocol === 'responses')
+            messages.push(...responseInput(result.output));
+          else
+            messages.push({
+              role: 'assistant',
+              content: result.text || null,
+              tool_calls: result.calls.map((c) => ({
+                id: c.id,
+                type: 'function',
+                function: { name: c.name, arguments: c.arguments },
+              })),
+            });
+          for (const call of result.calls) {
+            if (controller.signal.aborted) throw new Error('本次对话已停止。');
+            if (
+              typeof call.id !== 'string' ||
+              !call.id ||
+              typeof call.name !== 'string' ||
+              typeof call.arguments !== 'string' ||
+              call.arguments.length > 110000
+            )
+              throw new Error('模型工具调用格式错误。');
+            callCount++;
+            const trace = {
+              id: randomUUID(),
+              label:
+                {
+                  get_workspace_rules: '查看资料规则',
+                  read_major_requirements: '读取报考要求',
+                  list_information_files: '查找资料',
+                  read_information_file: '读取资料',
+                  propose_information_edit: '准备修改建议',
+                }[call.name] || '处理工具请求',
+              status: 'running',
+            };
+            answer.tools.push(trace);
+            send('tool', trace);
+            let output;
+            try {
+              output = await runTool(
+                session,
+                call.name,
+                JSON.parse(call.arguments),
+                answer,
+                send,
+                readVersions,
+              );
+              trace.status = 'complete';
+            } catch (error) {
+              trace.status = 'error';
+              trace.error = String(error.message || '资料操作失败。').slice(
+                0,
+                500,
+              );
+              output = { error: trace.error };
+            }
+            send('tool', trace);
+            saveSession(session);
+            const value = JSON.stringify(output);
+            messages.push(
+              session.provider.protocol === 'responses'
+                ? {
+                    type: 'function_call_output',
+                    call_id: call.id,
+                    output: value,
+                  }
+                : { role: 'tool', tool_call_id: call.id, content: value },
+            );
+          }
+          if (round === 7)
+            throw new Error('本轮处理次数已达到限制，请缩小问题后继续。');
         }
-        if (round === 7)
-          throw new Error('本轮处理次数已达到限制，请缩小问题后继续。');
-      }
     } catch (error) {
       answer.status = controller.signal.aborted ? 'interrupted' : 'error';
       answer.error = String(error.message || '对话失败。').slice(0, 500);
@@ -540,6 +618,54 @@ export function createAssistantService({
       json(res, value, status);
       return true;
     };
+    if (endpoint === '/native/status' && req.method === 'GET') {
+      const url = new URL(req.url, 'http://127.0.0.1');
+      return reply({
+        ...(await native.status(url.searchParams.get('refresh') === '1')),
+        sessionId: lastNativeSessionId,
+      });
+    }
+    if (endpoint === '/native/login' && req.method === 'POST') {
+      const input = await jsonBody(req);
+      return reply(await native.login(input?.path || ''));
+    }
+    if (endpoint === '/native/connect' && req.method === 'POST') {
+      const input = await jsonBody(req),
+        current = settings();
+      const scope = validateScope({
+        majorIds: input?.majorIds ?? current.majorIds,
+        writableKinds: input?.writableKinds ?? current.writableKinds,
+      });
+      const state = await native.connect(input?.path || '');
+      if (!state.ready)
+        return reply({
+          native: state,
+          session: null,
+          settings: publicSettings(),
+        });
+      const model = input?.model || state.defaultModel;
+      if (!state.models.some((m) => m.id === model))
+        fail('请选择本机 Codex 返回的可用模型。');
+      const provider = providerConfig(
+        { protocol: 'codex', model, codexPath: input?.path || '' },
+        fail,
+      );
+      const data = {
+        provider,
+        majorIds: scope.majorIds,
+        writableKinds: scope.writableKinds,
+      };
+      db.prepare(
+        'INSERT INTO assistant_settings VALUES (1, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data',
+      ).run(JSON.stringify(data));
+      const session = await createSession();
+      lastNativeSessionId = session.id;
+      return reply({
+        native: state,
+        session: { ...session, proposals: [] },
+        settings: publicSettings(),
+      });
+    }
     if (endpoint === '/key' && req.method === 'DELETE') {
       const input = await jsonBody(req);
       const provider = providerConfig(
@@ -604,7 +730,7 @@ export function createAssistantService({
       );
     if (endpoint === '/sessions' && req.method === 'POST') {
       await jsonBody(req);
-      return reply({ ...createSession(), proposals: [] }, 201);
+      return reply({ ...(await createSession()), proposals: [] }, 201);
     }
     let match = endpoint.match(/^\/sessions\/([\w-]+)(?:\/(turns|stop))?$/);
     if (match) {
@@ -680,6 +806,7 @@ export function createAssistantService({
     handle,
     close() {
       closed = true;
+      native.close();
       for (const controller of active.values()) controller.abort();
       keys.clear();
     },

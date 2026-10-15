@@ -1029,6 +1029,10 @@ export async function createLocalApp({
       }
     }
   });
+  server.on('japangrad:shutdown', () => {
+    assistant.close();
+    analysis.close();
+  });
   server.on('close', () => {
     assistant.close();
     analysis.close();
@@ -1084,5 +1088,8 @@ if (
     }
   });
   for (const signal of ['SIGINT', 'SIGTERM'])
-    process.on(signal, () => server.close());
+    process.on(signal, () => {
+      server.emit('japangrad:shutdown');
+      server.close();
+    });
 }

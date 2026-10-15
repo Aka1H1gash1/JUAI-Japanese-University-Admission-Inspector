@@ -64,6 +64,7 @@ for (const name of [
   'information-service.mjs',
   'assistant-service.mjs',
   'assistant-provider.mjs',
+  'codex-bridge.mjs',
   'admission-analysis.mjs',
   'admission-parser-worker.mjs',
   'admission-fields.json',

@@ -540,3 +540,92 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
     display: none;
   }
 }
+
+/* A docked assistant shares the screen with the document; it never covers it. */
+.workspace-body {
+  display: flex;
+  align-items: flex-start;
+  flex: 1;
+  min-width: 0;
+}
+.workspace-document {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: calc(100dvh - 64px);
+  container-type: inline-size;
+  container-name: workspace-document;
+}
+@container workspace-document (max-width:1050px) {
+  .journey-planning-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .journey-task-panel {
+    position: static;
+  }
+  .page-heading {
+    flex-wrap: wrap;
+  }
+}
+@container workspace-document (max-width:850px) {
+  .university-grid,
+  .school-grid,
+  .professor-grid,
+  .research-lab-grid,
+  .university-dashboard {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .collection-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .collection-stats > div {
+    padding: 0;
+    border: 0;
+  }
+  .workspace-page-heading {
+    flex-wrap: wrap;
+    padding: 24px;
+  }
+  .workspace-page-heading h1 {
+    font-size: 28px;
+  }
+  .explorer-main {
+    padding: 26px 24px 36px;
+  }
+  .list-toolbar .explorer-search {
+    flex-basis: 100%;
+    max-width: none;
+  }
+  .sort-select {
+    margin-left: 0;
+  }
+  .list-toolbar > .ant-btn {
+    margin-left: auto;
+  }
+}
+@container workspace-document (max-width:520px) {
+  .explorer-main {
+    padding: 22px 18px 32px;
+  }
+  .workspace-page-heading {
+    padding: 20px;
+  }
+  .detail-actions {
+    width: 100%;
+  }
+  .university-heading {
+    flex-wrap: wrap;
+  }
+  .university-facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 900px) {
+  .workspace-body.has-assistant .workspace-document {
+    display: none;
+  }
+  .workspace-body.has-assistant {
+    min-height: calc(100dvh - 64px);
+  }
+}

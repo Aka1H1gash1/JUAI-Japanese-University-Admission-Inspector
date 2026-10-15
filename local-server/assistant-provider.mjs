@@ -1,4 +1,21 @@
 export function providerConfig(input, fail) {
+  if (input?.protocol === 'codex') {
+    if (
+      typeof input.model !== 'string' ||
+      input.model.length > 160 ||
+      (input.codexPath !== undefined &&
+        (typeof input.codexPath !== 'string' || input.codexPath.length > 2048))
+    )
+      fail('本机 Codex 模型或程序路径格式错误。');
+    return {
+      protocol: 'codex',
+      model: input.model.trim(),
+      codexPath: (input.codexPath || '').trim(),
+      baseUrl: 'local-codex',
+      local: true,
+      stream: true,
+    };
+  }
   if (
     !input ||
     typeof input.baseUrl !== 'string' ||
