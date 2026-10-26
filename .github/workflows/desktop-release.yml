@@ -60,8 +60,20 @@ jobs:
             executable: desktop/dist/win-unpacked/JUAI.exe
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    env:
+      PACKAGING_ROOT: ${{ runner.os == 'Windows' && format('{0}/juai', runner.temp) || github.workspace }}
+    defaults:
+      run:
+        working-directory: ${{ runner.os == 'Windows' && format('{0}/juai', runner.temp) || github.workspace }}
     steps:
       - uses: actions/checkout@v7
+      - name: Use a short Windows build path for WiX
+        if: runner.os == 'Windows'
+        shell: pwsh
+        working-directory: ${{ github.workspace }}
+        run: |
+          New-Item -ItemType Directory -Path $env:PACKAGING_ROOT -Force | Out-Null
+          Get-ChildItem -Force $env:GITHUB_WORKSPACE | Copy-Item -Recurse -Destination $env:PACKAGING_ROOT
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -69,7 +81,7 @@ jobs:
       - uses: actions/download-artifact@v8
         with:
           name: juai-web
-          path: apps/web-antd/dist
+          path: ${{ env.PACKAGING_ROOT }}/apps/web-antd/dist
       - name: Install native service dependencies
         run: npm ci --prefix local-server --ignore-scripts --no-audit --no-fund
       - name: Install desktop build tools
@@ -77,7 +89,7 @@ jobs:
       - name: Prepare runtime and resources
         run: node desktop/prepare.mjs
       - name: Build installer
-        working-directory: desktop
+        working-directory: ${{ env.PACKAGING_ROOT }}/desktop
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm run package -- --${{ matrix.platform }} --${{ matrix.arch }}
@@ -114,8 +126,8 @@ jobs:
         with:
           name: juai-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
-            desktop/dist/*.dmg
-            desktop/dist/*.msi
+            ${{ env.PACKAGING_ROOT }}/desktop/dist/*.dmg
+            ${{ env.PACKAGING_ROOT }}/desktop/dist/*.msi
           if-no-files-found: error
           retention-days: 14
 

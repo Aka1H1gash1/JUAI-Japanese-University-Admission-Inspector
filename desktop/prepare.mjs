@@ -87,7 +87,15 @@ for (const entry of await readdir(path.join(root, 'local-server'), {
 await cp(
   path.join(root, 'local-server/node_modules'),
   path.join(target, 'local-server/node_modules'),
-  { recursive: true },
+  {
+    recursive: true,
+    // Runtime packages do not need declarations, source maps or SDK example servers.
+    filter: (source) =>
+      !/\.(?:map|ts|tsx)$/.test(source) &&
+      !['.bin', '__tests__', 'examples', 'test', 'tests'].includes(
+        path.basename(source),
+      ),
+  },
 );
 await cp(path.join(root, 'apps/web-antd/dist'), path.join(target, 'web'), {
   recursive: true,
