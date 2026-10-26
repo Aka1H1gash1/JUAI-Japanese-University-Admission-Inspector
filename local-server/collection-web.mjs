@@ -1,14 +1,12 @@
 import { Buffer } from 'node:buffer';
 import { lookup } from 'node:dns/promises';
-import { readFile } from 'node:fs/promises';
 import { BlockList, isIP } from 'node:net';
-import { homedir } from 'node:os';
-import path from 'node:path';
-import process from 'node:process';
 
 import { load } from 'cheerio';
 import { chromium } from 'playwright-core';
 import { Agent, fetch as request } from 'undici';
+
+import { discoverCollectionBrowser } from './browser-discovery.mjs';
 
 const blocked = new BlockList();
 for (const [ip, mask] of [
@@ -248,74 +246,74 @@ export async function fetchCollectionUrl(raw, signal, { image = false } = {}) {
   throw new Error('网页跳转次数过多。');
 }
 
-export function createCollectionBrowser() {
+export function createCollectionBrowser({
+  discover = discoverCollectionBrowser,
+  connect = (endpoint, options) => chromium.connectOverCDP(endpoint, options),
+} = {}) {
   let browser;
   let connecting;
   let configuredPort = 0;
   let closed = false;
+  let connectionInfo;
   const pages = new Set();
-  async function discover() {
-    const dirs = (() => {
-      if (process.platform === 'darwin') {
-        return [
-          'Library/Application Support/Google/Chrome',
-          'Library/Application Support/Google/Chrome Canary',
-          'Library/Application Support/Chromium',
-        ].map((p) => path.join(homedir(), p));
-      }
-      if (process.platform === 'win32') {
-        return [
-          path.join(process.env.LOCALAPPDATA || '', 'Google/Chrome/User Data'),
-        ];
-      }
-      return [
-        path.join(homedir(), '.config/google-chrome'),
-        path.join(homedir(), '.config/chromium'),
-      ];
-    })();
-    const ports = configuredPort ? [configuredPort] : [];
-    if (!configuredPort)
-      for (const dir of dirs) {
-        try {
-          const descriptor = await readFile(
-            path.join(dir, 'DevToolsActivePort'),
-            'utf8',
+  async function ensureConnected() {
+    if (closed) throw new Error('浏览器读取服务已关闭。');
+    if (browser?.isConnected()) return browser;
+    if (!connecting)
+      connecting = (async () => {
+        const value = await discover(configuredPort);
+        if (!value)
+          throw new Error(
+            '未检测到浏览器调试连接。请在 Chrome 的 chrome://inspect/#remote-debugging 开启远程调试；Edge 使用 edge://inspect/#remote-debugging。',
           );
-          const port = Number(descriptor.split('\n')[0]);
-          if (port > 0 && port <= 65_535) ports.push(port);
-        } catch {}
-      }
-    if (!configuredPort) ports.push(9222, 9229, 9333);
-    for (const port of new Set(ports))
-      try {
-        const response = await fetch(`http://127.0.0.1:${port}/json/version`, {
-          redirect: 'error',
-          signal: AbortSignal.timeout(1000),
-        });
-        if (!response.ok) continue;
-        const value = await response.json();
-        const ws = new URL(value.webSocketDebuggerUrl);
-        if (
-          ['127.0.0.1', 'localhost'].includes(ws.hostname) &&
-          Number(ws.port) === port &&
-          ws.protocol === 'ws:' &&
-          ws.pathname.startsWith('/devtools/browser/')
-        )
-          return {
-            endpoint: `http://127.0.0.1:${port}`,
-            name: String(value.Browser || 'Chrome').slice(0, 120),
-            port,
+        try {
+          const connected = await connect(value.endpoint, {
+            timeout: 60_000,
+            noDefaults: true,
+          });
+          if (closed) {
+            await connected.close();
+            throw new Error('浏览器读取服务已关闭。');
+          }
+          browser = connected;
+          connectionInfo = {
+            port: value.port,
+            name: `${value.name} ${browser.version()}`,
           };
-      } catch {}
-    return null;
+          return browser;
+        } catch (error) {
+          throw new Error(
+            `浏览器未完成授权连接。请切换到 Chrome / Edge，在连接提示中点击“允许”，再重试。若浏览器刚重启，请重新开启远程调试。${/Timeout/i.test(error.message) ? '等待授权已超时。' : ''}`,
+            { cause: error },
+          );
+        }
+      })().finally(() => {
+        connecting = undefined;
+      });
+    return connecting;
   }
   return {
     async status() {
-      const value = await discover();
+      if (browser?.isConnected())
+        return {
+          available: true,
+          detected: true,
+          ...connectionInfo,
+          message: '已完成浏览器授权连接。',
+        };
+      const value = await discover(configuredPort);
       return value
-        ? { available: true, name: value.name, port: value.port }
+        ? {
+            available: false,
+            detected: true,
+            name: value.name,
+            port: value.port,
+            message:
+              '已检测到浏览器。点击连接，并在 Chrome / Edge 出现授权提示时选择“允许”。',
+          }
         : {
             available: false,
+            detected: false,
             name: '',
             port: configuredPort,
             message:
@@ -330,11 +328,14 @@ export function createCollectionBrowser() {
         throw new Error('浏览器端口格式错误。');
       if (pages.size > 0 || connecting)
         throw new Error('收集任务正在使用浏览器，请完成后再切换连接。');
+      if (configuredPort === (port || 0) && browser?.isConnected())
+        return this.status();
       configuredPort = port || 0;
       if (browser) {
         await browser.close().catch(() => {});
         browser = undefined;
       }
+      await ensureConnected();
       return this.status();
     },
     async read(raw, signal) {
@@ -342,25 +343,8 @@ export function createCollectionBrowser() {
       const url = collectionUrl(raw);
       await publicAddresses(url);
       signal.throwIfAborted();
-      if (!browser?.isConnected()) {
-        if (!connecting)
-          connecting = (async () => {
-            const value = await discover();
-            if (!value)
-              throw new Error(
-                '用户 Chrome 尚未开放连接，请先在信息收集页面连接浏览器。',
-              );
-            browser = await chromium.connectOverCDP(value.endpoint, {
-              timeout: 12_000,
-              noDefaults: true,
-            });
-            return browser;
-          })().finally(() => {
-            connecting = undefined;
-          });
-        await connecting;
-        signal.throwIfAborted();
-      }
+      await ensureConnected();
+      signal.throwIfAborted();
       const context = browser.contexts()[0];
       if (!context) throw new Error('Chrome 没有可用的用户浏览器上下文。');
       const page = await context.newPage();

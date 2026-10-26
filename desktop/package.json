@@ -1,6 +1,6 @@
 {
   "name": "juai-desktop",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "Japanese University Admission Inspector - graduate admissions workspace",
   "author": "Aka1H1gash1",
@@ -11,6 +11,9 @@
     "prepare:resources": "node prepare.mjs",
     "start": "electron .",
     "package": "electron-builder --publish never"
+  },
+  "dependencies": {
+    "semver": "7.8.5"
   },
   "devDependencies": {
     "electron": "45.0.0",

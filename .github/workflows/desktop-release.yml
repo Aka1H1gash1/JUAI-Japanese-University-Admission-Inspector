@@ -90,6 +90,9 @@ jobs:
       - name: Prepare runtime and resources
         working-directory: ${{ env.PACKAGING_ROOT }}
         run: node desktop/prepare.mjs
+      - name: Verify updater and workspace backup safeguards
+        working-directory: ${{ env.PACKAGING_ROOT }}
+        run: node --test desktop/update-client.test.mjs desktop/workspace-upgrade.test.mjs local-server/browser-discovery.test.mjs
       - name: Build installer
         working-directory: ${{ env.PACKAGING_ROOT }}/desktop
         env:
@@ -126,6 +129,32 @@ jobs:
             if ($LASTEXITCODE -ne 0) { throw 'Installed desktop window verification failed' }
           } finally {
             Start-Process msiexec.exe -ArgumentList @('/x', "`"$installer`"", '/qn', '/norestart') -Wait
+          }
+      - name: Verify upgrade from v0.1.0 preserves existing data
+        if: runner.os == 'Windows'
+        working-directory: ${{ env.PACKAGING_ROOT }}
+        shell: pwsh
+        run: |
+          $legacy = Join-Path $env:RUNNER_TEMP 'JUAI-0.1.0-win-x64.msi'
+          Invoke-WebRequest 'https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector/releases/download/v0.1.0/JUAI-0.1.0-win-x64.msi' -OutFile $legacy
+          if ((Get-FileHash $legacy -Algorithm SHA256).Hash.ToLower() -ne '676e93993f4e65fe97aef8dc177cffa1a532ff0f5c37cc2a3cf0d034ef2d65c0') { throw 'Legacy installer hash mismatch' }
+          $current = (Get-ChildItem desktop/dist/*.msi | Select-Object -First 1).FullName
+          $destination = Join-Path $env:RUNNER_TEMP 'JUAI-upgrade-installed'
+          $workspace = Join-Path $env:RUNNER_TEMP 'juai-upgrade-preservation'
+          function Install-Juai($file) {
+            $result = Start-Process msiexec.exe -ArgumentList @('/i', "`"$file`"", '/qn', '/norestart', "APPLICATIONFOLDER=`"$destination`"") -Wait -PassThru
+            if ($result.ExitCode -notin @(0, 3010)) { throw "Install failed: $($result.ExitCode)" }
+          }
+          try {
+            Install-Juai $legacy
+            node desktop/verify-upgrade.mjs seed "$destination/JUAI.exe" "$workspace"
+            if ($LASTEXITCODE -ne 0) { throw 'Could not seed the existing version' }
+            Install-Juai $current
+            node desktop/verify-upgrade.mjs verify "$destination/JUAI.exe" "$workspace"
+            if ($LASTEXITCODE -ne 0) { throw 'Upgrade did not preserve the workspace' }
+          } finally {
+            Start-Process msiexec.exe -ArgumentList @('/x', "`"$current`"", '/qn', '/norestart') -Wait
+            Start-Process msiexec.exe -ArgumentList @('/x', "`"$legacy`"", '/qn', '/norestart') -Wait
           }
       - uses: actions/upload-artifact@v7
         with:

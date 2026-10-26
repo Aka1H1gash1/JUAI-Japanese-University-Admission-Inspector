@@ -41,6 +41,12 @@ try {
     contextIsolation: true,
     nodeIntegration: false,
   });
+  assert.equal(
+    await application.evaluate(({ Menu }) =>
+      Boolean(Menu.getApplicationMenu().getMenuItemById('juai-check-updates')),
+    ),
+    true,
+  );
   const snapshot = await window.evaluate(async () => {
     const response = await fetch('/api/japangrad/workspace');
     return response.json();

@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>JUAI 更新</title>
+    <link rel="stylesheet" href="update-progress.css" />
+    <script src="update-progress.js" defer></script>
+  </head>
+  <body>
+    <main>
+      <span class="brand">JUAI</span>
+      <h1 id="title">正在下载更新</h1>
+      <p id="detail">下载完成后会校验安装包，现有资料不会被替换。</p>
+      <progress id="progress" max="100" value="0" aria-label="安装包下载进度"></progress>
+      <div class="status"><span id="bytes">准备下载…</span><span id="percent">0%</span></div>
+      <button id="cancel" type="button">取消下载</button>
+    </main>
+  </body>
+</html>

@@ -8,6 +8,12 @@ directories:
   buildResources: build
 files:
   - main.mjs
+  - update-client.mjs
+  - update-manager.mjs
+  - update-preload.cjs
+  - update-progress.html
+  - update-progress.css
+  - update-progress.js
   - package.json
 extraResources:
   - from: resources/service

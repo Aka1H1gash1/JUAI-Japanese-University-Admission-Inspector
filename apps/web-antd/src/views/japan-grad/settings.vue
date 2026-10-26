@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { CollectionStatus } from './collection-types';
 
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
 
 import { App, Button, Input, InputNumber, Tabs } from 'ant-design-vue';
@@ -26,6 +26,16 @@ const errorMessage = ref('');
 const loading = ref(false);
 const tab = ref(route.query.tab === 'browser' ? 'browser' : 'profile');
 const browser = ref<CollectionStatus['browser']>();
+const connectingBrowser = ref(false);
+const browserLabel = computed(() => {
+  if (connectingBrowser.value)
+    return '正在等待浏览器授权，请切换到 Chrome / Edge 查看提示…';
+  if (browser.value?.available)
+    return `${browser.value.name} · ${browser.value.port} · 已连接`;
+  if (browser.value?.detected)
+    return `已检测到 ${browser.value.name} · ${browser.value.port}，等待连接`;
+  return '尚未检测到浏览器调试连接';
+});
 const port = ref<number>();
 const profile = ref<Profile>();
 const version = ref(0);
@@ -67,6 +77,7 @@ async function save() {
 }
 async function connect() {
   busy.value = true;
+  connectingBrowser.value = true;
   errorMessage.value = '';
   try {
     browser.value = await localApi<CollectionStatus['browser']>(
@@ -75,13 +86,14 @@ async function connect() {
     );
     message.info(
       browser.value.available
-        ? '已连接 Chrome。'
+        ? '浏览器已授权，可以读取网页了。'
         : browser.value.message || '尚未检测到浏览器。',
     );
   } catch (error) {
     errorMessage.value =
       error instanceof Error ? error.message : '浏览器连接失败。';
   } finally {
+    connectingBrowser.value = false;
     busy.value = false;
   }
 }
@@ -169,27 +181,28 @@ async function connect() {
       </Tabs.TabPane>
       <Tabs.TabPane key="browser" tab="浏览器连接">
         <section class="settings-panel">
-          <h2>连接你的 Chrome</h2>
+          <h2>连接你的 Chrome / Edge</h2>
           <p>
             网址查询可直接读取公开页面；动态网页或需要已有登录状态的页面，可使用已授权的
-            Chrome。
+            Chrome / Edge。
           </p>
           <div class="settings-browser-state">
-            <i :class="{ ready: browser?.available }"></i>{{
-              browser?.available
-                ? `${browser.name} · ${browser.port}`
-                : '尚未连接浏览器'
-            }}
+            <i :class="{ ready: browser?.available }"></i>{{ browserLabel }}
           </div>
+          <p v-if="browser?.message && !connectingBrowser">
+            {{ browser.message }}
+          </p>
           <ol>
             <li>
-              在 Chrome 打开 <code>chrome://inspect/#remote-debugging</code>。
+              在 Chrome 打开
+              <code>chrome://inspect/#remote-debugging</code>；Edge 使用
+              <code>edge://inspect/#remote-debugging</code>。
             </li>
-            <li>启用远程调试，并允许本机连接。</li>
-            <li>点击下方按钮检测连接。</li>
+            <li>开启页面中的远程调试选项，保持浏览器打开。</li>
+            <li>点击下方按钮，切换到浏览器，在弹出的连接请求中选择“允许”。</li>
           </ol>
           <Button type="primary" :loading="busy" @click="connect">
-            检查并连接浏览器
+            {{ connectingBrowser ? '等待浏览器授权…' : '检查并连接浏览器' }}
           </Button>
           <details>
             <summary>手动指定调试端口（可选）</summary>

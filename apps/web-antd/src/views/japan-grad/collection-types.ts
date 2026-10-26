@@ -144,7 +144,13 @@ export interface CollectionDetail {
   matches: Record<CollectionKind, string[]>;
 }
 export interface CollectionStatus {
-  browser: { available: boolean; name: string; port: number; message?: string };
+  browser: {
+    available: boolean;
+    detected?: boolean;
+    name: string;
+    port: number;
+    message?: string;
+  };
   ocr: { available: boolean; name: string };
   aiConfigured: boolean;
   aiConnectionName: string;

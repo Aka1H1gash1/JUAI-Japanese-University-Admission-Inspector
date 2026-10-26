@@ -1,10 +1,14 @@
-import { fork } from 'node:child_process';
-import { appendFileSync, mkdirSync } from 'node:fs';
+import { execFile, fork } from 'node:child_process';
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
 import { app, BrowserWindow, dialog, Menu, session, shell } from 'electron';
+
+import { createUpdateManager } from './update-manager.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const serviceDirectory = app.isPackaged
@@ -16,6 +20,54 @@ let origin;
 let quitting = false;
 let stopped = false;
 let logPath;
+let updater;
+let protectionWindow;
+let workspaceBackup = '';
+const execute = promisify(execFile);
+
+function nodeRuntime() {
+  return path.join(
+    serviceDirectory,
+    'runtime',
+    process.platform === 'win32' ? 'node.exe' : 'node',
+  );
+}
+
+async function workspacePreflight(workspace, mode) {
+  const environment = { ...process.env, JAPANGRAD_WORKSPACE: workspace };
+  delete environment.NODE_OPTIONS;
+  delete environment.NODE_PATH;
+  const result = await execute(
+    nodeRuntime(),
+    [
+      '--disable-warning=ExperimentalWarning',
+      path.join(serviceDirectory, 'workspace-upgrade.mjs'),
+      mode,
+      app.getVersion(),
+    ],
+    { env: environment, windowsHide: true, maxBuffer: 1024 * 1024 },
+  );
+  return JSON.parse(result.stdout);
+}
+
+async function stopServiceForUpdate() {
+  if (!service || stopped) return;
+  quitting = true;
+  await new Promise((resolve, reject) => {
+    const timer = setTimeout(
+      () =>
+        reject(
+          new Error('本地服务未正常关闭，已停止安装更新。请退出应用后重试。'),
+        ),
+      10_000,
+    );
+    service.once('exit', () => {
+      clearTimeout(timer);
+      resolve();
+    });
+    if (service.connected) service.send({ type: 'shutdown' });
+  });
+}
 
 function record(value) {
   if (logPath)
@@ -170,6 +222,7 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
 });
 app.on('before-quit', (event) => {
+  updater?.dispose();
   quitting = true;
   if (!service || stopped) return;
   event.preventDefault();
@@ -193,6 +246,39 @@ async function initialize() {
   const workspace =
     process.env.JAPANGRAD_WORKSPACE ||
     path.join(app.getPath('documents'), 'JapanGradWorkspace');
+  let markedVersion;
+  try {
+    markedVersion = JSON.parse(
+      await readFile(
+        path.join(workspace, '.juai-desktop-version.json'),
+        'utf8',
+      ),
+    ).version;
+  } catch {}
+  if (
+    existsSync(path.join(workspace, 'workspace.db')) &&
+    markedVersion !== app.getVersion()
+  ) {
+    protectionWindow = new BrowserWindow({
+      width: 470,
+      height: 195,
+      resizable: false,
+      closable: false,
+      autoHideMenuBar: true,
+      webPreferences,
+    });
+    await protectionWindow.loadURL(
+      `data:text/html;charset=utf-8,${encodeURIComponent('<!doctype html><html lang="zh-CN"><meta charset="UTF-8"><meta http-equiv="Content-Security-Policy" content="default-src \'none\'"><title>JUAI · 保护本地资料</title><body><h2>正在备份现有资料</h2><p>完成后继续启动。论文和文件较多时，请稍候。</p><p>此步骤不会替换原始资料。</p></body></html>')}`,
+    );
+  }
+  const protection = await workspacePreflight(workspace, 'prepare');
+  workspaceBackup = protection.backup || '';
+  if (workspaceBackup) record(`版本升级前的完整资料备份：${workspaceBackup}`);
+  updater = await createUpdateManager({
+    getWindow: () => mainWindow,
+    stopService: stopServiceForUpdate,
+    record,
+  });
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([
       ...(process.platform === 'darwin' ? [{ role: 'appMenu' }] : []),
@@ -218,6 +304,8 @@ async function initialize() {
         role: 'help',
         label: '帮助',
         submenu: [
+          ...updater.menu,
+          { type: 'separator' },
           {
             label: '使用说明与反馈',
             click: () =>
@@ -243,7 +331,12 @@ async function initialize() {
   );
   try {
     origin = await startService(workspace);
+    await workspacePreflight(workspace, 'mark');
     await createWindow();
+    if (protectionWindow && !protectionWindow.isDestroyed())
+      protectionWindow.destroy();
+    protectionWindow = undefined;
+    updater.start();
     app.on('activate', () => {
       if (!mainWindow && !quitting) void createWindow();
     });
@@ -251,7 +344,7 @@ async function initialize() {
     record(error.stack || error.message);
     dialog.showErrorBox(
       'JUAI 启动失败',
-      `${error.message}\n\n日志：${logPath}`,
+      `${error.message}\n\n${workspaceBackup ? `升级前备份：${workspaceBackup}\n` : ''}日志：${logPath}`,
     );
     app.quit();
   }

@@ -78,6 +78,7 @@ for (const name of [
   'ai-management-service.mjs',
   'collection-service.mjs',
   'collection-web.mjs',
+  'browser-discovery.mjs',
   'collection-agent.mjs',
   'collection-fields.mjs',
   'special-program-service.mjs',

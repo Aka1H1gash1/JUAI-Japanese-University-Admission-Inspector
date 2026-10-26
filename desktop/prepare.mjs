@@ -71,6 +71,10 @@ if (!nodeLicense) {
 }
 await writeFile(path.join(target, 'runtime/LICENSE'), nodeLicense);
 await cp(path.join(directory, 'service.mjs'), path.join(target, 'service.mjs'));
+await cp(
+  path.join(directory, 'workspace-upgrade.mjs'),
+  path.join(target, 'workspace-upgrade.mjs'),
+);
 for (const entry of await readdir(path.join(root, 'local-server'), {
   withFileTypes: true,
 })) {
