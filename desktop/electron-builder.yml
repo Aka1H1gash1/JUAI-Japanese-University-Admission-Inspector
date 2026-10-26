@@ -19,6 +19,8 @@ mac:
   icon: build/icon.icns
   minimumSystemVersion: '14.0'
   identity: '-'
+  entitlements: entitlements.mac.plist
+  entitlementsInherit: entitlements.mac.plist
   notarize: false
 dmg:
   title: JUAI ${version}
