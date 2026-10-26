@@ -1,0 +1,136 @@
+name: JUAI Desktop Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: juai-desktop-release
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24.22.1'
+
+jobs:
+  frontend:
+    name: Build shared frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Build workspace frontend
+        run: pnpm build:japangrad
+      - uses: actions/upload-artifact@v7
+        with:
+          name: juai-web
+          path: apps/web-antd/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  installer:
+    name: Package ${{ matrix.platform }}-${{ matrix.arch }}
+    needs: frontend
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: mac
+            arch: arm64
+            resources: desktop/dist/mac-arm64/JUAI.app/Contents/Resources/service
+          - os: macos-15-intel
+            platform: mac
+            arch: x64
+            resources: desktop/dist/mac/JUAI.app/Contents/Resources/service
+          - os: windows-latest
+            platform: win
+            arch: x64
+            resources: desktop/dist/win-unpacked/resources/service
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          architecture: ${{ matrix.arch }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: juai-web
+          path: apps/web-antd/dist
+      - name: Install native service dependencies
+        run: npm ci --prefix local-server --ignore-scripts --no-audit --no-fund
+      - name: Install desktop build tools
+        run: npm ci --prefix desktop --no-audit --no-fund
+      - name: Prepare runtime and resources
+        run: node desktop/prepare.mjs
+      - name: Build installer
+        working-directory: desktop
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+        run: npm run package -- --${{ matrix.platform }} --${{ matrix.arch }}
+      - name: Verify packaged service and clean workspace
+        run: node desktop/verify-service.mjs "${{ matrix.resources }}"
+      - name: Verify Windows MSI installation
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem desktop/dist/*.msi | Select-Object -First 1).FullName
+          $destination = Join-Path $env:RUNNER_TEMP 'JUAI-installed'
+          $log = Join-Path $env:RUNNER_TEMP 'JUAI-msi-install.log'
+          $arguments = @('/i', "`"$installer`"", '/qn', '/norestart', "APPLICATIONFOLDER=`"$destination`"", '/L*v', "`"$log`"")
+          $process = Start-Process msiexec.exe -ArgumentList $arguments -Wait -PassThru
+          if ($process.ExitCode -notin @(0, 3010)) {
+            Get-Content $log -Tail 100
+            throw "MSI installation failed: $($process.ExitCode)"
+          }
+          try {
+            if (!(Test-Path "$destination/JUAI.exe")) {
+              Get-Content $log -Tail 100
+              throw 'Installed JUAI executable was not found'
+            }
+            node desktop/verify-service.mjs "$destination/resources/service"
+            if ($LASTEXITCODE -ne 0) { throw 'Installed service verification failed' }
+          } finally {
+            Start-Process msiexec.exe -ArgumentList @('/x', "`"$installer`"", '/qn', '/norestart') -Wait
+          }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: juai-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            desktop/dist/*.dmg
+            desktop/dist/*.msi
+          if-no-files-found: error
+          retention-days: 14
+
+  checksums:
+    name: Collect installers and SHA-256 checksums
+    needs: installer
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: juai-*-*
+          merge-multiple: true
+          path: installers
+      - name: Generate SHA-256 checksums
+        working-directory: installers
+        run: sha256sum JUAI-*.dmg JUAI-*.msi > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: juai-release-installers
+          path: |
+            installers/JUAI-*.dmg
+            installers/JUAI-*.msi
+            installers/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 14

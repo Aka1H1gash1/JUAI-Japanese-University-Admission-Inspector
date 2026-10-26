@@ -1,0 +1,42 @@
+appId: com.juai.admission-inspector
+productName: JUAI
+copyright: Copyright © 2026 Aka1H1gash1
+asar: true
+npmRebuild: false
+directories:
+  output: dist
+  buildResources: build
+files:
+  - main.mjs
+  - package.json
+extraResources:
+  - from: resources/service
+    to: service
+artifactName: JUAI-${version}-${os}-${arch}.${ext}
+mac:
+  target: dmg
+  category: public.app-category.education
+  icon: build/icon.icns
+  minimumSystemVersion: '14.0'
+  identity: null
+  notarize: false
+dmg:
+  title: JUAI ${version}
+  contents:
+    - x: 160
+      y: 180
+      type: file
+    - x: 440
+      y: 180
+      type: link
+      path: /Applications
+win:
+  target: msi
+  icon: build/icon.ico
+msi:
+  oneClick: false
+  perMachine: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: JUAI
+  upgradeCode: 461B670F-1D3F-4CF9-8A41-DA02F3BB118E

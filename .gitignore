@@ -74,3 +74,9 @@ JapanGradWorkspace/
 !local-server/package-lock.json
 # Platform OCR helper is built from ocr-vision.swift during packaging.
 local-server/bin/juai-ocr
+
+# Desktop installers and platform-specific generated resources.
+desktop/build/
+desktop/resources/
+desktop/dist/
+!desktop/package-lock.json

@@ -1,0 +1,19 @@
+{
+  "name": "juai-desktop",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Japanese University Admission Inspector — 日本大学院申请工作台",
+  "author": "Aka1H1gash1",
+  "license": "MIT",
+  "type": "module",
+  "main": "main.mjs",
+  "scripts": {
+    "prepare:resources": "node prepare.mjs",
+    "start": "electron .",
+    "package": "electron-builder --publish never"
+  },
+  "devDependencies": {
+    "electron": "45.0.0",
+    "electron-builder": "26.18.0"
+  }
+}

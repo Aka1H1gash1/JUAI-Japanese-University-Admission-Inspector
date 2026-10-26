@@ -6,6 +6,12 @@ JUAI 面向准备报考日本修士、博士的学生，把大学、研究科、
 
 当前版本为本地 MVP，支持手动维护、修考日程、文档阅读与笔记，以及募集要项 AI 提取后核对填表。可复用已接入助手、选择本机可用 Luna，或单独配置模型 API；扫描件支持本机 OCR / 图片模型。资料以你确认的内容为准。
 
+## 桌面安装版
+
+在 [GitHub Releases](https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector/releases) 下载 macOS DMG 或 Windows MSI，安装包内置运行时，无需配置开发环境。macOS 分 Apple Silicon 和 Intel 两个版本，Windows 提供 x64 版本。首版为未签名预览版，支持范围、安装方法及 OCR 限制见[桌面版说明](desktop/RELEASE_NOTES.md)。
+
+资料默认继续保存在用户文档目录下的 `JapanGradWorkspace`，与原有便携版兼容。桌面应用的「文件」菜单可以打开资料和日志文件夹。
+
 ## 能做什么
 
 | 模块 | 功能 |
