@@ -61,10 +61,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     env:
-      PACKAGING_ROOT: ${{ runner.os == 'Windows' && format('{0}/juai', runner.temp) || github.workspace }}
-    defaults:
-      run:
-        working-directory: ${{ runner.os == 'Windows' && format('{0}/juai', runner.temp) || github.workspace }}
+      PACKAGING_ROOT: ${{ github.workspace }}
     steps:
       - uses: actions/checkout@v7
       - name: Use a short Windows build path for WiX
@@ -72,8 +69,10 @@ jobs:
         shell: pwsh
         working-directory: ${{ github.workspace }}
         run: |
-          New-Item -ItemType Directory -Path $env:PACKAGING_ROOT -Force | Out-Null
-          Get-ChildItem -Force $env:GITHUB_WORKSPACE | Copy-Item -Recurse -Destination $env:PACKAGING_ROOT
+          $shortPath = Join-Path $env:RUNNER_TEMP 'juai'
+          New-Item -ItemType Directory -Path $shortPath -Force | Out-Null
+          Get-ChildItem -Force $env:GITHUB_WORKSPACE | Copy-Item -Recurse -Destination $shortPath
+          "PACKAGING_ROOT=$shortPath" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
       - uses: actions/setup-node@v7
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -83,10 +82,13 @@ jobs:
           name: juai-web
           path: ${{ env.PACKAGING_ROOT }}/apps/web-antd/dist
       - name: Install native service dependencies
+        working-directory: ${{ env.PACKAGING_ROOT }}
         run: npm ci --prefix local-server --ignore-scripts --no-audit --no-fund
       - name: Install desktop build tools
+        working-directory: ${{ env.PACKAGING_ROOT }}
         run: npm ci --prefix desktop --no-audit --no-fund
       - name: Prepare runtime and resources
+        working-directory: ${{ env.PACKAGING_ROOT }}
         run: node desktop/prepare.mjs
       - name: Build installer
         working-directory: ${{ env.PACKAGING_ROOT }}/desktop
@@ -94,10 +96,13 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
         run: npm run package -- --${{ matrix.platform }} --${{ matrix.arch }}
       - name: Verify packaged service and clean workspace
+        working-directory: ${{ env.PACKAGING_ROOT }}
         run: node desktop/verify-service.mjs "${{ matrix.resources }}"
       - name: Verify packaged desktop window and navigation
+        working-directory: ${{ env.PACKAGING_ROOT }}
         run: node desktop/verify-window.mjs "${{ matrix.executable }}"
       - name: Verify Windows MSI installation
+        working-directory: ${{ env.PACKAGING_ROOT }}
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
