@@ -135,6 +135,17 @@ jobs:
             ${{ env.PACKAGING_ROOT }}/desktop/dist/*.msi
           if-no-files-found: error
           retention-days: 14
+      - name: Save installer diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: juai-diagnostics-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            ${{ env.PACKAGING_ROOT }}/desktop/dist/__msi-x64/project.wxs
+            ${{ env.PACKAGING_ROOT }}/desktop/dist/builder-effective-config.yaml
+            ${{ runner.temp }}/JUAI-msi-install.log
+          if-no-files-found: ignore
+          retention-days: 7
 
   checksums:
     name: Collect installers and SHA-256 checksums

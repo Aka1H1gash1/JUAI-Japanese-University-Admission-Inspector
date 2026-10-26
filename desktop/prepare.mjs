@@ -109,7 +109,7 @@ await cp(
 );
 await cp(
   path.join(root, 'local-server/USER_GUIDE.md'),
-  path.join(target, '使用说明.md'),
+  path.join(target, 'USER_GUIDE.md'),
 );
 if (process.platform === 'darwin') {
   await mkdir(path.join(target, 'local-server/bin'), { recursive: true });

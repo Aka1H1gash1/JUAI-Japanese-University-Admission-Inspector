@@ -2,7 +2,7 @@
   "name": "juai-desktop",
   "version": "0.1.0",
   "private": true,
-  "description": "Japanese University Admission Inspector — 日本大学院申请工作台",
+  "description": "Japanese University Admission Inspector - graduate admissions workspace",
   "author": "Aka1H1gash1",
   "license": "MIT",
   "type": "module",
