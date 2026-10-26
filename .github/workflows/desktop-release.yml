@@ -47,14 +47,17 @@ jobs:
             platform: mac
             arch: arm64
             resources: desktop/dist/mac-arm64/JUAI.app/Contents/Resources/service
+            executable: desktop/dist/mac-arm64/JUAI.app/Contents/MacOS/JUAI
           - os: macos-15-intel
             platform: mac
             arch: x64
             resources: desktop/dist/mac/JUAI.app/Contents/Resources/service
+            executable: desktop/dist/mac/JUAI.app/Contents/MacOS/JUAI
           - os: windows-latest
             platform: win
             arch: x64
             resources: desktop/dist/win-unpacked/resources/service
+            executable: desktop/dist/win-unpacked/JUAI.exe
     runs-on: ${{ matrix.os }}
     timeout-minutes: 30
     steps:
@@ -80,6 +83,8 @@ jobs:
         run: npm run package -- --${{ matrix.platform }} --${{ matrix.arch }}
       - name: Verify packaged service and clean workspace
         run: node desktop/verify-service.mjs "${{ matrix.resources }}"
+      - name: Verify packaged desktop window and navigation
+        run: node desktop/verify-window.mjs "${{ matrix.executable }}"
       - name: Verify Windows MSI installation
         if: runner.os == 'Windows'
         shell: pwsh
@@ -100,6 +105,8 @@ jobs:
             }
             node desktop/verify-service.mjs "$destination/resources/service"
             if ($LASTEXITCODE -ne 0) { throw 'Installed service verification failed' }
+            node desktop/verify-window.mjs "$destination/JUAI.exe"
+            if ($LASTEXITCODE -ne 0) { throw 'Installed desktop window verification failed' }
           } finally {
             Start-Process msiexec.exe -ArgumentList @('/x', "`"$installer`"", '/qn', '/norestart') -Wait
           }

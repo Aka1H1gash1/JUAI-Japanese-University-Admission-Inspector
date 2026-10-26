@@ -31,6 +31,6 @@ npm run package -- --win --x64
 
 ## GitHub 构建与发布
 
-手动运行 `JUAI Desktop Release` 工作流。它先构建共享前端，然后分别在 Apple Silicon Mac、Intel Mac、Windows x64 构建机生成 DMG / MSI，验证包内服务，并在 Windows 上实际静默安装、验证已安装服务后卸载。成功后，下载 `juai-release-installers` artifact，核对三份安装包和 `SHA256SUMS.txt`，再创建对应版本的 GitHub Release 并上传文件。
+手动运行 `JUAI Desktop Release` 工作流。它先构建共享前端，然后分别在 Apple Silicon Mac、Intel Mac、Windows x64 构建机生成 DMG / MSI，验证包内服务、真实窗口、欢迎页到申请总览的导航和渲染隔离；在 Windows 上实际静默安装，再验证已安装服务与窗口后卸载。成功后，下载 `juai-release-installers` artifact，核对三份安装包和 `SHA256SUMS.txt`，再创建对应版本的 GitHub Release 并上传文件。
 
-工作流不会自行公开发布，避免把未完成的安装包发布出去。首次发布说明见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。目前未配置签名 / 公证证书，安装提示如实写在发布说明中，后续可通过构建密钥配置签名。
+工作流不会自行公开发布，避免把未完成的安装包发布出去。首次发布说明见 [RELEASE_NOTES.md](RELEASE_NOTES.md)。Mac 使用 ad-hoc 本地签名保证包结构完整，但尚无 Apple Developer ID 签名 / 公证和 Windows 发布者签名。安装提示如实写在发布说明中，后续可通过构建密钥配置。

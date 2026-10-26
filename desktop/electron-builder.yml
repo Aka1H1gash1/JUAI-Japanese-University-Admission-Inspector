@@ -18,7 +18,7 @@ mac:
   category: public.app-category.education
   icon: build/icon.icns
   minimumSystemVersion: '14.0'
-  identity: null
+  identity: '-'
   notarize: false
 dmg:
   title: JUAI ${version}

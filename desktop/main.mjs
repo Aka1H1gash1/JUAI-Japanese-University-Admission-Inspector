@@ -180,8 +180,7 @@ app.on('before-quit', (event) => {
   }, 6000).unref();
 });
 
-if (app.requestSingleInstanceLock()) {
-  await app.whenReady();
+async function initialize() {
   app.setAppUserModelId('com.juai.admission-inspector');
   app.setAboutPanelOptions({
     applicationName: 'JUAI',
@@ -256,6 +255,16 @@ if (app.requestSingleInstanceLock()) {
     );
     app.quit();
   }
-} else {
-  app.quit();
 }
+
+// Electron waits for its ESM entry module before emitting ready; do not await it at top level.
+if (app.requestSingleInstanceLock()) {
+  void app
+    .whenReady()
+    .then(initialize)
+    .catch((error) => {
+      record(error.stack || error.message);
+      dialog.showErrorBox('JUAI 启动失败', error.message);
+      app.quit();
+    });
+} else app.quit();
