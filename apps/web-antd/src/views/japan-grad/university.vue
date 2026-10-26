@@ -4,16 +4,18 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button, Input } from 'ant-design-vue';
 
+import CollectedAdmissions from './components/collected-admissions.vue';
+import EntityCreateFlow from './components/entity-create-flow.vue';
 import EntityEditor from './components/entity-editor.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import UniversityLogo from './components/university-logo.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
 import { universityAddress, universityGeography } from './japan-geography';
 import {
-  formatYen,
   dormitoryLabel,
-  universityFees,
+  formatYen,
   universityBudgetTotals,
+  universityFees,
 } from './university-fees';
 
 const store = useExplorerStore();
@@ -88,7 +90,7 @@ function deleteUniversity() {
     async onOk() {
       await store.removeEntity('university', id);
       message.success('大学已删除');
-      return router.replace('/japan-grad');
+      return router.replace('/japan-grad/universities');
     },
   });
 }
@@ -97,8 +99,7 @@ function deleteUniversity() {
 <template>
   <section v-if="university" class="explorer-page">
     <nav class="explorer-breadcrumb" aria-label="当前位置">
-      <RouterLink to="/japan-grad">大学清单</RouterLink
-      ><ExplorerIcon name="chevron" /><span>{{ university.name }}</span>
+      <RouterLink to="/japan-grad/universities">大学清单</RouterLink><ExplorerIcon name="chevron" /><span>{{ university.name }}</span>
     </nav>
     <header class="page-heading detail-heading university-heading">
       <div>
@@ -128,11 +129,10 @@ function deleteUniversity() {
           target="_blank"
           rel="noopener noreferrer"
           class="university-website-link"
-          ><ExplorerIcon name="globe" />大学官网<ExplorerIcon name="link"
-        /></a>
+          ><ExplorerIcon name="globe" />大学官网<ExplorerIcon name="link" /></a>
         <Button class="icon-button" @click="universityEditorOpen = true">
-          <ExplorerIcon name="edit" />编辑大学 </Button
-        ><Button
+          <ExplorerIcon name="edit" />编辑大学
+</Button><Button
           class="icon-button"
           aria-label="删除大学"
           @click="deleteUniversity"
@@ -157,8 +157,7 @@ function deleteUniversity() {
           <div>
             <dt>
               QS 排名<span v-if="university.qsYear">
-                · {{ university.qsYear }}</span
-              >
+                · {{ university.qsYear }}</span>
             </dt>
             <dd :class="{ 'is-missing': !university.qsRank }">
               {{ university.qsRank || '待填写' }}
@@ -187,8 +186,7 @@ function deleteUniversity() {
             <span
               class="dormitory-status"
               :class="`dormitory-${university.dormitoryStatus}`"
-              >{{ dormitoryLabel(university.dormitoryStatus) }}</span
-            >
+              >{{ dormitoryLabel(university.dormitoryStatus) }}</span>
           </div>
           <p v-if="university.dormitoryNotes">
             {{ university.dormitoryNotes }}
@@ -198,8 +196,7 @@ function deleteUniversity() {
             :href="websiteUrl(university.dormitoryWebsite)"
             target="_blank"
             rel="noopener noreferrer"
-            >查看寮申请信息<ExplorerIcon name="link"
-          /></a>
+            >查看寮申请信息<ExplorerIcon name="link" /></a>
           <button
             v-else-if="university.dormitoryStatus === 'unknown'"
             class="text-button"
@@ -212,20 +209,16 @@ function deleteUniversity() {
           <h3>已整理的申请方向</h3>
           <div class="university-progress-counts">
             <div>
-              <strong>{{ universitySchools.length }}</strong
-              ><span>研究科</span>
+              <strong>{{ universitySchools.length }}</strong><span>研究科</span>
             </div>
             <div>
-              <strong>{{ universityMajors.length }}</strong
-              ><span>专攻</span>
+              <strong>{{ universityMajors.length }}</strong><span>专攻</span>
             </div>
             <div>
-              <strong>{{ universityLabs.length }}</strong
-              ><span>研究室</span>
+              <strong>{{ universityLabs.length }}</strong><span>研究室</span>
             </div>
             <div class="university-favorite-stat">
-              <strong>{{ wantedLabs.length }}</strong
-              ><span><ExplorerIcon name="heart" />想考研究室</span>
+              <strong>{{ wantedLabs.length }}</strong><span><ExplorerIcon name="heart" />想考研究室</span>
             </div>
           </div>
           <div
@@ -236,9 +229,7 @@ function deleteUniversity() {
             <span v-for="area in researchAreas.slice(0, 6)" :key="area">{{
               area
             }}</span>
-            <small v-if="researchAreas.length > 6"
-              >另有 {{ researchAreas.length - 6 }} 个领域</small
-            >
+            <small v-if="researchAreas.length > 6">另有 {{ researchAreas.length - 6 }} 个领域</small>
           </div>
         </div>
         <div class="university-notebook">
@@ -264,22 +255,19 @@ function deleteUniversity() {
           <div>
             <dt>入学金<small>仅第一年入学时缴交一次</small></dt>
             <dd :class="{ 'is-missing': fees.admissionFee === '' }">
-              <span v-if="fees.admissionFee !== ''">¥</span
-              >{{ formatYen(fees.admissionFee) }}
+              <span v-if="fees.admissionFee !== ''">¥</span>{{ formatYen(fees.admissionFee) }}
             </dd>
           </div>
           <div>
             <dt>年度学费<small>每年缴交</small></dt>
             <dd :class="{ 'is-missing': fees.annualTuition === '' }">
-              <span v-if="fees.annualTuition !== ''">¥</span
-              >{{ formatYen(fees.annualTuition) }}
+              <span v-if="fees.annualTuition !== ''">¥</span>{{ formatYen(fees.annualTuition) }}
             </dd>
           </div>
           <div class="university-living-divider">
             <dt>房租 / 寮费<small>每月金额 · 按 12 个月计算</small></dt>
             <dd :class="{ 'is-missing': university.monthlyRent === '' }">
-              <span v-if="university.monthlyRent !== ''">¥</span
-              >{{ formatYen(university.monthlyRent)
+              <span v-if="university.monthlyRent !== ''">¥</span>{{ formatYen(university.monthlyRent)
               }}<small v-if="university.monthlyRent !== ''">/ 月</small>
             </dd>
           </div>
@@ -288,26 +276,21 @@ function deleteUniversity() {
             <dd
               :class="{ 'is-missing': university.monthlyLivingExpenses === '' }"
             >
-              <span v-if="university.monthlyLivingExpenses !== ''">¥</span
-              >{{ formatYen(university.monthlyLivingExpenses)
-              }}<small v-if="university.monthlyLivingExpenses !== ''"
-                >/ 月</small
-              >
+              <span v-if="university.monthlyLivingExpenses !== ''">¥</span>{{ formatYen(university.monthlyLivingExpenses)
+              }}<small v-if="university.monthlyLivingExpenses !== ''">/ 月</small>
             </dd>
           </div>
         </dl>
         <div class="university-fee-totals">
           <div>
-            <span>{{ feeTotals.complete ? '首年总费用' : '首年已知费用' }}</span
-            ><strong :class="{ 'is-missing': feeTotals.firstYear === '' }">{{
+            <span>{{ feeTotals.complete ? '首年总费用' : '首年已知费用' }}</span><strong :class="{ 'is-missing': feeTotals.firstYear === '' }">{{
               feeTotals.firstYear !== ''
                 ? `¥ ${formatYen(feeTotals.firstYear)}`
                 : '待补充预算'
             }}</strong>
           </div>
           <div>
-            <span>{{ feeTotals.complete ? '两年总费用' : '两年已知费用' }}</span
-            ><strong :class="{ 'is-missing': feeTotals.twoYears === '' }">{{
+            <span>{{ feeTotals.complete ? '两年总费用' : '两年已知费用' }}</span><strong :class="{ 'is-missing': feeTotals.twoYears === '' }">{{
               feeTotals.twoYears !== ''
                 ? `¥ ${formatYen(feeTotals.twoYears)}`
                 : '待补充预算'
@@ -336,6 +319,7 @@ function deleteUniversity() {
       </aside>
     </section>
 
+    <CollectedAdmissions kind="university" :id="university.id" />
     <header class="collection-heading">
       <div>
         <h2>
@@ -369,8 +353,7 @@ function deleteUniversity() {
           class="school-card"
         >
           <div class="school-card-top">
-            <span class="entity-symbol"><ExplorerIcon name="book" /></span
-            ><ExplorerIcon name="arrow" />
+            <span class="entity-symbol"><ExplorerIcon name="book" /></span><ExplorerIcon name="arrow" />
           </div>
           <h3>{{ school.name }}</h3>
           <p v-if="school.japaneseName" class="secondary-name">
@@ -382,8 +365,7 @@ function deleteUniversity() {
           <p v-if="school.notes" class="card-notes">{{ school.notes }}</p>
           <div class="school-card-bottom">
             <span>{{ store.majorsFor(school.id).length }} 个专攻</span>
-            <span>{{ store.schoolLabs(school.id).length }} 个研究室</span
-            ><span
+            <span>{{ store.schoolLabs(school.id).length }} 个研究室</span><span
               v-if="
                 store.schoolProfessors(school.id).some((item) => item.favorite)
               "
@@ -393,8 +375,7 @@ function deleteUniversity() {
                   .schoolProfessors(school.id)
                   .filter((item) => item.favorite).length
               }}
-              位心仪</span
-            ><span class="open-label">查看专攻 →</span>
+              位心仪</span><span class="open-label">查看专攻 →</span>
           </div>
         </RouterLink>
       </div>
@@ -416,7 +397,7 @@ function deleteUniversity() {
       kind="university"
       :entity-id="university.id"
     />
-    <EntityEditor
+    <EntityCreateFlow
       v-model:open="schoolEditorOpen"
       kind="school"
       :parent-id="university.id"
@@ -426,6 +407,8 @@ function deleteUniversity() {
   <section v-else class="search-empty">
     <h1>这所大学已不存在</h1>
     <p>返回清单查看其他大学。</p>
-    <RouterLink to="/japan-grad" class="back-link">返回大学清单 →</RouterLink>
+    <RouterLink to="/japan-grad/universities" class="back-link">
+      返回大学清单 →
+    </RouterLink>
   </section>
 </template>

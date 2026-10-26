@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+
 import { Button, Input, Switch } from 'ant-design-vue';
+
 import { useExplorerStore } from '../explorer';
-import EntityEditor from './entity-editor.vue';
+import EntityCreateFlow from './entity-create-flow.vue';
 import ExplorerIcon from './explorer-icon.vue';
 import ResearchLabCard from './research-lab-card.vue';
 const props = defineProps<{ majorId: string }>();
@@ -53,9 +55,9 @@ watch(
         </h2>
         <p>以研究室整理方向与老师，标记「想考」后加入修考之路。</p>
       </div>
-      <Button type="primary" class="icon-button" @click="edit()"
-        ><ExplorerIcon name="plus" />新增研究室</Button
-      >
+      <Button type="primary" class="icon-button" @click="edit()">
+        <ExplorerIcon name="plus" />新增研究室
+      </Button>
     </header>
     <template v-if="labs.length">
       <div class="teacher-toolbar">
@@ -65,14 +67,13 @@ watch(
           class="explorer-search"
           placeholder="搜索研究室、研究方向或老师"
           aria-label="搜索研究室"
-          ><template #prefix><ExplorerIcon name="search" /></template></Input
-        ><label class="favorite-filter"
-          ><Switch
+        >
+          <template #prefix><ExplorerIcon name="search" /></template>
+</Input><label class="favorite-filter"><Switch
             v-model:checked="wantedOnly"
             size="small"
             aria-label="只看想考的研究室"
-          />只看想考<span>{{ wanted }}</span></label
-        >
+          />只看想考<span>{{ wanted }}</span></label>
       </div>
       <div v-if="visible.length" class="research-lab-grid">
         <ResearchLabCard
@@ -89,8 +90,9 @@ watch(
             query = '';
             wantedOnly = false;
           "
-          >查看全部研究室</Button
         >
+          查看全部研究室
+        </Button>
       </div>
     </template>
     <div v-else class="collection-empty">
@@ -99,7 +101,7 @@ watch(
       <p>记录研究室名称、研究方向和官网，再添加其中的老师。</p>
       <Button @click="edit()">新增研究室</Button>
     </div>
-    <EntityEditor
+    <EntityCreateFlow
       v-model:open="editorOpen"
       kind="lab"
       :entity-id="editingId"

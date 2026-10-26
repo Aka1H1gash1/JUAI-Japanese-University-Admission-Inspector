@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button } from 'ant-design-vue';
 
+import CollectedAdmissions from './components/collected-admissions.vue';
 import EntityEditor from './components/entity-editor.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import ProfessorDetails from './components/professor-details.vue';
@@ -96,21 +97,18 @@ function removeProfessor() {
     class="explorer-page professor-page"
   >
     <nav class="explorer-breadcrumb" aria-label="当前位置">
-      <RouterLink to="/japan-grad">大学清单</RouterLink
-      ><ExplorerIcon name="chevron" />
-      <RouterLink :to="`/japan-grad/universities/${university.id}`">{{
-        university.name
-      }}</RouterLink
-      ><ExplorerIcon name="chevron" />
+      <RouterLink to="/japan-grad/universities">大学清单</RouterLink><ExplorerIcon name="chevron" />
+      <RouterLink :to="`/japan-grad/universities/${university.id}`">
+        {{ university.name }}
+</RouterLink><ExplorerIcon name="chevron" />
       <RouterLink
         :to="`/japan-grad/universities/${university.id}/schools/${school.id}`"
-        >{{ school.name }}</RouterLink
-      ><ExplorerIcon name="chevron" />
-      <RouterLink :to="majorUrl">{{ major.name }}</RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink :to="labUrl">{{
-        lab.name
-      }}</RouterLink
-      ><ExplorerIcon name="chevron" /><span>{{ professor.name }}</span>
+      >
+        {{ school.name }}
+</RouterLink><ExplorerIcon name="chevron" />
+      <RouterLink :to="majorUrl">{{ major.name }}</RouterLink><ExplorerIcon name="chevron" /><RouterLink :to="labUrl">
+        {{ lab.name }}
+</RouterLink><ExplorerIcon name="chevron" /><span>{{ professor.name }}</span>
     </nav>
     <header class="page-heading detail-heading professor-page-heading">
       <div>
@@ -118,8 +116,7 @@ function removeProfessor() {
           <span
             class="entity-symbol teacher-symbol professor-avatar"
             aria-hidden="true"
-            >{{ professorInitials(professor.name) }}</span
-          >
+            >{{ professorInitials(professor.name) }}</span>
           <div>
             <h1>{{ professor.name }}</h1>
             <p class="page-description">
@@ -138,21 +135,24 @@ function removeProfessor() {
           :class="{ 'is-favorite': professor.favorite }"
           :aria-pressed="professor.favorite"
           @click="store.toggleFavorite(professor.id)"
-          ><ExplorerIcon name="heart" />{{
+        >
+          <ExplorerIcon name="heart" />{{
             professor.favorite ? '已标记为心仪老师' : '标记为心仪老师'
-          }}</Button
-        >
-        <Button class="icon-button" @click="editorOpen = true"
-          ><ExplorerIcon name="edit" />编辑资料</Button
-        >
+          }}
+        </Button>
+        <Button class="icon-button" @click="editorOpen = true">
+          <ExplorerIcon name="edit" />编辑资料
+        </Button>
         <Button
           class="icon-button"
           aria-label="删除老师"
           @click="removeProfessor"
-          ><ExplorerIcon name="trash"
-        /></Button>
+        >
+          <ExplorerIcon name="trash" />
+        </Button>
       </div>
     </header>
+    <CollectedAdmissions kind="professor" :id="professor.id" />
     <ProfessorDetails :key="professor.id" :professor-id="professor.id" />
     <EntityEditor
       v-model:open="editorOpen"
@@ -166,8 +166,11 @@ function removeProfessor() {
   <section v-else class="search-empty">
     <h1>这位老师已不存在</h1>
     <p>请返回所属专攻或大学清单重新选择。</p>
-    <RouterLink :to="major ? majorUrl : '/japan-grad'" class="back-link">{{
-      major ? '返回专攻 →' : '返回大学清单 →'
-    }}</RouterLink>
+    <RouterLink
+      :to="major ? majorUrl : '/japan-grad/universities'"
+      class="back-link"
+    >
+      {{ major ? '返回专攻 →' : '返回大学清单 →' }}
+    </RouterLink>
   </section>
 </template>

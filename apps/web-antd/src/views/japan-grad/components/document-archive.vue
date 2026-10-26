@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { vAccessibleSelect } from '../select-accessibility';
 import type { DocumentKind, StoredDocument } from '../documents';
 
 import { computed, ref, watch } from 'vue';
+
 import { useWindowSize } from '@vueuse/core';
 import {
   App,
@@ -15,16 +15,17 @@ import {
 } from 'ant-design-vue';
 
 import {
+  documentReaderPath,
   fileFormat,
   fileSize,
   fileUrl,
   isWord,
   kindLabels,
-  readerLabel,
-  requiresDownload,
   supportedFileAccept,
 } from '../documents';
 import { jsonOptions, localApi } from '../local-api';
+import { requireValue } from '../required-value';
+import { vAccessibleSelect } from '../select-accessibility';
 import ExplorerIcon from './explorer-icon.vue';
 
 const props = defineProps<{
@@ -57,7 +58,7 @@ const selected = computed(() =>
   documents.value.find((item) => item.id === selectedId.value),
 );
 const editOpen = ref(false);
-const editing = ref<StoredDocument | null>(null);
+const editing = ref<null | StoredDocument>(null);
 const editBusy = ref(false);
 const editError = ref('');
 let generation = 0;
@@ -184,7 +185,7 @@ function acceptFiles(files: File[]) {
     uploadError.value = '每次只能上传一个文件，请选择或拖入单个文件。';
     return;
   }
-  const file = files[0]!;
+  const file = requireValue(files[0]);
   if (!/\.(?:pdf|docx?|md|txt)$/i.test(file.name)) {
     clearFile();
     uploadError.value = '请选择 PDF、DOC、DOCX、MD 或 TXT 文件。';
@@ -205,9 +206,9 @@ function acceptFiles(files: File[]) {
 }
 function selectFile(event: Event) {
   const input = event.target as HTMLInputElement;
-  const files = Array.from(input.files ?? []);
+  const files = [...(input.files ?? [])];
   input.value = '';
-  if (files.length) acceptFiles(files);
+  if (files.length > 0) acceptFiles(files);
 }
 function dragEnter(event: DragEvent) {
   if (!uploading.value && event.dataTransfer?.types.includes('Files'))
@@ -220,7 +221,7 @@ function dragOver(event: DragEvent) {
 function dropFile(event: DragEvent) {
   dragDepth.value = 0;
   if (!uploading.value && event.dataTransfer?.types.includes('Files'))
-    acceptFiles(Array.from(event.dataTransfer.files));
+    acceptFiles([...event.dataTransfer.files]);
 }
 watch(uploadOpen, () => {
   dragDepth.value = 0;
@@ -320,8 +321,8 @@ function remove(record: StoredDocument) {
     title: `移除「${record.title}」？`,
     content:
       record.kind === 'question'
-        ? '过去问及其对应答案将一起移入工作区 .trash 文件夹。'
-        : '文件将移入工作区 .trash 文件夹，可从本地恢复原文件。',
+        ? '过去问及其对应答案将一起移入工作区 .trash 文件夹，关联的阅读笔记也会移除；需要保留笔记时请先导出。'
+        : '原文件将移入工作区 .trash 文件夹，关联的阅读笔记也会移除；需要保留笔记时请先导出。',
     okText: '确认移除',
     cancelText: '取消',
     okButtonProps: { danger: true },
@@ -410,26 +411,35 @@ function remove(record: StoredDocument) {
             class="icon-button"
             :disabled="loading"
             @click="upload(group.kind)"
-            ><ExplorerIcon name="plus" />新增{{ group.title }}</Button
           >
+            <ExplorerIcon name="plus" />新增{{ group.title }}
+          </Button>
         </header>
         <div
           v-if="recordsFor(group.kind).length"
           class="archive-selection-grid"
         >
-          <button
+          <article
             v-for="item in recordsFor(group.kind)"
             :key="item.id"
             class="archive-selection-card"
             :data-kind="item.kind"
-            :aria-label="`查看${kindLabels[item.kind]}：${item.title}`"
-            @click="select(item)"
           >
+            <RouterLink
+              :to="documentReaderPath(item.id)"
+              class="archive-card-reader-link"
+              :aria-label="`阅读${kindLabels[item.kind]}：${item.title}`"
+            />
             <div class="archive-selection-top">
-              <span class="entity-symbol"><ExplorerIcon name="book" /></span
-              ><span class="archive-selection-year"
-                >{{ item.year }}<small>{{ yearLabel(item.kind) }}</small></span
+              <span class="entity-symbol"><ExplorerIcon name="book" /></span><span class="archive-selection-year">{{ item.year }}<small>{{ yearLabel(item.kind) }}</small></span>
+              <button
+                class="archive-card-metadata"
+                :aria-label="`查看或编辑资料：${item.title}`"
+                title="资料与编辑"
+                @click="select(item)"
               >
+                <ExplorerIcon name="info" />
+              </button>
             </div>
             <h3>{{ item.title }}</h3>
             <p class="archive-selection-file">
@@ -449,10 +459,9 @@ function remove(record: StoredDocument) {
                 item.kind === 'question'
                   ? `${answersFor(item.id).length} 份对应答案`
                   : `${fileFormat(item.filename)} · 本地保存`
-              }}</span
-              ><span>查看资料<ExplorerIcon name="arrow" /></span>
+              }}</span><span>阅读与笔记<ExplorerIcon name="arrow" /></span>
             </div>
-          </button>
+          </article>
         </div>
         <div v-else-if="!loading" class="archive-empty">
           <ExplorerIcon name="book" />
@@ -481,8 +490,7 @@ function remove(record: StoredDocument) {
     >
       <div v-if="selected" class="archive-document-details">
         <div class="archive-detail-heading">
-          <span class="entity-symbol"><ExplorerIcon name="book" /></span
-          ><span class="archive-kind">{{ kindLabels[selected.kind] }}</span>
+          <span class="entity-symbol"><ExplorerIcon name="book" /></span><span class="archive-kind">{{ kindLabels[selected.kind] }}</span>
           <h2>{{ selected.title }}</h2>
           <p>{{ yearLabel(selected.kind) }} · {{ selected.year }}</p>
         </div>
@@ -496,13 +504,12 @@ function remove(record: StoredDocument) {
                   : '阅读原始文件'
             }}
           </p>
-          <a
+          <RouterLink
             class="archive-reader-link"
-            :href="fileUrl(selected.id)"
-            :target="requiresDownload(selected) ? undefined : '_blank'"
-            rel="noopener noreferrer"
-            >{{ readerLabel(selected) }} <ExplorerIcon name="link"
-          /></a>
+            :to="documentReaderPath(selected.id)"
+          >
+            阅读与笔记 <ExplorerIcon name="arrow" />
+          </RouterLink>
         </div>
         <RouterLink
           v-if="selected.kind === 'guidelines'"
@@ -514,8 +521,9 @@ function remove(record: StoredDocument) {
             },
           }"
           @click="detailOpen = false"
-          >分析这份募集要项 →</RouterLink
         >
+          分析这份募集要项 →
+        </RouterLink>
         <dl class="archive-detail-fields">
           <div>
             <dt>文件名</dt>
@@ -525,16 +533,16 @@ function remove(record: StoredDocument) {
             <dt>文件大小</dt>
             <dd>{{ fileSize(selected.size) }}</dd>
           </div>
-          <template v-if="selected.kind === 'paper'"
-            ><div>
+          <template v-if="selected.kind === 'paper'">
+            <div>
               <dt>作者</dt>
               <dd>{{ selected.authors || '尚未填写' }}</dd>
             </div>
             <div>
               <dt>期刊 / 会议</dt>
               <dd>{{ selected.venue || '尚未填写' }}</dd>
-            </div></template
-          >
+            </div>
+          </template>
           <div>
             <dt>{{ selected.kind === 'paper' ? '阅读笔记' : '个人备注' }}</dt>
             <dd class="archive-detail-notes">
@@ -568,45 +576,37 @@ function remove(record: StoredDocument) {
                 {{ answer.notes }}
               </p>
               <div class="answer-actions">
-                <a
+                <RouterLink
                   class="archive-link"
-                  :href="fileUrl(answer.id)"
-                  :target="requiresDownload(answer) ? undefined : '_blank'"
-                  rel="noopener noreferrer"
-                  >{{
-                    requiresDownload(answer)
-                      ? '下载答案原文件'
-                      : '用浏览器阅读答案 ↗'
-                  }}</a
-                ><Button size="small" @click="edit(answer)">编辑</Button
-                ><a
+                  :to="documentReaderPath(answer.id)"
+                >
+                  阅读答案与笔记 →
+</RouterLink><Button size="small" @click="edit(answer)">编辑</Button><a
                   class="archive-link"
                   :href="`${fileUrl(answer.id)}?download=1`"
-                  >下载</a
-                ><Button
+                  >下载</a><Button
                   size="small"
                   type="text"
                   danger
                   :aria-label="`移除文件：${answer.title}`"
                   @click="remove(answer)"
-                  >移除</Button
                 >
+                  移除
+                </Button>
               </div>
             </article>
           </div>
           <p v-else class="archive-answer-empty">尚未上传对应答案。</p>
         </section>
         <div class="archive-card-actions">
-          <Button @click="edit(selected)">编辑资料</Button
-          ><a class="archive-link" :href="`${fileUrl(selected.id)}?download=1`"
-            >下载原文件</a
-          ><Button
+          <Button @click="edit(selected)">编辑资料</Button><a class="archive-link" :href="`${fileUrl(selected.id)}?download=1`">下载原文件</a><Button
             type="text"
             danger
             :aria-label="`移除文件：${selected.title}`"
             @click="remove(selected)"
-            >移除</Button
           >
+            移除
+          </Button>
         </div>
       </div>
     </Drawer>
@@ -644,16 +644,10 @@ function remove(record: StoredDocument) {
                 aria-label="拖拽或选择资料文件"
                 @click="fileInput?.click()"
               >
-                <span class="archive-dropzone-icon"
-                  ><ExplorerIcon name="upload"
-                /></span>
-                <strong
-                  >{{ dragging ? '松开即可选择文件' : '拖拽文件到这里，或'
-                  }}<span v-if="!dragging">点击选择</span></strong
-                >
-                <span class="archive-dropzone-hint"
-                  >每次 1 个文件 · PDF / DOC / DOCX / MD / TXT</span
-                >
+                <span class="archive-dropzone-icon"><ExplorerIcon name="upload" /></span>
+                <strong>{{ dragging ? '松开即可选择文件' : '拖拽文件到这里，或'
+                  }}<span v-if="!dragging">点击选择</span></strong>
+                <span class="archive-dropzone-hint">每次 1 个文件 · PDF / DOC / DOCX / MD / TXT</span>
                 <small>单个文件最大 50 MB</small>
               </button>
               <input
@@ -673,41 +667,38 @@ function remove(record: StoredDocument) {
                 fileFormat(selectedFile.name)
               }}</span>
               <div>
-                <strong>{{ selectedFile.name }}</strong
-                ><span
-                  >{{ fileSize(selectedFile.size) }} · 1 个文件{{
+                <strong>{{ selectedFile.name }}</strong><span>{{ fileSize(selectedFile.size) }} · 1 个文件{{
                     uploading ? ' · 正在保存…' : ' · 待保存'
-                  }}</span
-                >
+                  }}</span>
               </div>
               <Button
                 type="text"
                 size="small"
                 :disabled="uploading"
                 @click="fileInput?.click()"
-                >更换</Button
               >
+                更换
+              </Button>
               <Button
                 type="text"
                 size="small"
                 :disabled="uploading"
                 aria-label="移除已选文件"
                 @click="clearFile"
-                ><ExplorerIcon name="close"
-              /></Button>
+              >
+                <ExplorerIcon name="close" />
+              </Button>
             </div>
           </div>
           <div class="field">
-            <label for="archive-year"
-              >{{
+            <label for="archive-year">{{
                 kind === 'guidelines'
                   ? '招生年度'
                   : kind === 'paper'
                     ? '发表年份'
                     : '考试年份'
               }}
-              *</label
-            ><input
+              *</label><input
               id="archive-year"
               v-model.number="year"
               type="number"
@@ -718,8 +709,7 @@ function remove(record: StoredDocument) {
             />
           </div>
           <div class="field">
-            <label for="archive-title">资料标题 *</label
-            ><Input
+            <label for="archive-title">资料标题 *</label><Input
               id="archive-title"
               v-model:value="title"
               :maxlength="240"
@@ -737,14 +727,14 @@ function remove(record: StoredDocument) {
           <span>{{
             selectedFile ? '1 个文件待保存' : '每次上传一个文件'
           }}</span>
-          <Button :disabled="uploading" @click="uploadOpen = false">取消</Button
-          ><Button
+          <Button :disabled="uploading" @click="uploadOpen = false">取消</Button><Button
             type="primary"
             html-type="submit"
             :loading="uploading"
             :disabled="!selectedFile"
-            >保存到本地</Button
           >
+            保存到本地
+          </Button>
         </div>
       </form>
     </Modal>
@@ -765,35 +755,32 @@ function remove(record: StoredDocument) {
       >
         <div class="form-fields">
           <div class="field full">
-            <label for="archive-edit-title">标题 *</label
-            ><Input
+            <label for="archive-edit-title">标题 *</label><Input
               id="archive-edit-title"
               v-model:value="editing.title"
               :maxlength="240"
             />
           </div>
-          <template v-if="editing.kind === 'paper'"
-            ><div class="field">
-              <label for="paper-authors">作者</label
-              ><Input
+          <template v-if="editing.kind === 'paper'">
+            <div class="field">
+              <label for="paper-authors">作者</label><Input
                 id="paper-authors"
                 v-model:value="editing.authors"
                 :maxlength="500"
               />
             </div>
             <div class="field">
-              <label for="paper-venue">期刊 / 会议</label
-              ><Input
+              <label for="paper-venue">期刊 / 会议</label><Input
                 id="paper-venue"
                 v-model:value="editing.venue"
                 :maxlength="500"
-              /></div
-          ></template>
+              />
+            </div>
+          </template>
           <div class="field full">
             <label for="archive-notes">{{
               editing.kind === 'paper' ? '阅读笔记' : '资料备注'
-            }}</label
-            ><Input.TextArea
+            }}</label><Input.TextArea
               id="archive-notes"
               v-model:value="editing.notes"
               :rows="4"
@@ -803,10 +790,9 @@ function remove(record: StoredDocument) {
         </div>
         <p v-if="editError" role="alert" class="form-error">{{ editError }}</p>
         <div class="form-footer">
-          <Button :disabled="editBusy" @click="editOpen = false">取消</Button
-          ><Button type="primary" html-type="submit" :loading="editBusy"
-            >保存资料</Button
-          >
+          <Button :disabled="editBusy" @click="editOpen = false">取消</Button><Button type="primary" html-type="submit" :loading="editBusy">
+            保存资料
+          </Button>
         </div>
       </form>
     </Modal>

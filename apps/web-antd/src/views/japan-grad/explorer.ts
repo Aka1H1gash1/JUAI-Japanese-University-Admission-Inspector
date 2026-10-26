@@ -1,31 +1,32 @@
-import type { LabTimeline, TimelineEntry } from './timeline';
-import { emptyTimeline, timelineError } from './timeline';
-import { ref } from 'vue';
 import type { ApplicationTask, ProfessorContact } from './application-planning';
-import {
-  normalizedContact,
-  contactTimelinePrefix,
-} from './application-planning';
-import { planningError } from '../../../../../local-server/planning-fields.mjs';
 import type { ExamHistoryRecord } from './exam-history';
 import type { MajorAdmissionFields } from './major-admissions';
-import { admissionRangeError, validAdmissionFields } from './major-admissions';
+import type { LabTimeline, TimelineEntry } from './timeline';
+
+import { ref } from 'vue';
+
+import { defineStore } from 'pinia';
+
+import { planningError } from '../../../../../local-server/planning-fields.mjs';
+import {
+  contactTimelinePrefix,
+  normalizedContact,
+} from './application-planning';
 import {
   normalizeExamRecord,
   prepareExamBatch,
   validExamHistory,
 } from './exam-history';
-
-import { jsonOptions, localApi } from './local-api';
 import { geographyError } from './japan-geography';
+import { jsonOptions, localApi } from './local-api';
+import { admissionRangeError, validAdmissionFields } from './major-admissions';
+import { emptyTimeline, timelineError } from './timeline';
 import {
   normalizeUniversityCategory,
   UNIVERSITY_BUDGET_FIELDS,
   universityFees,
   validYenAmount,
 } from './university-fees';
-
-import { defineStore } from 'pinia';
 
 export type EntityKind =
   | 'lab'
@@ -57,6 +58,9 @@ export interface University {
   prefecture?: string;
   qsRank: string;
   qsYear: string;
+  japanRank?: string;
+  japanRankYear?: string;
+  japanRankSource?: string;
   admissionFee: string;
   annualTuition: string;
   feeNotes: string;
@@ -442,6 +446,9 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
       region: item.region ?? '',
       qsRank: item.qsRank ?? '',
       qsYear: item.qsYear ?? '',
+      japanRank: item.japanRank ?? '',
+      japanRankYear: item.japanRankYear ?? '',
+      japanRankSource: item.japanRankSource ?? '',
       category: normalizeUniversityCategory(item.category),
       ...universityFees(item),
       feeNotes: item.feeNotes ?? '',
@@ -455,7 +462,9 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     schools.value = data.schools;
     majors.value = data.majors.map((item) => ({
       ...item,
-      examHistory: (item.examHistory ?? []).map(normalizeExamRecord),
+      examHistory: (item.examHistory ?? []).map((item) =>
+        normalizeExamRecord(item),
+      ),
       applicationStart: item.applicationStart ?? '',
       applicationEnd: item.applicationEnd ?? '',
       applicationMaterials: item.applicationMaterials ?? '',
@@ -464,7 +473,9 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     professors.value = data.professors.map((item) => ({
       ...item,
       contact: normalizedContact(item.contact),
-      contactHistory: (item.contactHistory ?? []).map(normalizedContact),
+      contactHistory: (item.contactHistory ?? []).map((item) =>
+        normalizedContact(item),
+      ),
     }));
     labs.value = (data.labs ?? []).map((item) => ({
       ...item,
@@ -642,7 +653,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           annualTuition: fields.annualTuition?.trim(),
         });
         if (
-          !Object.values(fees).every(validYenAmount) ||
+          !Object.values(fees).every((item) => validYenAmount(item)) ||
           !['monthlyRent', 'monthlyLivingExpenses'].every((field) =>
             validYenAmount(get(field)),
           )
@@ -657,6 +668,9 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           prefecture: get('prefecture'),
           qsRank: get('qsRank'),
           qsYear: get('qsYear'),
+          japanRank: get('japanRank'),
+          japanRankYear: get('japanRankYear'),
+          japanRankSource: get('japanRankSource'),
           ...fees,
           feeNotes: get('feeNotes'),
           monthlyRent: get('monthlyRent'),
@@ -850,7 +864,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           if (value.complete) {
             contact.firstSentDate = value.start;
             if (
-              ['not_contacted', 'first_sent', 'replied'].includes(
+              ['first_sent', 'not_contacted', 'replied'].includes(
                 contact.status,
               )
             )
@@ -859,7 +873,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           }
         } else if (
           suffix === 'sent' &&
-          ['sent', 'contact'].includes(value.kind) &&
+          ['contact', 'sent'].includes(value.kind) &&
           value.complete
         ) {
           contact.firstSentDate = value.start;
@@ -870,13 +884,13 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           if (value.complete) {
             contact.actualInterviewDate = value.start;
             contact.actualInterviewAt = value.at;
-            if (!['consent', 'closed'].includes(contact.status))
+            if (!['closed', 'consent'].includes(contact.status))
               contact.status = 'interview_completed';
           } else {
             contact.interviewDate = value.start;
             contact.interviewAt = value.at;
             if (
-              ['not_contacted', 'first_sent', 'replied'].includes(
+              ['first_sent', 'not_contacted', 'replied'].includes(
                 contact.status,
               )
             )
@@ -1055,7 +1069,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
         title: task.title.trim(),
         notes: task.notes.trim(),
       };
-      if (index < 0) tasks.push(value);
+      if (index === -1) tasks.push(value);
       else tasks[index] = value;
       const error = planningError({
         labs: [{ ...lab, tasks }],

@@ -1,7 +1,16 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+
 import { App, Button, Tabs } from 'ant-design-vue';
+
+import CollectedAdmissions from './components/collected-admissions.vue';
+import EntityEditor from './components/entity-editor.vue';
+import ExamHistory from './components/exam-history.vue';
+import ExplorerIcon from './components/explorer-icon.vue';
+import LabTasks from './components/lab-tasks.vue';
+import MajorAdmissions from './components/major-admissions.vue';
+import ResearchLabTeachers from './components/research-lab-teachers.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
 import {
   annualBudgetText,
@@ -9,12 +18,6 @@ import {
   labLanguageRequirements,
   majorPath,
 } from './lab-targets';
-import EntityEditor from './components/entity-editor.vue';
-import ExplorerIcon from './components/explorer-icon.vue';
-import MajorAdmissions from './components/major-admissions.vue';
-import ExamHistory from './components/exam-history.vue';
-import ResearchLabTeachers from './components/research-lab-teachers.vue';
-import LabTasks from './components/lab-tasks.vue';
 const store = useExplorerStore();
 const route = useRoute();
 const router = useRouter();
@@ -66,17 +69,17 @@ function remove() {
 <template>
   <section v-if="target" class="explorer-page research-lab-page">
     <nav class="explorer-breadcrumb" aria-label="当前位置">
-      <RouterLink to="/japan-grad">大学清单</RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink
+      <RouterLink to="/japan-grad/universities">大学清单</RouterLink><ExplorerIcon name="chevron" /><RouterLink
         :to="`/japan-grad/universities/${target.university.id}`"
-        >{{ target.university.name }}</RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink
+      >
+        {{ target.university.name }}
+</RouterLink><ExplorerIcon name="chevron" /><RouterLink
         :to="`/japan-grad/universities/${target.university.id}/schools/${target.school.id}`"
-        >{{ target.school.name }}</RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink :to="majorPath(target)">{{
-        target.major.name
-      }}</RouterLink
-      ><ExplorerIcon name="chevron" /><span>{{ target.lab.name }}</span>
+      >
+        {{ target.school.name }}
+</RouterLink><ExplorerIcon name="chevron" /><RouterLink :to="majorPath(target)">
+        {{ target.major.name }}
+</RouterLink><ExplorerIcon name="chevron" /><span>{{ target.lab.name }}</span>
     </nav>
     <header class="page-heading detail-heading">
       <div>
@@ -96,48 +99,47 @@ function remove() {
           :aria-pressed="target.lab.wantApply"
           :loading="store.saving"
           @click="toggle"
-          ><ExplorerIcon :name="target.lab.wantApply ? 'check' : 'plus'" />{{
+        >
+          <ExplorerIcon :name="target.lab.wantApply ? 'check' : 'plus'" />{{
             target.lab.wantApply ? '已标记想考' : '标记为想考'
-          }}</Button
-        ><Button class="icon-button" @click="editorOpen = true"
-          ><ExplorerIcon name="edit" />编辑研究室</Button
-        ><Button aria-label="删除研究室" @click="remove"
-          ><ExplorerIcon name="trash"
-        /></Button>
+          }}
+</Button><Button class="icon-button" @click="editorOpen = true">
+          <ExplorerIcon name="edit" />编辑研究室
+</Button><Button aria-label="删除研究室" @click="remove">
+          <ExplorerIcon name="trash" />
+        </Button>
       </div>
     </header>
     <section class="entity-overview" aria-label="研究室资料">
       <div class="overview-meta">
-        <span
-          ><ExplorerIcon name="book" />{{
+        <span><ExplorerIcon name="book" />{{
             target.lab.research || '研究方向待补充'
-          }}</span
-        ><a
+          }}</span><a
           v-if="websiteUrl(target.lab.website)"
           :href="websiteUrl(target.lab.website)"
           target="_blank"
           rel="noopener noreferrer"
-          ><ExplorerIcon name="globe" />研究室官网<ExplorerIcon name="link"
-        /></a>
+          ><ExplorerIcon name="globe" />研究室官网<ExplorerIcon name="link" /></a>
       </div>
       <p v-if="target.lab.notes" class="overview-notes">
         {{ target.lab.notes }}
       </p>
       <div class="lab-overview-footer">
-        <span>年度开销：{{ annualBudgetText(target.university) }}</span
-        ><RouterLink to="/japan-grad/journey">前往修考之路 →</RouterLink>
+        <span>年度开销：{{ annualBudgetText(target.university) }}</span><RouterLink to="/japan-grad/journey">前往修考之路 →</RouterLink>
       </div>
     </section>
+    <CollectedAdmissions kind="lab" :id="target.lab.id" />
     <Tabs v-model:active-key="tab" class="professor-workspace-tabs">
-      <Tabs.TabPane key="teachers" :tab="`老师（${target.professors.length}）`"
-        ><ResearchLabTeachers
+      <Tabs.TabPane key="teachers" :tab="`老师（${target.professors.length}）`">
+        <ResearchLabTeachers
           v-if="tab === 'teachers'"
           :key="target.lab.id"
           :lab-id="target.lab.id"
-      /></Tabs.TabPane>
-      <Tabs.TabPane key="admissions" tab="报考信息"
-        ><template v-if="tab === 'admissions'"
-          ><section class="lab-admission-notes">
+        />
+      </Tabs.TabPane>
+      <Tabs.TabPane key="admissions" tab="报考信息">
+        <template v-if="tab === 'admissions'">
+          <section class="lab-admission-notes">
             <h2>研究室报考说明</h2>
             <p>
               下方时间与科目来自所属专攻「{{
@@ -148,13 +150,11 @@ function remove() {
               <div>
                 <dt>
                   语言要求
-                  <small
-                    >（{{
+                  <small>（{{
                       target.lab.languageRequirements?.trim()
                         ? '研究室单独要求'
                         : '参考所属专攻'
-                    }}）</small
-                  >
+                    }}）</small>
                 </dt>
                 <dd>
                   {{ labLanguageRequirements(target) || '尚未填写语言要求' }}
@@ -175,16 +175,20 @@ function remove() {
           </section>
           <MajorAdmissions
             :key="`admissions-${target.major.id}`"
-            :major-id="target.major.id" /><ExamHistory
+            :major-id="target.major.id"
+          /><ExamHistory
             :key="`exams-${target.major.id}`"
-            :major-id="target.major.id" /></template
-      ></Tabs.TabPane>
-      <Tabs.TabPane key="tasks" tab="材料与待办"
-        ><LabTasks
+            :major-id="target.major.id"
+          />
+        </template>
+      </Tabs.TabPane>
+      <Tabs.TabPane key="tasks" tab="材料与待办">
+        <LabTasks
           v-if="tab === 'tasks'"
           :key="target.lab.id"
           :lab-id="target.lab.id"
-      /></Tabs.TabPane>
+        />
+      </Tabs.TabPane>
     </Tabs>
     <EntityEditor
       v-model:open="editorOpen"
@@ -197,6 +201,8 @@ function remove() {
   <section v-else class="search-empty">
     <h1>这个研究室已不存在</h1>
     <p>请返回大学清单重新选择。</p>
-    <RouterLink to="/japan-grad" class="back-link">返回大学清单 →</RouterLink>
+    <RouterLink to="/japan-grad/universities" class="back-link">
+      返回大学清单 →
+    </RouterLink>
   </section>
 </template>

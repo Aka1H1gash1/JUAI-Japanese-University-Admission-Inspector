@@ -1,26 +1,38 @@
+import { Buffer } from 'node:buffer';
+import { execFile } from 'node:child_process';
+import { createHash, randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, realpath, rename, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
 import { homedir } from 'node:os';
 import path from 'node:path';
-import { createHash, randomUUID } from 'node:crypto';
+import process from 'node:process';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
-import { execFile } from 'node:child_process';
-import geography from './japan-geography.json' with { type: 'json' };
-import { upgradeResearchLabs } from './research-labs.mjs';
-import { planningError } from './planning-fields.mjs';
-import { timelineError } from './timeline-fields.mjs';
+
+import { createAdmissionAiService } from './admission-ai-service.mjs';
+import { createAiManagementService } from './ai-management-service.mjs';
 import { createAnalysisService } from './analysis-service.mjs';
-import { createExperienceService } from './experience-service.mjs';
-import { createInformationService } from './information-service.mjs';
 import { createAssistantService } from './assistant-service.mjs';
-import { validPlannerDay, validPlannerMinute } from './planning-fields.mjs';
+import { createCollectionService } from './collection-service.mjs';
+import { createDocumentReaderService } from './document-reader-service.mjs';
+import { createExperienceService } from './experience-service.mjs';
 import {
   deliveryProperties,
   fileProperties,
   validateFile,
 } from './file-types.mjs';
+import { createInformationService } from './information-service.mjs';
+import geography from './japan-geography.json' with { type: 'json' };
+import {
+  planningError,
+  validPlannerDay,
+  validPlannerMinute,
+} from './planning-fields.mjs';
+import { upgradeResearchLabs } from './research-labs.mjs';
+import { createSpecialProgramService } from './special-program-service.mjs';
+import { timelineError } from './timeline-fields.mjs';
+import { createWorkspaceSettingsService } from './workspace-settings-service.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 export const EMPTY_DATA = {
@@ -98,9 +110,15 @@ export function validateExplorer(data) {
   }
   for (const item of data.universities) {
     if (
-      ['region', 'prefecture', 'qsRank', 'qsYear'].some(
-        (key) => item[key] !== undefined && !text(item[key], 120),
-      )
+      [
+        'region',
+        'prefecture',
+        'qsRank',
+        'qsYear',
+        'japanRank',
+        'japanRankYear',
+        'japanRankSource',
+      ].some((key) => item[key] !== undefined && !text(item[key], 120))
     )
       fail('大学扩展字段格式错误。');
     if (
@@ -128,7 +146,7 @@ export function validateExplorer(data) {
       fail('大学费用备注格式错误。');
     if (
       item.dormitoryStatus !== undefined &&
-      !['', 'unknown', 'available', 'unavailable'].includes(
+      !['', 'available', 'unavailable', 'unknown'].includes(
         item.dormitoryStatus,
       )
     )
@@ -439,6 +457,24 @@ export async function createLocalApp({
     validateExplorer,
     authenticate: analysis.authenticate,
   });
+  const reader = createDocumentReaderService({
+    db,
+    snapshot,
+    document,
+    safeFile,
+    transaction,
+    fail,
+    json,
+    jsonBody,
+  });
+  const ai = createAiManagementService({
+    db,
+    transaction,
+    snapshot,
+    json,
+    jsonBody,
+    fail,
+  });
   const assistant = createAssistantService({
     db,
     snapshot,
@@ -447,6 +483,51 @@ export async function createLocalApp({
     jsonBody,
     fail,
     transaction,
+    reader,
+    ai,
+  });
+  const admissionAi = createAdmissionAiService({
+    db,
+    transaction,
+    analysis,
+    assistant,
+    fail,
+    json,
+    jsonBody,
+    ai,
+  });
+  ai.importLegacy();
+  ai.initializeFeature('web_collection', 'workspace_chat');
+  const specialPrograms = createSpecialProgramService({
+    db,
+    snapshot,
+    transaction,
+    fail,
+    json,
+    jsonBody,
+  });
+  const settings = createWorkspaceSettingsService({
+    db,
+    transaction,
+    fail,
+    json,
+    jsonBody,
+  });
+  const collection = createCollectionService({
+    db,
+    snapshot,
+    transaction,
+    fail,
+    json,
+    jsonBody,
+    validateExplorer,
+    ai,
+    workspace,
+    ensureDirectory,
+    safeFile,
+    logoProperties,
+    createSpecialProgram: specialPrograms.createFromCollection,
+    specialProgramExists: specialPrograms.exists,
   });
   const server = createServer(async (req, res) => {
     try {
@@ -458,7 +539,7 @@ export async function createLocalApp({
       const origin = req.headers.origin;
       if (
         origin &&
-        ![ownOrigin, `http://localhost:${port}`, ...allowedOrigins].includes(
+        ![`http://localhost:${port}`, ownOrigin, ...allowedOrigins].includes(
           origin,
         )
       )
@@ -471,10 +552,16 @@ export async function createLocalApp({
           req.headers['x-japangrad-client'] !== '1'
         )
           fail('缺少本地工作台请求标识。', 403);
+        if (await ai.handle(req, res, route)) return;
+        if (await settings.handle(req, res, route)) return;
+        if (await specialPrograms.handle(req, res, route)) return;
+        if (await collection.handle(req, res, route)) return;
         if (await assistant.handle(req, res, route)) return;
         if (await information.handle(req, res, route)) return;
         if (await experiences.handle(req, res, route)) return;
+        if (await admissionAi.handle(req, res, route)) return;
         if (await analysis.handle(req, res, route)) return;
+        if (await reader.handle(req, res, route)) return;
         if (route === '/api/japangrad/workspace' && req.method === 'GET') {
           const current = snapshot();
           if (url.searchParams.get('since') === String(current.revision))
@@ -555,6 +642,12 @@ export async function createLocalApp({
           );
           for (const university of data.universities) {
             const previous = previousUniversities.get(university.id);
+            for (const key of ['japanRank', 'japanRankYear', 'japanRankSource'])
+              if (
+                university[key] === undefined &&
+                previous?.[key] !== undefined
+              )
+                university[key] = previous[key];
             if (
               university.prefecture === undefined &&
               previous?.prefecture !== undefined
@@ -713,11 +806,11 @@ export async function createLocalApp({
           )
             fail('所属记录不存在。', 404);
           if (
-            !['guidelines', 'question', 'answer', 'paper', 'consent'].includes(
+            !['answer', 'consent', 'guidelines', 'paper', 'question'].includes(
               meta.kind,
             ) ||
             (meta.ownerType === 'professor') !==
-              ['paper', 'consent'].includes(meta.kind)
+              ['consent', 'paper'].includes(meta.kind)
           )
             fail('文件分类不合法。');
           if (
@@ -914,7 +1007,7 @@ export async function createLocalApp({
           if (!ownerExists('professor', input.professorId))
             fail('老师不存在。', 404);
           if (
-            !['sent', 'received'].includes(input.direction) ||
+            !['received', 'sent'].includes(input.direction) ||
             !text(input.subject, 240) ||
             !input.subject.trim() ||
             !text(input.body, 100_000) ||
@@ -999,6 +1092,9 @@ export async function createLocalApp({
         '.json': 'application/json',
         '.svg': 'image/svg+xml',
         '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.webp': 'image/webp',
         '.woff2': 'font/woff2',
         '.bcmap': 'application/octet-stream',
         '.ttf': 'font/ttf',
@@ -1030,10 +1126,18 @@ export async function createLocalApp({
     }
   });
   server.on('japangrad:shutdown', () => {
+    collection.close();
+    admissionAi.close();
+    ai.close();
+    reader.close();
     assistant.close();
     analysis.close();
   });
   server.on('close', () => {
+    collection.close();
+    admissionAi.close();
+    ai.close();
+    reader.close();
     assistant.close();
     analysis.close();
     db.close();
@@ -1071,7 +1175,7 @@ if (
     server.close();
   });
   server.listen(port, '127.0.0.1', () => {
-    const address = `http://127.0.0.1:${server.address().port}/japan-grad`;
+    const address = `http://127.0.0.1:${server.address().port}/welcome`;
     // oxlint-disable-next-line no-console -- The local launcher reports its address and data folder.
     console.log(
       `JapanGrad: ${address}\n本地工作区: ${workspace}\n关闭本窗口或按 Ctrl+C 停止服务。`,

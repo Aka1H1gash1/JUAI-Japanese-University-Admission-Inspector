@@ -72,3 +72,5 @@ JapanGradWorkspace/
 
 # Local parser and MCP dependencies have their own reproducible install.
 !local-server/package-lock.json
+# Platform OCR helper is built from ocr-vision.swift during packaging.
+local-server/bin/juai-ocr

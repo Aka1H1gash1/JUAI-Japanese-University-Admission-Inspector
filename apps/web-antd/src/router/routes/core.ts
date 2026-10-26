@@ -1,7 +1,6 @@
 import type { RouteRecordRaw } from 'vue-router';
 
 import { LOGIN_PATH } from '@vben/constants';
-import { preferences } from '@vben/preferences';
 
 import { $t } from '#/locales';
 
@@ -35,8 +34,14 @@ const coreRoutes: RouteRecordRaw[] = [
     },
     name: 'Root',
     path: '/',
-    redirect: preferences.app.defaultHomePath,
+    redirect: '/welcome',
     children: [],
+  },
+  {
+    name: 'JapanGradWelcome',
+    path: '/welcome',
+    component: () => import('#/views/japan-grad/welcome.vue'),
+    meta: { title: 'JapanGrad', ignoreAccess: true, hideInMenu: true },
   },
   {
     name: 'JapanGrad',
@@ -45,8 +50,18 @@ const coreRoutes: RouteRecordRaw[] = [
     meta: { title: '大学选择与对比' },
     children: [
       {
-        name: 'UniversityList',
         path: '',
+        redirect: { name: 'ApplicationOverview' },
+      },
+      {
+        name: 'ApplicationOverview',
+        path: 'overview',
+        component: () => import('#/views/japan-grad/overview.vue'),
+        meta: { title: '申请总览' },
+      },
+      {
+        name: 'UniversityList',
+        path: 'universities',
         component: () => import('#/views/japan-grad/index.vue'),
         meta: {
           title: '大学选择与对比',
@@ -59,10 +74,46 @@ const coreRoutes: RouteRecordRaw[] = [
         meta: { title: '修考之路' },
       },
       {
+        name: 'InformationCollection',
+        path: 'collection',
+        component: () => import('#/views/japan-grad/collection.vue'),
+        meta: { title: '网址解析结果' },
+      },
+      {
+        name: 'AiManagement',
+        path: 'ai',
+        component: () => import('#/views/japan-grad/ai-management.vue'),
+        meta: { title: 'AI 管理' },
+      },
+      {
+        name: 'SpecialAdmissionPrograms',
+        path: 'special-programs',
+        component: () => import('#/views/japan-grad/special-programs.vue'),
+        meta: { title: '特殊入学项目' },
+      },
+      {
+        name: 'WorkspaceSettings',
+        path: 'settings',
+        component: () => import('#/views/japan-grad/settings.vue'),
+        meta: { title: '设置' },
+      },
+      {
+        name: 'SpecialAdmissionProgramDetails',
+        path: 'special-programs/:programId',
+        component: () => import('#/views/japan-grad/special-programs.vue'),
+        meta: { title: '特殊入学项目详情' },
+      },
+      {
         name: 'MajorGuidelineAnalysis',
         path: 'analysis/:analysisMajorId',
         component: () => import('#/views/japan-grad/major-analysis.vue'),
         meta: { title: '募集要项分析' },
+      },
+      {
+        name: 'DocumentReader',
+        path: 'documents/:documentId',
+        component: () => import('#/views/japan-grad/document-reader.vue'),
+        meta: { title: '资料阅读与笔记' },
       },
       {
         name: 'UniversityDetails',

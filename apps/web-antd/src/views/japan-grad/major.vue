@@ -4,10 +4,11 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button } from 'ant-design-vue';
 
-import EntityEditor from './components/entity-editor.vue';
+import CollectedAdmissions from './components/collected-admissions.vue';
 import DocumentArchive from './components/document-archive.vue';
-import ExplorerIcon from './components/explorer-icon.vue';
+import EntityEditor from './components/entity-editor.vue';
 import ExamHistory from './components/exam-history.vue';
+import ExplorerIcon from './components/explorer-icon.vue';
 import MajorAdmissions from './components/major-admissions.vue';
 import ResearchLabCollection from './components/research-lab-collection.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
@@ -61,16 +62,15 @@ function deleteMajor() {
 <template>
   <section v-if="major && school && university" class="explorer-page">
     <nav class="explorer-breadcrumb" aria-label="当前位置">
-      <RouterLink to="/japan-grad">大学清单</RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink
+      <RouterLink to="/japan-grad/universities">大学清单</RouterLink><ExplorerIcon name="chevron" /><RouterLink
         :to="`/japan-grad/universities/${university.id}`"
       >
-        {{ university.name }} </RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink
+        {{ university.name }}
+</RouterLink><ExplorerIcon name="chevron" /><RouterLink
         :to="`/japan-grad/universities/${university.id}/schools/${school.id}`"
       >
-        {{ school.name }} </RouterLink
-      ><ExplorerIcon name="chevron" /><span>{{ major.name }}</span>
+        {{ school.name }}
+</RouterLink><ExplorerIcon name="chevron" /><span>{{ major.name }}</span>
     </nav>
     <header class="page-heading detail-heading">
       <div>
@@ -80,32 +80,30 @@ function deleteMajor() {
         </p>
       </div>
       <div class="detail-actions">
-        <Button @click="router.push(`/japan-grad/analysis/${major.id}`)"
-          >募集要项分析</Button
-        >
+        <Button @click="router.push(`/japan-grad/analysis/${major.id}`)">
+          募集要项分析
+        </Button>
         <Button class="icon-button" @click="majorEditorOpen = true">
-          <ExplorerIcon name="edit" />编辑专攻 </Button
-        ><Button class="icon-button" aria-label="删除专攻" @click="deleteMajor">
+          <ExplorerIcon name="edit" />编辑专攻
+</Button><Button class="icon-button" aria-label="删除专攻" @click="deleteMajor">
           <ExplorerIcon name="trash" />
         </Button>
       </div>
     </header>
     <section class="entity-overview" aria-label="专攻资料">
       <div class="overview-meta">
-        <span
-          ><ExplorerIcon name="book" />{{
+        <span><ExplorerIcon name="book" />{{
             major.research || '研究领域尚未填写'
-          }}</span
-        ><a
+          }}</span><a
           v-if="websiteUrl(major.website)"
           :href="websiteUrl(major.website)"
           target="_blank"
           rel="noopener noreferrer"
-          ><ExplorerIcon name="globe" />访问专攻官网<ExplorerIcon name="link"
-        /></a>
+          ><ExplorerIcon name="globe" />访问专攻官网<ExplorerIcon name="link" /></a>
       </div>
       <p v-if="major.notes" class="overview-notes">{{ major.notes }}</p>
     </section>
+    <CollectedAdmissions kind="major" :id="major.id" />
     <MajorAdmissions :key="`admissions-${major.id}`" :major-id="major.id" />
     <ExamHistory :key="`exams-${major.id}`" :major-id="major.id" />
     <DocumentArchive :key="major.id" owner-type="major" :owner-id="major.id" />
@@ -121,6 +119,8 @@ function deleteMajor() {
   <section v-else class="search-empty">
     <h1>这个专攻已不存在</h1>
     <p>返回大学清单重新选择。</p>
-    <RouterLink to="/japan-grad" class="back-link">返回大学清单 →</RouterLink>
+    <RouterLink to="/japan-grad/universities" class="back-link">
+      返回大学清单 →
+    </RouterLink>
   </section>
 </template>

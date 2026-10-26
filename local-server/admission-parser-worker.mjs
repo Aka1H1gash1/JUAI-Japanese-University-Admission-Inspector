@@ -1,6 +1,8 @@
-import { parentPort, workerData } from 'node:worker_threads';
+/* oxlint-disable unicorn/require-post-message-target-origin -- Node worker_threads parentPort is not a browser Window. */
+import { Buffer } from 'node:buffer';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parentPort, workerData } from 'node:worker_threads';
 
 async function parse() {
   const { content, extension, imagePage } = workerData;
@@ -89,9 +91,10 @@ async function parse() {
     let characters = 0;
     for (let number = 1; number <= pdf.numPages; number++) {
       const page = await pdf.getPage(number);
-      const items = (await page.getTextContent()).items;
-      let value = '',
-        lastY;
+      const textContent = await page.getTextContent();
+      const items = textContent.items;
+      let lastY;
+      let value = '';
       for (const item of items) {
         if (!('str' in item)) continue;
         const y = item.transform?.[5];
@@ -116,18 +119,19 @@ async function parse() {
       page.cleanup();
     }
     const empty = pages
-      .filter((page) => page.text.replace(/\s/g, '').length < 20)
+      .filter((page) => page.text.replaceAll(/\s/g, '').length < 20)
       .map((page) => page.page);
     return {
       pages,
-      warnings: empty.length
-        ? [
-            `第 ${empty.join('、')} 页文字不足，可能为扫描页或图表；请使用 Agent 的页面图像分析能力或人工核对。`,
-          ]
-        : [],
+      warnings:
+        empty.length > 0
+          ? [
+              `第 ${empty.join('、')} 页文字不足，可能为扫描页或图表；请使用 OCR、图片模型或人工核对。`,
+            ]
+          : [],
     };
   } finally {
-    await pdf.destroy();
+    await task.destroy();
   }
 }
 parse()

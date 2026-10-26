@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { vAccessibleSelect } from '../select-accessibility';
 import type { EditorFields, EntityKind } from '../explorer';
 
 import { computed, ref, watch } from 'vue';
@@ -7,24 +6,25 @@ import { computed, ref, watch } from 'vue';
 import { App, Button, Input, Modal, Select } from 'ant-design-vue';
 
 import { titleOptions, useExplorerStore, websiteUrl } from '../explorer';
-import { localApi } from '../local-api';
 import {
   geographyError,
   JAPAN_PREFECTURES,
   JAPAN_REGIONS,
   universityGeography,
 } from '../japan-geography';
-import UniversityLogo from './university-logo.vue';
+import { localApi } from '../local-api';
+import { vAccessibleSelect } from '../select-accessibility';
 import {
   DEFAULT_UNIVERSITY_FEES,
   DORMITORY_OPTIONS,
   formatYen,
   hasDefaultUniversityFees,
-  UNIVERSITY_CATEGORIES,
   UNIVERSITY_BUDGET_FIELDS,
+  UNIVERSITY_CATEGORIES,
   universityBudgetTotals,
   validYenAmount,
 } from '../university-fees';
+import UniversityLogo from './university-logo.vue';
 
 const props = defineProps<{
   kind: EntityKind;
@@ -122,7 +122,7 @@ async function uploadLogo(event: Event) {
   feedback.value = '';
   try {
     if (file.size > 3 * 1024 * 1024) throw new Error('校徽图片不能超过 3 MB。');
-    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type))
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type))
       throw new Error('校徽请使用 PNG、JPG 或 WebP 图片。');
     let bitmap: ImageBitmap;
     try {
@@ -186,6 +186,9 @@ watch(open, (value) => {
     prefecture: '',
     qsRank: '',
     qsYear: '',
+    japanRank: '',
+    japanRankYear: '',
+    japanRankSource: '',
     admissionFee: '',
     annualTuition: '',
     feeNotes: '',
@@ -257,12 +260,15 @@ async function save() {
       '费用请填写 0-999,999,999 之间的整数日元，或留空；无需输入逗号。';
     return;
   }
-  const websiteFields =
-    props.kind === 'professor'
-      ? ['personalWebsite']
-      : props.kind === 'university'
-        ? ['website', 'dormitoryWebsite']
-        : ['website'];
+  const websiteFields = (() => {
+    if (props.kind === 'professor') {
+      return ['personalWebsite'];
+    }
+    if (props.kind === 'university') {
+      return ['website', 'dormitoryWebsite'];
+    }
+    return ['website'];
+  })();
   if (
     websiteFields.some(
       (field) =>
@@ -383,10 +389,8 @@ async function save() {
           </div>
         </div>
         <div class="field full">
-          <label for="entity-name"
-            >{{ kind === 'professor' ? '老师姓名' : `${kindLabel}名称` }}
-            <span>*</span></label
-          ><Input
+          <label for="entity-name">{{ kind === 'professor' ? '老师姓名' : `${kindLabel}名称` }}
+            <span>*</span></label><Input
             id="entity-name"
             v-model:value="form.name"
             :maxlength="120"
@@ -396,8 +400,7 @@ async function save() {
           />
         </div>
         <div class="field" :class="{ full: kind === 'school' }">
-          <label for="entity-japanese">日文名称</label
-          ><Input
+          <label for="entity-japanese">日文名称</label><Input
             id="entity-japanese"
             v-model:value="form.japaneseName"
             :maxlength="120"
@@ -406,8 +409,7 @@ async function save() {
         </div>
         <template v-if="kind === 'university'">
           <div class="field">
-            <label for="entity-category">大学类型</label
-            ><Select
+            <label for="entity-category">大学类型</label><Select
               v-accessible-select
               id="entity-category"
               v-model:value="form.category"
@@ -473,6 +475,27 @@ async function save() {
               v-model:value="form.qsYear"
               :maxlength="120"
               placeholder="如 2027，可选"
+            />
+          </div>
+          <div class="field">
+            <label>日本排名</label><Input
+              v-model:value="form.japanRank"
+              :maxlength="120"
+              placeholder="如 12、并列 12；无可靠来源可留空"
+            />
+          </div>
+          <div class="field">
+            <label>日本排名年份</label><Input
+              v-model:value="form.japanRankYear"
+              :maxlength="120"
+              placeholder="如 2027"
+            />
+          </div>
+          <div class="field full">
+            <label>日本排名来源</label><Input
+              v-model:value="form.japanRankSource"
+              :maxlength="120"
+              placeholder="如 QS 日本位次、THE 日本大学排名；请注明口径"
             />
           </div>
           <section
@@ -567,10 +590,8 @@ async function save() {
             <p v-if="feeTotals.firstYear" class="fee-editor-total">
               {{ feeTotals.complete ? '首年总费用' : '首年已知费用' }}
               <strong>¥ {{ formatYen(feeTotals.firstYear) }}</strong>
-              <span
-                >{{ feeTotals.complete ? '两年总费用' : '两年已知费用' }} ¥
-                {{ formatYen(feeTotals.twoYears) }}</span
-              >
+              <span>{{ feeTotals.complete ? '两年总费用' : '两年已知费用' }} ¥
+                {{ formatYen(feeTotals.twoYears) }}</span>
             </p>
             <p v-if="!feeTotals.complete" class="fee-editor-hint">
               待补充：{{
@@ -590,8 +611,7 @@ async function save() {
             </div>
             <div class="form-fields">
               <div class="field full">
-                <label for="entity-dormitory-status">是否可以申请寮</label
-                ><Select
+                <label for="entity-dormitory-status">是否可以申请寮</label><Select
                   v-accessible-select
                   id="entity-dormitory-status"
                   v-model:value="form.dormitoryStatus"
@@ -599,8 +619,7 @@ async function save() {
                 />
               </div>
               <div class="field full">
-                <label for="entity-dormitory-website">寮申请官网</label
-                ><Input
+                <label for="entity-dormitory-website">寮申请官网</label><Input
                   id="entity-dormitory-website"
                   v-model:value="form.dormitoryWebsite"
                   :maxlength="2048"
@@ -608,8 +627,7 @@ async function save() {
                 />
               </div>
               <div class="field full">
-                <label for="entity-dormitory-notes">申请条件 / 住宿备注</label
-                ><Input.TextArea
+                <label for="entity-dormitory-notes">申请条件 / 住宿备注</label><Input.TextArea
                   id="entity-dormitory-notes"
                   v-model:value="form.dormitoryNotes"
                   :rows="2"
@@ -632,8 +650,7 @@ async function save() {
             />
           </div>
           <div class="field">
-            <label for="entity-title">职称</label
-            ><Select
+            <label for="entity-title">职称</label><Select
               v-accessible-select
               id="entity-title"
               v-model:value="form.title"
@@ -655,8 +672,7 @@ async function save() {
             />
           </div>
           <div class="field full">
-            <label for="entity-lab-exams">考试特殊说明</label
-            ><Input.TextArea
+            <label for="entity-lab-exams">考试特殊说明</label><Input.TextArea
               id="entity-lab-exams"
               v-model:value="form.examNotes"
               :maxlength="4000"
@@ -665,8 +681,7 @@ async function save() {
             />
           </div>
           <div class="field full">
-            <label for="entity-lab-admissions">出愿特殊说明</label
-            ><Input.TextArea
+            <label for="entity-lab-admissions">出愿特殊说明</label><Input.TextArea
               id="entity-lab-admissions"
               v-model:value="form.applicationNotes"
               :maxlength="4000"
@@ -678,8 +693,7 @@ async function save() {
         <div v-if="kind !== 'university'" class="field full">
           <label for="entity-research">{{
             kind === 'school' ? '学科 / 研究领域' : '研究方向'
-          }}</label
-          ><Input
+          }}</label><Input
             id="entity-research"
             v-model:value="form.research"
             :maxlength="500"
@@ -687,8 +701,7 @@ async function save() {
           />
         </div>
         <div v-if="kind === 'professor'" class="field full">
-          <label for="entity-email">联系邮箱</label
-          ><Input
+          <label for="entity-email">联系邮箱</label><Input
             id="entity-email"
             v-model:value="form.email"
             :maxlength="254"
@@ -696,8 +709,7 @@ async function save() {
           />
         </div>
         <div v-if="kind !== 'professor'" class="field full">
-          <label for="entity-website">官网地址</label
-          ><Input
+          <label for="entity-website">官网地址</label><Input
             id="entity-website"
             v-model:value="form.website"
             :maxlength="2048"
@@ -706,8 +718,7 @@ async function save() {
         </div>
         <template v-if="kind === 'professor'">
           <div class="field full">
-            <label for="entity-personal-website">老师个人主页</label
-            ><Input
+            <label for="entity-personal-website">老师个人主页</label><Input
               id="entity-personal-website"
               v-model:value="form.personalWebsite"
               :maxlength="2048"
@@ -718,8 +729,7 @@ async function save() {
         <div class="field full">
           <label for="entity-notes">{{
             kind === 'professor' ? '关注理由 / 个人备注' : '个人备注'
-          }}</label
-          ><Input.TextArea
+          }}</label><Input.TextArea
             id="entity-notes"
             v-model:value="form.notes"
             :maxlength="4000"
@@ -730,9 +740,7 @@ async function save() {
       </div>
       <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
       <div class="form-footer">
-        <span>仅名称必填，其余可以稍后补充</span
-        ><Button @click="open = false">取消</Button
-        ><Button
+        <span>仅名称必填，其余可以稍后补充</span><Button @click="open = false">取消</Button><Button
           type="primary"
           html-type="submit"
           :loading="store.saving"

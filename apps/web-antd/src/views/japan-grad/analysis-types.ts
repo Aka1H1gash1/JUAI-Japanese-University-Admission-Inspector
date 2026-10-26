@@ -1,24 +1,25 @@
-import definitions from '../../../../../local-server/admission-fields.json';
 import type {
-  University,
   GraduateSchool,
   Major,
   ResearchLab,
+  University,
 } from './explorer';
+
+import definitions from '../../../../../local-server/admission-fields.json';
 export type AdmissionFieldId =
-  | 'applicationStart'
   | 'applicationEnd'
-  | 'writtenDate'
+  | 'applicationFee'
+  | 'applicationMaterials'
+  | 'applicationStart'
+  | 'eligibility'
   | 'interviewDate'
+  | 'languageRequirements'
+  | 'notes'
+  | 'professorContactRequirement'
   | 'resultDate'
   | 'subjects'
-  | 'languageRequirements'
-  | 'applicationMaterials'
-  | 'eligibility'
   | 'submissionMethod'
-  | 'applicationFee'
-  | 'professorContactRequirement'
-  | 'notes';
+  | 'writtenDate';
 export const ADMISSION_FIELDS = definitions as {
   id: AdmissionFieldId;
   label: string;
@@ -41,7 +42,7 @@ export interface Evidence {
 }
 export interface AnalysisObject {
   admissionYear: number;
-  degree: 'master' | 'doctor' | 'research_student';
+  degree: 'doctor' | 'master' | 'research_student';
   selectionType: string;
   notes: string;
 }
@@ -58,7 +59,7 @@ export interface AnalysisJob {
     sha256: string;
     majorId: string;
   }[];
-  status: 'queued' | 'parsing' | 'ready' | 'awaiting_review' | 'failed';
+  status: 'awaiting_review' | 'failed' | 'parsing' | 'queued' | 'ready';
   error: string;
   createdAt: string;
 }
@@ -72,13 +73,15 @@ export interface AnalysisProposal {
       AdmissionFieldId,
       {
         value: string;
-        status: 'found' | 'not_found' | 'unreadable' | 'conflict';
+        status: 'conflict' | 'found' | 'not_found' | 'unreadable';
         evidence: Evidence[];
+        scopeNote?: string;
+        requiresScopeConfirmation?: boolean;
       }
     >
   >;
   warnings: string[];
-  status: 'pending' | 'applied';
+  status: 'applied' | 'pending';
   createdAt: string;
   appliedFields?: AdmissionFieldId[];
 }

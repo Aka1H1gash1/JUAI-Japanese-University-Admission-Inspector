@@ -1,9 +1,9 @@
 export type DocumentKind =
   | 'answer'
+  | 'consent'
   | 'guidelines'
   | 'paper'
-  | 'question'
-  | 'consent';
+  | 'question';
 export interface StoredDocument {
   experienceId?: string;
   signed?: boolean;
@@ -36,6 +36,9 @@ export const kindLabels: Record<DocumentKind, string> = {
 export function fileUrl(id: string) {
   return `/api/japangrad/documents/${encodeURIComponent(id)}/file`;
 }
+export function documentReaderPath(id: string) {
+  return `/japan-grad/documents/${encodeURIComponent(id)}`;
+}
 export function fileSize(size: number) {
   return size >= 1024 * 1024
     ? `${(size / (1024 * 1024)).toFixed(1)} MB`
@@ -53,8 +56,7 @@ export function requiresDownload(document: StoredDocument) {
   return isWord(document) || document.charset === 'unknown';
 }
 export function readerLabel(document: StoredDocument) {
-  if (isWord(document)) return '下载 Word 文件';
+  if (/\.doc$/i.test(document.filename)) return '下载 Word 文件';
   if (document.charset === 'unknown') return '下载文本文件';
-  if (fileFormat(document.filename) === 'PDF') return '用浏览器打开 PDF';
-  return '浏览器阅读文本';
+  return '阅读与笔记';
 }

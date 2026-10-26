@@ -1,16 +1,37 @@
 <script setup lang="ts">
+import type {
+  AssistantNoteDraft,
+  ReaderAssistantContext,
+  ReaderSource,
+} from '../reader-types';
+
 import { computed, nextTick, onUnmounted, ref, watch } from 'vue';
-import { useWindowSize, useStorage, useEventListener } from '@vueuse/core';
-import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
+import { useRoute, useRouter } from 'vue-router';
+
+import { useEventListener, useStorage, useWindowSize } from '@vueuse/core';
+import { App, Button, Input, Modal, Select } from 'ant-design-vue';
+
+import { documentReaderPath } from '../documents';
 import { useExplorerStore } from '../explorer';
 import { jsonOptions, localApi } from '../local-api';
+import { requireValue } from '../required-value';
 import { vAccessibleSelect } from '../select-accessibility';
-import ExplorerIcon from './explorer-icon.vue';
 import AgentInformationHistory from './agent-information-history.vue';
+import AssistantAnswer from './assistant-answer.vue';
+import ExplorerIcon from './explorer-icon.vue';
+const props = defineProps<{ reader?: ReaderAssistantContext }>();
+const emit = defineEmits<{
+  locateSource: [source: ReaderSource];
+  saveNote: [draft: AssistantNoteDraft];
+}>();
+const route = useRoute();
+const router = useRouter();
+const settingsPath = () =>
+  `/assistant/settings${props.reader ? '?feature=document_chat' : ''}`;
 interface Provider {
   baseUrl: string;
   model: string;
-  protocol: 'responses' | 'chat_completions' | 'codex';
+  protocol: 'chat_completions' | 'codex' | 'responses';
   codexPath?: string;
   stream: boolean;
   local?: boolean;
@@ -30,12 +51,16 @@ interface Trace {
 }
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'assistant' | 'user';
   text: string;
   status: string;
   error?: string;
   tools?: Trace[];
   proposalIds?: string[];
+  sources?: ReaderSource[];
+  selection?: { page: number; quote: string };
+  citationWarning?: string;
+  documentPage?: number;
 }
 interface Proposal {
   id: string;
@@ -52,7 +77,11 @@ interface Session {
   id: string;
   title: string;
   provider: Provider;
-  scope: { majorIds: string[]; writableKinds: string[] };
+  scope: {
+    majorIds: string[];
+    writableKinds: string[];
+    document?: { id: string; sha256: string; title: string };
+  };
   messages: Message[];
   proposals: Proposal[];
   running: boolean;
@@ -86,7 +115,7 @@ const panel = ref<HTMLElement>();
 watch(
   [panel, paneWidth],
   () => {
-    if (panel.value && !resizeStart)
+    if (panel.value && !resizeStart && !props.reader)
       panel.value.style.setProperty(
         '--assistant-pane-width',
         `${paneWidth.value}px`,
@@ -95,10 +124,10 @@ watch(
   { flush: 'post' },
 );
 let resizeStart:
-  | { x: number; width: number; target: HTMLElement; pointerId: number }
-  | undefined;
-let resizeFrame = 0,
-  nextWidth = 440;
+  | undefined
+  | { x: number; width: number; target: HTMLElement; pointerId: number };
+let nextWidth = 440;
+let resizeFrame = 0;
 function startResize(event: PointerEvent) {
   if (windowWidth.value <= 900 || event.button !== 0) return;
   const target = event.currentTarget as HTMLElement;
@@ -144,21 +173,27 @@ function stopResize() {
   resizeStart = undefined;
 }
 function resizeKey(event: KeyboardEvent) {
-  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+  if (!['ArrowLeft', 'ArrowRight', 'End', 'Home'].includes(event.key)) return;
   event.preventDefault();
-  storedWidth.value =
-    event.key === 'Home'
-      ? 320
-      : event.key === 'End'
-        ? maxPaneWidth.value
-        : Math.max(
-            320,
-            Math.min(
-              maxPaneWidth.value,
-              paneWidth.value + (event.key === 'ArrowLeft' ? 20 : -20),
-            ),
-          );
+  storedWidth.value = (() => {
+    if (event.key === 'Home') {
+      return 320;
+    }
+    if (event.key === 'End') {
+      return maxPaneWidth.value;
+    }
+    return Math.max(
+      320,
+      Math.min(
+        maxPaneWidth.value,
+        paneWidth.value + (event.key === 'ArrowLeft' ? 20 : -20),
+      ),
+    );
+  })();
 }
+useEventListener(window, 'juai-ai-config-changed', () => {
+  if (!busy.value && open.value) void load();
+});
 useEventListener(window, 'pointermove', moveResize);
 useEventListener(window, 'pointerup', stopResize);
 useEventListener(window, 'pointercancel', stopResize);
@@ -177,53 +212,102 @@ interface NativeState {
   path?: string;
   accountType?: string;
 }
+const awaitingNative = ref(false);
+const loginUrl = ref('');
+const nativeBusy = ref(false);
 const nativeState = ref<NativeState>({
-    connected: false,
-    ready: false,
-    needsLogin: false,
-    models: [],
-  }),
-  nativeBusy = ref(false),
-  loginUrl = ref(''),
-  awaitingNative = ref(false);
+  connected: false,
+  ready: false,
+  needsLogin: false,
+  models: [],
+});
 let invitationSession = '';
 let awaitingExternal = false;
 let nativeConnectCustom = false;
 
-const store = useExplorerStore(),
-  { message, modal } = App.useApp();
-const settings = ref<Settings>(),
-  sessions = ref<SessionRow[]>([]),
-  session = ref<Session>(),
-  draft = ref(''),
-  error = ref(''),
-  status = ref(''),
-  busy = ref(false),
-  loading = ref(false),
-  settingsOpen = ref(false),
-  historyOpen = ref(false),
-  savingSettings = ref(false),
-  acting = ref(''),
-  scroll = ref<HTMLElement>();
+const store = useExplorerStore();
+const { message, modal } = App.useApp();
+const acting = ref('');
+const busy = ref(false);
+const draft = ref('');
+const errorMessage = ref('');
+const historyOpen = ref(false);
+const loading = ref(false);
+const savingSettings = ref(false);
+const scroll = ref<HTMLElement>();
+const session = ref<Session>();
+const sessions = ref<SessionRow[]>([]);
+const settings = ref<Settings>();
+const settingsOpen = ref(false);
+const status = ref('');
+const attachment = ref<{ page: number; quote: string }>();
+const creatingSession = ref(false);
+const sessionInput = () =>
+  props.reader
+    ? { document: { id: props.reader.documentId, sha256: props.reader.sha256 } }
+    : {};
+const sessionListPath = () =>
+  props.reader
+    ? `/assistant/sessions?documentId=${encodeURIComponent(props.reader.documentId)}&sha256=${props.reader.sha256}`
+    : '/assistant/sessions';
+function sharedScope() {
+  const ids = (settings.value?.majorIds ?? form.value.majorIds).filter((id) =>
+    store.majors.some((m) => m.id === id),
+  );
+  return {
+    majorIds: ids.length > 0 ? ids : majors.value.map((m) => m.value),
+    writableKinds: settings.value?.writableKinds ?? ['major', 'lab'],
+  };
+}
+function attachSelection(value: { page: number; quote: string }) {
+  if (!props.reader || busy.value) {
+    message.info('请先等待当前回答结束，或停止回答。');
+    return;
+  }
+  if (value.quote.length > 8000) {
+    message.info('每次提问最多附上 8,000 字，请缩小选区。');
+    return;
+  }
+  attachment.value = { page: value.page, quote: value.quote };
+  if (!draft.value.trim()) draft.value = '请解释这段原文，并标出依据。';
+  void nextTick(() =>
+    document.querySelector<HTMLTextAreaElement>('#assistant-message')?.focus(),
+  );
+}
+function locate(source: ReaderSource) {
+  if (props.reader) emit('locateSource', source);
+  else
+    window.open(
+      `${documentReaderPath(source.documentId)}?page=${source.page}&sha256=${source.sha256}&quote=${encodeURIComponent(source.quote)}`,
+      '_blank',
+      'noopener,noreferrer',
+    );
+}
+function saveAnswer(entry: Message) {
+  const index =
+    session.value?.messages.findIndex((m) => m.id === entry.id) ?? -1;
+  const question = session.value?.messages
+    .slice(0, index)
+    .findLast((m) => m.role === 'user')?.text;
+  emit('saveNote', {
+    title: `AI 阅读笔记${question ? `：${question.slice(0, 70)}` : ''}`,
+    body: entry.text,
+    sources: entry.sources ?? [],
+  });
+}
+defineExpose({ attachSelection });
 const form = ref({
   source: 'codex' as 'api' | 'codex',
   codexPath: '',
   baseUrl: 'https://api.openai.com/v1',
   model: '',
-  protocol: 'responses' as 'responses' | 'chat_completions',
+  protocol: 'responses' as 'chat_completions' | 'responses',
   stream: true,
   majorIds: [] as string[],
   writableKinds: ['major', 'lab'],
   readOnly: false,
   apiKey: '',
 });
-const kindOptions = [
-  { value: 'major', label: '专攻资料与考试' },
-  { value: 'lab', label: '研究室与材料待办' },
-  { value: 'professor', label: '老师基本资料' },
-  { value: 'university', label: '大学、费用与住宿（共享）' },
-  { value: 'school', label: '研究科（共享）' },
-];
 const majors = computed(() =>
   store.majors.map((m) => {
     const school = store.schools.find((s) => s.id === m.schoolId);
@@ -233,14 +317,6 @@ const majors = computed(() =>
     return { value: m.id, label: `${university?.name || ''} / ${m.name}` };
   }),
 );
-const formKeyConfigured = computed(() => {
-  const base = form.value.baseUrl.trim().replace(/\/$/, '');
-  return (
-    (settings.value?.provider.baseUrl === base &&
-      settings.value.keyConfigured) ||
-    (session.value?.provider.baseUrl === base && session.value.keyConfigured)
-  );
-});
 const selectedId = computed({
   get: () => session.value?.id,
   set: (id: string | undefined) => {
@@ -261,6 +337,10 @@ let scrollQueued = false;
 function keepBottom(force = false) {
   const element = scroll.value;
   if (!element) return;
+  if (!session.value?.messages.length) {
+    element.scrollTop = 0;
+    return;
+  }
   const close =
     element.scrollHeight - element.scrollTop - element.clientHeight < 160;
   if (!force && !close) return;
@@ -274,129 +354,121 @@ function keepBottom(force = false) {
 async function loadSession(id: string) {
   const generation = ++readGeneration;
   const value = await localApi<Session>(`/assistant/sessions/${id}`);
+  validateSessionScope(value);
   if (generation === readGeneration) session.value = value;
 }
+function validateSessionScope(value: Session) {
+  if (
+    props.reader
+      ? value.scope.document?.id !== props.reader.documentId ||
+        value.scope.document?.sha256 !== props.reader.sha256
+      : !!value.scope.document
+  )
+    throw new Error('这份对话属于另一资料范围，请在当前页面新建对话。');
+}
 async function listSessions() {
-  sessions.value = await localApi<SessionRow[]>('/assistant/sessions');
+  sessions.value = await localApi<SessionRow[]>(sessionListPath());
 }
 async function selectSession(id: string) {
   if (busy.value) return;
   loading.value = true;
-  error.value = '';
+  errorMessage.value = '';
   try {
     await loadSession(id);
     keepBottom(true);
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '对话读取失败。';
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : '对话读取失败。';
   } finally {
     loading.value = false;
   }
 }
 async function load() {
   loading.value = true;
-  error.value = '';
+  errorMessage.value = '';
   try {
     const [config, history] = await Promise.all([
-      localApi<Settings>('/assistant/settings'),
-      localApi<SessionRow[]>('/assistant/sessions'),
+      localApi<Settings>(settingsPath()),
+      localApi<SessionRow[]>(sessionListPath()),
     ]);
     settings.value = config;
     sessions.value = history;
     if (session.value) await loadSession(session.value.id);
-    else if (history.length) await loadSession(history[0]!.id);
+    else if (history.length > 0) await loadSession(requireValue(history[0]).id);
     keepBottom(true);
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '助手读取失败。';
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : '助手读取失败。';
   } finally {
     loading.value = false;
   }
 }
-watch(open, (value) => {
-  if (value) {
-    if (!busy.value) void load();
-    else keepBottom(true);
-    void refreshNative();
-    refreshTimer = setInterval(() => {
-      if (
-        awaitingNative.value ||
-        nativeState.value.loginPending ||
-        nativeState.value.needsLogin
-      )
-        void refreshNative(true);
-      if (!busy.value && session.value?.running)
-        void loadSession(session.value.id).catch(() => {});
-    }, 4000);
-  } else {
+watch(
+  open,
+  (value) => {
     if (refreshTimer) clearInterval(refreshTimer);
-    refreshTimer = undefined;
-  }
-});
+    if (value) {
+      if (busy.value) {
+        keepBottom(true);
+      } else {
+        void load();
+      }
+      void refreshNative();
+      refreshTimer = setInterval(() => {
+        if (
+          awaitingNative.value ||
+          nativeState.value.loginPending ||
+          nativeState.value.needsLogin
+        )
+          void refreshNative(true);
+        if (!busy.value && session.value?.running)
+          void loadSession(session.value.id).catch(() => {});
+      }, 4000);
+    } else {
+      if (refreshTimer) clearInterval(refreshTimer);
+      refreshTimer = undefined;
+    }
+  },
+  { immediate: true },
+);
 onUnmounted(() => {
   controller?.abort();
   if (refreshTimer) clearInterval(refreshTimer);
 });
 function editSettings() {
-  const c = settings.value,
-    provider = session.value?.provider ?? c?.provider,
-    scope = session.value?.scope ?? c;
-  form.value = {
-    source: c?.configured && provider?.protocol !== 'codex' ? 'api' : 'codex',
-    codexPath: provider?.codexPath || '',
-    baseUrl:
-      provider?.protocol === 'codex'
-        ? 'https://api.openai.com/v1'
-        : provider?.baseUrl || 'https://api.openai.com/v1',
-    model: provider?.model || '',
-    protocol:
-      provider?.protocol === 'codex'
-        ? 'responses'
-        : provider?.protocol || 'responses',
-    stream: provider?.stream !== false,
-    majorIds: (scope?.majorIds ?? majors.value.map((m) => m.value)).filter(
-      (id) => store.majors.some((m) => m.id === id),
-    ),
-    writableKinds: [...(scope?.writableKinds ?? ['major', 'lab'])],
-    readOnly: scope?.writableKinds.length === 0,
-    apiKey: '',
-  };
-  settingsOpen.value = true;
+  void router.push({
+    path: '/japan-grad/ai',
+    query: { tab: 'features', returnTo: route.fullPath },
+  });
 }
-watch(
-  () => form.value.source,
-  (source) => {
-    if (source === 'codex')
-      form.value.model =
-        session.value?.provider.protocol === 'codex'
-          ? session.value.provider.model
-          : nativeState.value.defaultModel || '';
-    else
-      form.value.model =
-        session.value?.provider.protocol !== 'codex'
-          ? session.value?.provider.model || ''
-          : '';
-  },
-);
 watch(historyOpen, (value) => {
   if (!value && !busy.value && session.value)
     void loadSession(session.value.id).catch(() => {});
 });
-watch(settingsOpen, (value) => {
-  if (!value) form.value.apiKey = '';
-});
 async function newSession() {
-  if (busy.value) return;
-  error.value = '';
+  if (busy.value || creatingSession.value) return;
+  creatingSession.value = true;
+  errorMessage.value = '';
   try {
     readGeneration++;
     session.value = await localApi<Session>(
       '/assistant/sessions',
-      jsonOptions('POST', {}),
+      jsonOptions('POST', sessionInput()),
     );
+    try {
+      validateSessionScope(session.value);
+    } catch (error) {
+      session.value = undefined;
+      throw error;
+    }
     await listSessions();
     keepBottom(true);
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '请先配置助手。';
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : '请先配置助手。';
     editSettings();
+  } finally {
+    creatingSession.value = false;
   }
 }
 async function refreshNative(refresh = false) {
@@ -420,7 +492,7 @@ async function refreshNative(refresh = false) {
         value.sessionId !== invitationSession
       ) {
         await loadSession(value.sessionId);
-        settings.value = await localApi<Settings>('/assistant/settings');
+        settings.value = await localApi<Settings>(settingsPath());
         await listSessions();
         awaitingNative.value = false;
         awaitingExternal = false;
@@ -430,21 +502,22 @@ async function refreshNative(refresh = false) {
         await connectNative(nativeConnectCustom);
       }
     }
-  } catch (e) {
+  } catch (error) {
     if (refresh)
-      error.value = e instanceof Error ? e.message : '连接状态读取失败。';
+      errorMessage.value =
+        error instanceof Error ? error.message : '连接状态读取失败。';
   }
 }
 async function connectNative(custom = false) {
   if (nativeBusy.value || busy.value) return;
   nativeBusy.value = true;
   nativeConnectCustom = custom;
-  error.value = '';
+  errorMessage.value = '';
   try {
     const result = await localApi<{
       native: NativeState;
       settings: Settings;
-      session: Session | null;
+      session: null | Session;
     }>(
       '/assistant/native/connect',
       jsonOptions('POST', {
@@ -460,16 +533,18 @@ async function connectNative(custom = false) {
                 : form.value.writableKinds,
             }
           : {}),
+        ...(props.reader ? { ...sharedScope(), ...sessionInput() } : {}),
       }),
     );
     nativeState.value = result.native;
     if (!result.session) {
       awaitingNative.value = true;
-      error.value = '本机 Codex 尚未登录，请完成登录后继续。';
+      errorMessage.value = '本机 Codex 尚未登录，请完成登录后继续。';
       return;
     }
     readGeneration++;
     settings.value = result.settings;
+    validateSessionScope(result.session);
     session.value = result.session;
     await listSessions();
     awaitingNative.value = false;
@@ -477,15 +552,16 @@ async function connectNative(custom = false) {
     settingsOpen.value = false;
     keepBottom(true);
     message.success('已连接本机 Codex，直接输入问题即可');
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '本机 Codex 连接失败。';
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : '本机 Codex 连接失败。';
   } finally {
     nativeBusy.value = false;
   }
 }
 async function loginNative() {
   nativeBusy.value = true;
-  error.value = '';
+  errorMessage.value = '';
   try {
     const result = await localApi<{ authUrl: string }>(
       '/assistant/native/login',
@@ -497,8 +573,9 @@ async function loginNative() {
     awaitingNative.value = true;
     nativeState.value.loginPending = true;
     window.open(result.authUrl, '_blank', 'noopener,noreferrer');
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '无法打开 Codex 登录。';
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : '无法打开 Codex 登录。';
   } finally {
     nativeBusy.value = false;
   }
@@ -508,6 +585,7 @@ async function copyNativePrompt() {
   const body = JSON.stringify({
     majorIds: scope?.majorIds ?? majors.value.map((m) => m.value),
     writableKinds: scope?.writableKinds ?? ['major', 'lab'],
+    ...sessionInput(),
   });
   const text = `请帮我把本机 Codex 连接到 JUAI 网页助手侧栏。JUAI 正在 ${window.location.origin} 运行。仅向 ${window.location.origin}/api/japangrad/assistant/native/connect 发送 POST，头为 Content-Type: application/json 和 X-JapanGrad-Client: 1，正文为 ${body}。该接口会检测本机 Codex、沿用已有登录并创建网页对话；不需要修改源码、SQLite 或 Codex 全局配置。返回 native.ready=true 后停止并告诉我回到网页；如果需要登录，只转述提示，不读取或复制账户凭据。不要调用 turns 或发起模型推理。`;
   try {
@@ -518,78 +596,22 @@ async function copyNativePrompt() {
     invitationSession = nativeState.value.sessionId || '';
     message.success('已复制，让本机 Agent 执行后此侧栏会加载新对话');
   } catch {
-    error.value = '复制失败，请使用「连接本机 Codex」按钮。';
-  }
-}
-async function saveSettings() {
-  if (form.value.source === 'codex') {
-    await connectNative(true);
-    return;
-  }
-
-  savingSettings.value = true;
-  error.value = '';
-  try {
-    settings.value = await localApi<Settings>(
-      '/assistant/settings',
-      jsonOptions('PUT', {
-        provider: {
-          baseUrl: form.value.baseUrl,
-          model: form.value.model,
-          protocol: form.value.protocol,
-          stream: form.value.stream,
-        },
-        majorIds: form.value.majorIds,
-        writableKinds: form.value.readOnly ? [] : form.value.writableKinds,
-        ...(form.value.apiKey.trim()
-          ? { apiKey: form.value.apiKey.trim() }
-          : {}),
-      }),
-    );
-    form.value.apiKey = '';
-    readGeneration++;
-    session.value = await localApi<Session>(
-      '/assistant/sessions',
-      jsonOptions('POST', {}),
-    );
-    await listSessions();
-    settingsOpen.value = false;
-    message.success('已配置，直接输入问题即可');
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '助手配置失败。';
-  } finally {
-    savingSettings.value = false;
-  }
-}
-async function clearKey() {
-  try {
-    const result = await localApi<{ baseUrl: string; keyConfigured: boolean }>(
-      '/assistant/key',
-      jsonOptions('DELETE', { baseUrl: form.value.baseUrl }),
-    );
-    form.value.apiKey = '';
-    if (settings.value?.provider.baseUrl === result.baseUrl)
-      settings.value.keyConfigured = false;
-    if (session.value?.provider.baseUrl === result.baseUrl)
-      session.value.keyConfigured = false;
-    message.success('已清除此地址的本次密钥');
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '密钥清除失败。';
+    errorMessage.value = '复制失败，请使用「连接本机 Codex」按钮。';
   }
 }
 async function streamEvents(
   response: Response,
   receive: (event: string, value: any) => void,
 ) {
-  const reader = response.body!.getReader(),
-    decoder = new TextDecoder();
+  const decoder = new TextDecoder();
+  const reader = requireValue(response.body).getReader();
   let buffer = '';
   function frame(raw: string) {
-    const lines = raw.split('\n'),
-      event = lines
-        .find((l) => l.startsWith('event:'))
-        ?.slice(6)
-        .trim();
+    const lines = raw.split('\n');
+    const event = lines
+      .find((l) => l.startsWith('event:'))
+      ?.slice(6)
+      .trim();
     const data = lines
       .filter((l) => l.startsWith('data:'))
       .map((l) => l.slice(5).trimStart())
@@ -600,8 +622,8 @@ async function streamEvents(
     for (;;) {
       const { done, value } = await reader.read();
       if (done) break;
-      buffer = (buffer + decoder.decode(value, { stream: true })).replace(
-        /\r\n/g,
+      buffer = (buffer + decoder.decode(value, { stream: true })).replaceAll(
+        '\r\n',
         '\n',
       );
       let i;
@@ -617,23 +639,31 @@ async function streamEvents(
   }
 }
 async function send() {
-  if (busy.value || !draft.value.trim()) return;
+  if (
+    busy.value ||
+    creatingSession.value ||
+    nativeBusy.value ||
+    savingSettings.value ||
+    !draft.value.trim()
+  )
+    return;
   if (!session.value) {
     await newSession();
     if (!session.value) return;
   }
   if (session.value.running) {
-    error.value = '此对话正在回答，请等待或停止后再发送。';
+    errorMessage.value = '此对话正在回答，请等待或停止后再发送。';
     return;
   }
-  const text = draft.value.trim(),
-    id = session.value.id;
+  const id = session.value.id;
+  const text = draft.value.trim();
+  const selection = attachment.value ? { ...attachment.value } : undefined;
   busy.value = true;
-  error.value = '';
+  errorMessage.value = '';
   status.value = '正在连接模型…';
   controller = new AbortController();
-  let started = false,
-    finished = false;
+  let finished = false;
+  let started = false;
   try {
     const response = await fetch(
       `/api/japangrad/assistant/sessions/${id}/turns`,
@@ -643,7 +673,19 @@ async function send() {
           'Content-Type': 'application/json',
           'X-JapanGrad-Client': '1',
         },
-        body: JSON.stringify({ message: text }),
+        body: JSON.stringify({
+          message: text,
+          ...(props.reader
+            ? {
+                reader: {
+                  documentId: props.reader.documentId,
+                  sha256: props.reader.sha256,
+                  page: props.reader.page,
+                  ...(selection ? { selection } : {}),
+                },
+              }
+            : {}),
+        }),
         signal: controller.signal,
       },
     );
@@ -655,8 +697,9 @@ async function send() {
       if (event === 'start') {
         started = true;
         draft.value = '';
-        session.value!.messages.push(value.user, value.answer);
-        session.value!.running = true;
+        attachment.value = undefined;
+        requireValue(session.value).messages.push(value.user, value.answer);
+        requireValue(session.value).running = true;
         keepBottom(true);
       } else if (event === 'delta') {
         if (activeAnswer.value) activeAnswer.value.text += value.text;
@@ -667,15 +710,23 @@ async function send() {
         if (!answer) return;
         answer.tools ??= [];
         const index = answer.tools.findIndex((t) => t.id === value.id);
-        if (index < 0) answer.tools.push(value);
+        if (index === -1) answer.tools.push(value);
         else answer.tools[index] = value;
         keepBottom();
+      } else if (event === 'source') {
+        if (activeAnswer.value) {
+          activeAnswer.value.sources ??= [];
+          if (
+            !activeAnswer.value.sources.some((source) => source.id === value.id)
+          )
+            activeAnswer.value.sources.push(value);
+        }
       } else if (event === 'proposal') {
-        session.value!.proposals.push(value);
+        requireValue(session.value).proposals.push(value);
         activeAnswer.value?.proposalIds?.push(value.id);
         keepBottom();
       } else if (event === 'error') {
-        error.value = value.message;
+        errorMessage.value = value.message;
       } else if (event === 'done') {
         finished = true;
         session.value = value.session;
@@ -684,19 +735,24 @@ async function send() {
     });
     if (!finished)
       throw new Error('连接已断开，已接收的内容保留，请刷新对话查看最终状态。');
-  } catch (e) {
-    error.value =
-      e instanceof Error && e.name === 'AbortError'
-        ? '本次回答已停止。'
-        : e instanceof Error
-          ? e.message
-          : '对话失败。';
+  } catch (error) {
+    errorMessage.value = (() => {
+      if (error instanceof Error && error.name === 'AbortError') {
+        return '本次回答已停止。';
+      }
+      if (error instanceof Error) {
+        return error.message;
+      }
+      return '对话失败。';
+    })();
     if (started) await loadSession(id).catch(() => {});
   } finally {
     busy.value = false;
     status.value = '';
     controller = undefined;
-    if (error.value && !draft.value) draft.value = text;
+    if (errorMessage.value && !draft.value) draft.value = text;
+    if (errorMessage.value && selection && !attachment.value)
+      attachment.value = selection;
     await listSessions().catch(() => {});
     void refreshNative();
   }
@@ -710,14 +766,14 @@ async function stop() {
     );
     if (!result.stopping) controller?.abort();
     status.value = '正在停止…';
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '停止失败。';
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : '停止失败。';
   }
 }
 async function resolveProposal(proposal: Proposal, action: 'apply' | 'reject') {
   if (busy.value || !session.value) return;
   acting.value = proposal.id;
-  error.value = '';
+  errorMessage.value = '';
   try {
     const updated = await localApi<Proposal>(
       `/assistant/proposals/${proposal.id}/${action}`,
@@ -731,8 +787,9 @@ async function resolveProposal(proposal: Proposal, action: 'apply' | 'reject') {
       await store.refresh();
       message.success('已保存资料，可在 Agent 修改记录中撤销');
     }
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '建议处理失败。';
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : '建议处理失败。';
     await loadSession(session.value.id).catch(() => {});
   } finally {
     acting.value = '';
@@ -793,12 +850,15 @@ const fieldLabel = (field: string) =>
       favorite: '关注标记',
     }) as Record<string, string>
   )[field] || field;
-const display = (value: unknown) =>
-  value === undefined
-    ? '未填写'
-    : typeof value === 'string'
-      ? value || '（空）'
-      : JSON.stringify(value, null, 2);
+const display = (value: unknown) => {
+  if (value === undefined) {
+    return '未填写';
+  }
+  if (typeof value === 'string') {
+    return value || '（空）';
+  }
+  return JSON.stringify(value, null, 2);
+};
 const proposalLabel = (status: string) =>
   ({
     pending: '待确认',
@@ -814,9 +874,11 @@ const proposalLabel = (status: string) =>
     id="juai-assistant-panel"
     ref="panel"
     class="assistant-panel"
+    :class="{ 'is-embedded': !!reader }"
     aria-label="AI 资料助手侧栏"
   >
     <div
+      v-if="!reader"
       class="assistant-resizer"
       role="separator"
       aria-orientation="vertical"
@@ -830,15 +892,14 @@ const proposalLabel = (status: string) =>
       @keydown="resizeKey"
       @dblclick="storedWidth = 440"
     ></div>
-    <header class="assistant-panel-heading">
+    <header v-if="!reader" class="assistant-panel-heading">
       <strong>{{
         session?.provider.protocol === 'codex'
           ? 'Codex 资料助手'
           : 'AI 资料助手'
-      }}</strong
-      ><Button type="text" aria-label="收起助手侧栏" @click="open = false"
-        ><ExplorerIcon name="close"
-      /></Button>
+      }}</strong><Button type="text" aria-label="收起助手侧栏" @click="open = false">
+        <ExplorerIcon name="close" />
+      </Button>
     </header>
     <div class="assistant-shell">
       <header class="assistant-toolbar">
@@ -847,31 +908,41 @@ const proposalLabel = (status: string) =>
           v-model:value="selectedId"
           show-search
           option-filter-prop="label"
-          :disabled="busy || loading"
+          :disabled="busy || loading || creatingSession"
           :options="sessions.map((s) => ({ value: s.id, label: s.title }))"
           placeholder="选择历史对话"
           aria-label="历史对话"
         />
-        <Button :disabled="busy || loading" @click="newSession">新对话</Button
-        ><Button :disabled="busy" @click="editSettings">设置</Button
-        ><Button :disabled="busy" @click="historyOpen = true">修改记录</Button
-        ><Button
+        <Button
+          :disabled="busy || loading || creatingSession"
+          @click="newSession"
+        >
+          新对话
+</Button><Button :disabled="busy" @click="editSettings">AI 管理</Button><Button v-if="!reader" :disabled="busy" @click="historyOpen = true">
+          修改记录
+</Button><Button
           v-if="session"
           :disabled="busy || session.running"
           aria-label="删除当前对话"
           @click="removeSession"
-          ><ExplorerIcon name="trash"
-        /></Button>
+        >
+          <ExplorerIcon name="trash" />
+        </Button>
       </header>
       <p v-if="session" class="assistant-context">
-        <strong
-          >{{ session.provider.protocol === 'codex' ? '本机 Codex / ' : ''
-          }}{{ session.provider.model }}</strong
-        ><span>{{ session.scope.majorIds.length }} 个专攻</span
-        ><span>{{
-          session.scope.writableKinds.length ? '修改需确认' : '只读资料'
-        }}</span
-        ><span v-if="pending">{{ pending }} 项建议待确认</span>
+        <strong>{{ session.provider.protocol === 'codex' ? '本机 Codex / ' : ''
+          }}{{ session.provider.model }}</strong><span>{{
+          reader ? '仅当前文档' : `${session.scope.majorIds.length} 个专攻`
+        }}</span><span>{{
+          reader
+            ? '保存笔记需确认'
+            : session.scope.writableKinds.length
+              ? '修改需确认'
+              : '只读资料'
+        }}</span><span v-if="pending">{{ pending }} 项建议待确认</span>
+      </p>
+      <p v-if="reader" class="assistant-document-context" :title="reader.title">
+        <ExplorerIcon name="book" /><span>{{ reader.title }}</span><small>当前第 {{ reader.page }} 页</small>
       </p>
       <p
         v-if="
@@ -886,15 +957,12 @@ const proposalLabel = (status: string) =>
         本地服务未保存 API 密钥，请在「模型与权限」中重新填写。
       </p>
       <div v-if="nativeState.needsLogin" class="assistant-native-login">
-        <span>Codex 尚未登录</span
-        ><Button :loading="nativeBusy" @click="loginNative">登录 Codex</Button
-        ><a
+        <span>Codex 尚未登录</span><Button :loading="nativeBusy" @click="loginNative">登录 Codex</Button><a
           v-if="loginUrl"
           :href="loginUrl"
           target="_blank"
           rel="noopener noreferrer"
-          >继续登录</a
-        >
+          >继续登录</a>
       </div>
       <div
         ref="scroll"
@@ -910,17 +978,41 @@ const proposalLabel = (status: string) =>
           <span></span><span></span><span></span>
         </div>
         <section
+          v-else-if="!session?.messages.length && attachment"
+          class="assistant-selection-intro"
+        >
+          <ExplorerIcon name="book" />
+          <h2>围绕这段原文提问</h2>
+          <p>选段已附在输入框上方。补充问题后发送，或在设置中选择模型连接。</p>
+        </section>
+        <section
           v-else-if="!session?.messages.length"
           class="assistant-welcome"
         >
-          <span class="assistant-welcome-icon"
-            ><ExplorerIcon name="book"
-          /></span>
-          <h2>在这里，和本机 Agent 对话。</h2>
+          <span class="assistant-welcome-icon"><ExplorerIcon name="book" /></span>
+          <h2>
+            {{
+              reader
+                ? '围绕这份资料，深入理解。'
+                : '在这里，和本机 Agent 对话。'
+            }}
+          </h2>
           <p>
-            查找研究室、比较预算、整理考试与材料。每次修改先给你看，再由你确认。
+            {{
+              reader
+                ? '直接提问，或选中一段原文再问。回答中的引用可点回原文，想法可以确认后存成笔记。'
+                : '查找研究室、比较预算、整理考试与材料。每次修改先给你看，再由你确认。'
+            }}
           </p>
           <div class="assistant-connect-actions">
+            <Button
+              v-if="reader && settings?.configured && !session"
+              type="primary"
+              :disabled="busy || loading"
+              @click="newSession"
+            >
+              使用已配置模型
+            </Button>
             <Button
               v-if="
                 session?.messages.length &&
@@ -930,21 +1022,29 @@ const proposalLabel = (status: string) =>
               :disabled="busy"
               :loading="nativeBusy"
               @click="connectNative(false)"
-              >连接 Codex</Button
             >
+              连接 Codex
+            </Button>
             <Button
               v-if="
-                session?.provider.protocol !== 'codex' || !nativeState.ready
+                (!reader ||
+                  !settings?.configured ||
+                  session?.provider.protocol === 'codex') &&
+                (session?.provider.protocol !== 'codex' || !nativeState.ready)
               "
               type="primary"
               :loading="nativeBusy"
               @click="connectNative(false)"
-              >连接本机 Codex</Button
-            ><span v-else class="assistant-native-ready"
-              ><ExplorerIcon name="check" />已连接本机 Codex，直接输入问题</span
-            ><Button :disabled="nativeBusy" @click="editSettings"
-              >其他连接方式</Button
-            ><button
+            >
+              连接本机 Codex
+</Button><span
+              v-else-if="
+                session?.provider.protocol === 'codex' && nativeState.ready
+              "
+              class="assistant-native-ready"
+              ><ExplorerIcon name="check" />已连接本机 Codex，直接输入问题</span><Button :disabled="nativeBusy" @click="editSettings">
+              管理连接与模型
+</Button><button
               type="button"
               class="text-button"
               @click="copyNativePrompt"
@@ -954,11 +1054,17 @@ const proposalLabel = (status: string) =>
           </div>
           <div class="assistant-suggestions">
             <button
-              v-for="text in [
-                '对比想考研究室的研究方向和语言要求',
-                '帮我找出考试信息还没填完整的专攻',
-                '根据现有材料清单，整理下一步待办',
-              ]"
+              v-for="text in reader
+                ? [
+                    '请解释当前页的主要内容，并引用原文依据',
+                    '这份资料有哪些关键信息？请说明你查看的范围',
+                    '结合我保存的笔记，整理还需要弄清楚的问题',
+                  ]
+                : [
+                    '对比想考研究室的研究方向和语言要求',
+                    '帮我找出考试信息还没填完整的专攻',
+                    '根据现有材料清单，整理下一步待办',
+                  ]"
               :key="text"
               @click="draft = text"
             >
@@ -974,11 +1080,55 @@ const proposalLabel = (status: string) =>
         >
           <header>
             {{ entry.role === 'user' ? '你' : 'JUAI 助手'
-            }}<small v-if="entry.status === 'interrupted'">已中断</small>
+            }}<small v-if="entry.documentPage">第 {{ entry.documentPage }} 页</small><small v-if="entry.status === 'interrupted'">已中断</small>
           </header>
-          <p v-if="entry.text" class="assistant-message-text">
+          <p
+            v-if="entry.text && entry.role === 'user'"
+            class="assistant-message-text"
+          >
             {{ entry.text }}
           </p>
+          <AssistantAnswer
+            v-else-if="entry.text"
+            :text="entry.text"
+            :sources="entry.sources"
+            @locate="locate"
+          />
+          <blockquote
+            v-if="entry.selection"
+            class="assistant-attached-selection"
+          >
+            <span>附上原文 · 第 {{ entry.selection.page }} 页</span>{{ entry.selection.quote }}
+          </blockquote>
+          <div v-if="entry.sources?.length" class="assistant-message-sources">
+            <span>{{
+              entry.status === 'complete' ? '引用原文' : '已读取的原文'
+            }}</span><button
+              v-for="source in entry.sources"
+              :key="source.id"
+              :title="source.quote"
+              @click="locate(source)"
+            >
+              <strong>{{ source.id }} · {{ source.locator }}</strong><span>{{ source.quote }}</span>
+            </button>
+          </div>
+          <p v-if="entry.citationWarning" class="assistant-citation-warning">
+            {{ entry.citationWarning }}
+          </p>
+          <Button
+            v-if="
+              reader &&
+              entry.role === 'assistant' &&
+              entry.status === 'complete' &&
+              entry.text
+            "
+            size="small"
+            class="assistant-save-note"
+            :disabled="busy || session?.running"
+            @click="saveAnswer(entry)"
+          >
+            <ExplorerIcon name="notebook" />存为笔记
+          </Button>
           <ul v-if="entry.tools?.length" class="assistant-tool-progress">
             <li v-for="trace in entry.tools" :key="trace.id">
               <ExplorerIcon
@@ -989,10 +1139,8 @@ const proposalLabel = (status: string) =>
                       ? 'close'
                       : 'search'
                 "
-              /><span
-                >{{ trace.label
-                }}{{ trace.status === 'running' ? '…' : '' }}</span
-              ><small v-if="trace.error">{{ trace.error }}</small>
+              /><span>{{ trace.label
+                }}{{ trace.status === 'running' ? '…' : '' }}</span><small v-if="trace.error">{{ trace.error }}</small>
             </li>
           </ul>
           <section
@@ -1004,8 +1152,7 @@ const proposalLabel = (status: string) =>
           >
             <header>
               <div>
-                <strong>{{ proposal.summary }}</strong
-                ><small>{{ proposal.name }}</small>
+                <strong>{{ proposal.summary }}</strong><small>{{ proposal.name }}</small>
               </div>
               <span>{{ proposalLabel(proposal.status) }}</span>
             </header>
@@ -1036,20 +1183,23 @@ const proposalLabel = (status: string) =>
                 </table>
               </div>
             </details>
-            <p v-if="proposal.error" class="form-error">{{ proposal.error }}</p>
+            <p v-if="proposal.error" class="form-error">
+              {{ proposal.error }}
+            </p>
             <footer v-if="proposal.status === 'pending'">
-              <span>确认后同步到工作区</span
-              ><Button
+              <span>确认后同步到工作区</span><Button
                 :disabled="busy || !!acting || session?.running"
                 @click="resolveProposal(proposal, 'reject')"
-                >拒绝</Button
-              ><Button
+              >
+                拒绝
+</Button><Button
                 type="primary"
                 :loading="acting === proposal.id"
                 :disabled="busy || !!acting || session?.running"
                 @click="resolveProposal(proposal, 'apply')"
-                >确认修改</Button
               >
+                确认修改
+              </Button>
             </footer>
           </section>
           <p v-if="entry.error" class="form-error" role="alert">
@@ -1058,31 +1208,58 @@ const proposalLabel = (status: string) =>
         </article>
         <p v-if="busy" class="assistant-working" role="status">{{ status }}</p>
       </div>
-      <div v-if="error" class="assistant-error" role="alert">
-        {{ error
+      <div v-if="errorMessage" class="assistant-error" role="alert">
+        {{ errorMessage
         }}<Button v-if="!busy" size="small" @click="load">刷新对话</Button>
       </div>
       <form class="assistant-composer" @submit.prevent="send">
-        <label class="sr-only" for="assistant-message">发送给助手的问题</label
-        ><Input.TextArea
+        <div v-if="attachment" class="assistant-selection-attachment">
+          <div>
+            <strong>已附原文 · 第 {{ attachment.page }} 页</strong>
+            <p>{{ attachment.quote }}</p>
+          </div>
+          <button
+            type="button"
+            aria-label="移除提问选段"
+            :disabled="busy"
+            @click="attachment = undefined"
+          >
+            <ExplorerIcon name="close" />
+          </button>
+        </div>
+        <label class="sr-only" for="assistant-message">发送给助手的问题</label><Input.TextArea
           id="assistant-message"
           v-model:value="draft"
           :maxlength="12000"
           :auto-size="{ minRows: 2, maxRows: 7 }"
-          placeholder="问问研究室、预算或考试安排…"
+          :placeholder="
+            reader
+              ? '针对当前资料提问，回答会附上原文引用…'
+              : '问问研究室、预算或考试安排…'
+          "
           :disabled="busy"
         />
         <footer>
-          <span>授权资料会发送到你配置的模型服务</span
-          ><Button v-if="busy || session?.running" @click="stop"
-            >停止回答</Button
-          ><Button
+          <span>{{
+            reader
+              ? '提问及读取的原文会交给所选模型处理'
+              : '授权资料会发送到你配置的模型服务'
+          }}</span><Button v-if="busy || session?.running" @click="stop">
+            停止回答
+</Button><Button
             v-else
             type="primary"
             html-type="submit"
-            :disabled="!draft.trim() || loading"
-            >发送</Button
+            :disabled="
+              !draft.trim() ||
+              loading ||
+              creatingSession ||
+              nativeBusy ||
+              savingSettings
+            "
           >
+            发送
+          </Button>
         </footer>
       </form>
     </div>
@@ -1092,294 +1269,370 @@ const proposalLabel = (status: string) =>
     title="资料修改与撤销"
     :width="960"
     :footer="null"
-    ><AgentInformationHistory :active="historyOpen"
-  /></Modal>
-  <Modal
-    v-model:open="settingsOpen"
-    title="模型与资料权限"
-    :width="700"
-    :footer="null"
-    :mask-closable="!savingSettings && !nativeBusy"
-    :closable="!savingSettings && !nativeBusy"
-    :keyboard="!savingSettings && !nativeBusy"
   >
-    <form class="assistant-settings" @submit.prevent="saveSettings">
-      <p class="form-context">
-        选择本机 Codex 或自己的
-        API，直接在侧栏对话。模型服务会接收对话和本轮读取的授权资料。
-      </p>
-      <div class="field">
-        <label>助手来源</label
-        ><Select
-          v-accessible-select
-          v-model:value="form.source"
-          aria-label="助手来源"
-          :options="[
-            { value: 'codex', label: '本机 Codex（沿用已有登录）' },
-            { value: 'api', label: '自己的模型 API' },
-          ]"
-        />
-      </div>
-      <template v-if="form.source === 'api'">
-        <div class="field">
-          <label for="assistant-base-url">API Base URL</label
-          ><Input
-            id="assistant-base-url"
-            v-model:value="form.baseUrl"
-            :maxlength="2048"
-            placeholder="https://api.openai.com/v1"
-          />
-        </div>
-        <div class="assistant-setting-row">
-          <div class="field">
-            <label>接口类型</label
-            ><Select
-              v-accessible-select
-              v-model:value="form.protocol"
-              aria-label="模型接口类型"
-              :options="[
-                { value: 'responses', label: 'OpenAI Responses' },
-                {
-                  value: 'chat_completions',
-                  label: 'OpenAI 兼容 Chat Completions',
-                },
-              ]"
-            />
-          </div>
-          <div class="field">
-            <label for="assistant-model">模型 ID</label
-            ><Input
-              id="assistant-model"
-              v-model:value="form.model"
-              :maxlength="160"
-              placeholder="填写服务商提供的模型 ID"
-            />
-          </div>
-        </div>
-        <p class="form-context">
-          较新的 OpenAI 模型选
-          Responses；其他兼容服务按其接口选择。模型需支持工具调用。本地服务可填写
-          http://localhost:11434/v1 等地址。
-        </p>
-        <div class="field">
-          <label for="assistant-key">API 密钥</label
-          ><Input.Password
-            id="assistant-key"
-            v-model:value="form.apiKey"
-            autocomplete="off"
-            :maxlength="4096"
-            :placeholder="
-              formKeyConfigured
-                ? '已在本次服务内存中保存，留空保留'
-                : '本地模型可留空，远程服务需填写'
-            "
-          />
-        </div>
-        <Checkbox v-model:checked="form.stream"
-          >流式显示回答（不兼容时可关闭）</Checkbox
-        >
-      </template>
-      <template v-else>
-        <p class="form-context">
-          直接使用本机 Codex 的登录和模型，无需填写 API 密钥。资料只通过 JUAI
-          工具访问，写入仍需确认。
-        </p>
-        <div class="field">
-          <label>Codex 模型</label
-          ><Select
-            v-accessible-select
-            v-model:value="form.model"
-            allow-clear
-            aria-label="Codex 模型"
-            placeholder="自动使用本机默认模型"
-            :options="
-              nativeState.models.map((m) => ({ value: m.id, label: m.name }))
-            "
-          />
-        </div>
-        <details class="assistant-scope-details">
-          <summary>程序路径（自动检测失败时填写）</summary>
-          <div class="field">
-            <label for="assistant-codex-path">codex 程序绝对路径</label
-            ><Input
-              id="assistant-codex-path"
-              v-model:value="form.codexPath"
-              placeholder="留空自动检测"
-              :maxlength="2048"
-            />
-          </div>
-        </details>
-        <div v-if="nativeState.needsLogin" class="assistant-native-login">
-          <Button :loading="nativeBusy" @click="loginNative">登录 Codex</Button
-          ><a
-            v-if="loginUrl"
-            :href="loginUrl"
-            target="_blank"
-            rel="noopener noreferrer"
-            >继续登录</a
-          >
-        </div>
-        <button class="text-button" type="button" @click="copyNativePrompt">
-          复制连接指令给本机 Agent
-        </button>
-      </template>
-      <details class="assistant-scope-details">
-        <summary>
-          资料权限：{{ form.majorIds.length }} 个专攻，{{
-            form.readOnly ? '只读资料' : '修改均需确认'
-          }}
-        </summary>
-        <fieldset class="assistant-scope">
-          <legend>允许助手读取的专攻</legend>
-          <Checkbox.Group v-model:value="form.majorIds" :options="majors" />
-          <p v-if="!majors.length">请先建立大学与专攻资料。</p>
-          <small
-            >包含所属大学、研究科、研究室及老师基本资料和备注，邮件与考学经历不开放。</small
-          >
-        </fieldset>
-        <Checkbox v-model:checked="form.readOnly"
-          >只查询资料，不提出修改</Checkbox
-        >
-        <fieldset v-if="!form.readOnly" class="assistant-scope">
-          <legend>允许提出修改的资料类型</legend>
-          <Checkbox.Group
-            v-model:value="form.writableKinds"
-            :options="kindOptions"
-          /><small
-            >大学和研究科为共享资料。所有写入都需要你在对话里确认。</small
-          >
-        </fieldset>
-      </details>
-      <p class="form-context">
-        范围包含所选专攻的大学、研究室及老师基本资料与备注。可展开调整，邮件和考学经历不开放。
-      </p>
-      <p v-if="error" class="form-error" role="alert">{{ error }}</p>
-      <div class="form-footer">
-        <Button
-          v-if="form.source === 'api' && formKeyConfigured"
-          :disabled="savingSettings"
-          @click="clearKey"
-          >清除本次密钥</Button
-        ><span>保存设置后开始新对话</span
-        ><Button :disabled="savingSettings" @click="settingsOpen = false"
-          >取消</Button
-        ><Button
-          type="primary"
-          html-type="submit"
-          :loading="savingSettings || nativeBusy"
-          :disabled="
-            (form.source === 'api' && !form.model.trim()) ||
-            !form.majorIds.length ||
-            (!form.readOnly && !form.writableKinds.length)
-          "
-          >{{
-            form.source === 'codex' ? '连接并开始对话' : '保存并开始对话'
-          }}</Button
-        >
-      </div>
-    </form>
+    <AgentInformationHistory :active="historyOpen" />
   </Modal>
 </template>
 <style scoped>
+.assistant-panel.is-embedded {
+  position: relative;
+  top: 0;
+  flex: 1 1 auto;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border: 0;
+}
+
+.is-embedded .assistant-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 12px;
+}
+
+.is-embedded .assistant-toolbar .ant-select {
+  flex: 1;
+  min-width: 130px;
+}
+
+.is-embedded .assistant-toolbar .ant-btn {
+  padding-inline: 8px;
+  font-size: 12px;
+}
+
+.is-embedded .assistant-context {
+  padding-inline: 14px;
+  font-size: 10px;
+}
+
+.assistant-document-context {
+  display: flex;
+  gap: 7px;
+  align-items: center;
+  padding: 8px 14px;
+  margin: 0;
+  font-size: 11px;
+  background: var(--jg-card-header);
+  border-bottom: 1px solid var(--jg-line);
+}
+
+.assistant-document-context svg {
+  width: 14px;
+  height: 14px;
+  color: var(--jg-accent-text);
+}
+
+.assistant-document-context > span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assistant-document-context small {
+  flex: none;
+  color: var(--jg-muted);
+}
+
+.is-embedded .assistant-welcome {
+  padding: 24px 16px;
+}
+
+.is-embedded .assistant-welcome h2 {
+  font-size: 17px;
+}
+
+.is-embedded .assistant-welcome p {
+  font-size: 12px;
+}
+
+.is-embedded .assistant-conversation {
+  padding: 14px;
+}
+
+.is-embedded .assistant-message-user {
+  margin-left: 16px;
+}
+
+.is-embedded .assistant-message {
+  padding: 13px;
+}
+
+.is-embedded .assistant-message-text {
+  font-size: 13px;
+}
+
+.is-embedded .assistant-composer {
+  padding: 12px;
+}
+
+.is-embedded .assistant-connect-actions > .text-button {
+  display: none;
+}
+
+.assistant-selection-intro {
+  display: grid;
+  gap: 12px;
+  padding: 24px 12px;
+}
+
+.assistant-selection-intro > svg {
+  width: 28px;
+  height: 28px;
+  color: var(--jg-accent-text);
+}
+
+.assistant-selection-intro h2 {
+  font-size: 16px;
+  font-weight: 650;
+}
+
+.assistant-selection-intro p {
+  font-size: 12px;
+  line-height: 1.9;
+  color: var(--jg-muted);
+}
+
+.assistant-attached-selection {
+  max-height: 150px;
+  padding: 8px 10px;
+  margin: 10px 0 0;
+  overflow: auto;
+  font-size: 12px;
+  color: var(--jg-secondary);
+  white-space: pre-wrap;
+  border-left: 2px solid var(--jg-accent-line);
+}
+
+.assistant-attached-selection > span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 10px;
+  color: var(--jg-muted);
+}
+
+.assistant-message-sources {
+  display: grid;
+  gap: 7px;
+  margin-top: 14px;
+}
+
+.assistant-message-sources > span {
+  font-size: 10px;
+  color: var(--jg-muted);
+}
+
+.assistant-message-sources button {
+  display: grid;
+  gap: 5px;
+  padding: 9px;
+  color: var(--jg-secondary);
+  text-align: left;
+  cursor: pointer;
+  background: var(--jg-card-header);
+  border: 1px solid var(--jg-line);
+  border-radius: 7px;
+}
+
+.assistant-message-sources strong {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--jg-accent-text);
+}
+
+.assistant-message-sources button > span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  font-size: 11px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+.assistant-citation-warning {
+  margin-top: 10px !important;
+  font-size: 11px;
+  line-height: 1.8;
+  color: var(--jg-warning);
+}
+
+.assistant-save-note {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  margin-top: 12px;
+  font-size: 11px;
+}
+
+.assistant-save-note svg {
+  width: 14px;
+  height: 14px;
+}
+
+.assistant-selection-attachment {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  padding: 9px;
+  margin-bottom: 9px;
+  background: var(--jg-accent-soft);
+  border: 1px solid var(--jg-accent-line);
+  border-radius: 7px;
+}
+
+.assistant-selection-attachment > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.assistant-selection-attachment strong {
+  font-size: 10px;
+  color: var(--jg-accent-text);
+}
+
+.assistant-selection-attachment p {
+  display: -webkit-box;
+  margin-top: 5px !important;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  font-size: 12px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+}
+
+.assistant-selection-attachment button {
+  padding: 0;
+  color: var(--jg-muted);
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+}
+
+.assistant-selection-attachment svg {
+  width: 14px;
+  height: 14px;
+}
+
 .assistant-panel {
-  container-type: inline-size;
-  container-name: assistant-pane;
   position: sticky;
   top: 64px;
-  align-self: flex-start;
-  flex: 0 0 var(--assistant-pane-width, 440px);
-  width: var(--assistant-pane-width, 440px);
-  height: calc(100dvh - 64px);
-  min-width: 0;
   display: flex;
+  flex: 0 0 var(--assistant-pane-width, 440px);
   flex-direction: column;
+  align-self: flex-start;
+  width: var(--assistant-pane-width, 440px);
+  min-width: 0;
+  height: calc(100dvh - 64px);
+  container-name: assistant-pane;
+  container-type: inline-size;
   background: var(--jg-surface);
   border-left: 1px solid var(--jg-line);
 }
+
 .assistant-panel-heading {
   display: flex;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
   padding: 10px 14px;
   border-bottom: 1px solid var(--jg-line);
 }
+
 .assistant-panel-heading strong {
   font-size: 14px;
 }
+
 .assistant-panel-heading svg {
   width: 17px;
   height: 17px;
 }
+
 .assistant-resizer {
   position: absolute;
   top: 0;
   bottom: 0;
   left: -4px;
-  width: 8px;
-  cursor: col-resize;
-  touch-action: none;
   z-index: 2;
+  width: 8px;
+  touch-action: none;
+  cursor: col-resize;
 }
+
 .assistant-resizer:hover,
 .assistant-resizer:focus-visible {
-  background: var(--jg-accent-line);
   outline: none;
+  background: var(--jg-accent-line);
 }
+
 .assistant-panel > .assistant-shell {
-  height: auto;
   flex: 1;
+  height: auto;
   min-height: 0;
   padding: 14px;
 }
+
 .assistant-connect-actions {
   display: flex;
-  gap: 10px;
   flex-wrap: wrap;
+  gap: 10px;
 }
+
 .assistant-connect-actions > .text-button {
   width: 100%;
   font-size: 12px;
 }
+
 .assistant-native-ready {
   display: flex;
-  align-items: center;
   gap: 6px;
+  align-items: center;
   font-size: 13px;
   color: var(--jg-accent-text);
 }
+
 .assistant-native-ready svg {
   width: 16px;
   height: 16px;
 }
+
 .assistant-native-login {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
   padding: 10px;
-  background: var(--jg-accent-soft);
-  border-radius: 8px;
   margin-bottom: 12px;
   font-size: 12px;
+  background: var(--jg-accent-soft);
+  border-radius: 8px;
 }
+
 .assistant-native-login a {
   color: var(--jg-accent-text);
 }
+
 @container assistant-pane (max-width: 600px) {
   .assistant-toolbar .ant-select {
     flex-basis: 100%;
   }
+
   .assistant-welcome {
     padding: 18px 2px;
   }
+
   .assistant-welcome h2 {
     font-size: 20px;
   }
+
   .assistant-message {
     padding: 14px;
   }
 }
+
 @media (max-width: 900px) {
   .assistant-panel {
     top: 64px;
@@ -1387,64 +1640,75 @@ const proposalLabel = (status: string) =>
     width: 100%;
     border-left: 0;
   }
+
   .assistant-resizer {
     display: none;
   }
 }
+
 @media (max-width: 767px) {
   .assistant-panel {
     top: 60px;
     height: calc(100dvh - 60px);
   }
 }
+
 .assistant-shell {
   display: flex;
   flex-direction: column;
-  min-height: 0;
   height: 100%;
+  min-height: 0;
   color: var(--jg-text);
 }
+
 .assistant-toolbar {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 8px;
   padding-bottom: 14px;
 }
+
 .assistant-toolbar .ant-select {
   flex: 1;
   min-width: 180px;
 }
+
 .assistant-toolbar svg {
   width: 16px;
   height: 16px;
 }
+
 .assistant-context {
   display: flex;
   flex-wrap: wrap;
   gap: 8px 16px;
   margin: 0 0 14px;
-  color: var(--jg-muted);
   font-size: 12px;
+  color: var(--jg-muted);
 }
+
 .assistant-context strong {
   color: var(--jg-accent-text);
 }
+
 .assistant-conversation {
   flex: 1;
-  overflow-y: auto;
   min-height: 0;
   padding: 18px;
+  overflow-y: auto;
+  scrollbar-width: thin;
   background: var(--jg-bg);
   border: 1px solid var(--jg-line);
   border-radius: 16px;
-  scrollbar-width: thin;
 }
+
 .assistant-welcome {
   display: grid;
   gap: 18px;
   justify-items: start;
   padding: 28px 16px;
 }
+
 .assistant-welcome-icon {
   display: grid;
   place-items: center;
@@ -1455,57 +1719,66 @@ const proposalLabel = (status: string) =>
   border: 1px solid var(--jg-accent-line);
   border-radius: 12px;
 }
+
 .assistant-welcome h2 {
   margin: 0;
   font-size: 22px;
   letter-spacing: -0.6px;
 }
+
 .assistant-welcome p {
   max-width: 44ch;
   margin: 0;
-  color: var(--jg-secondary);
   line-height: 1.8;
+  color: var(--jg-secondary);
 }
+
 .assistant-suggestions {
   display: grid;
   gap: 10px;
   width: 100%;
   margin-top: 8px;
 }
+
 .assistant-suggestions button {
   display: flex;
   gap: 14px;
   align-items: center;
   justify-content: space-between;
   padding: 14px;
-  border: 1px solid var(--jg-line);
-  border-radius: 8px;
-  background: var(--jg-surface);
   color: var(--jg-secondary);
   text-align: left;
   cursor: pointer;
+  background: var(--jg-surface);
+  border: 1px solid var(--jg-line);
+  border-radius: 8px;
 }
+
 .assistant-suggestions button:hover {
-  border-color: var(--jg-accent-line);
   color: var(--jg-accent-text);
+  border-color: var(--jg-accent-line);
 }
+
 .assistant-suggestions svg {
+  flex-shrink: 0;
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
 }
+
 .assistant-message {
-  margin-bottom: 22px;
   padding: 18px;
+  margin-bottom: 22px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: 12px;
 }
+
 .assistant-message-user {
   margin-left: 36px;
   background: var(--jg-accent-soft);
   border-color: var(--jg-accent-line);
 }
+
 .assistant-message > header {
   display: flex;
   gap: 10px;
@@ -1514,41 +1787,48 @@ const proposalLabel = (status: string) =>
   font-weight: 600;
   color: var(--jg-secondary);
 }
+
 .assistant-message header small {
   font-weight: 400;
   color: var(--jg-muted);
 }
+
 .assistant-message-text {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
   margin: 0;
   font-size: 14px;
   line-height: 1.9;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
+
 .assistant-tool-progress {
   display: grid;
   gap: 7px;
   padding: 0;
   margin: 14px 0 0;
-  list-style: none;
   font-size: 12px;
   color: var(--jg-secondary);
+  list-style: none;
 }
+
 .assistant-tool-progress li {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   align-items: center;
 }
+
 .assistant-tool-progress svg {
   width: 14px;
   height: 14px;
 }
+
 .assistant-tool-progress small {
   flex-basis: 100%;
-  overflow-wrap: anywhere;
   color: var(--jg-error);
+  overflow-wrap: anywhere;
 }
+
 .assistant-proposal {
   padding: 16px;
   margin-top: 16px;
@@ -1556,98 +1836,115 @@ const proposalLabel = (status: string) =>
   border: 1px solid var(--jg-accent-line);
   border-radius: 12px;
 }
+
 .assistant-proposal > header {
   display: flex;
   gap: 12px;
   justify-content: space-between;
   font-size: 13px;
 }
+
 .assistant-proposal header small {
   display: block;
   margin-top: 4px;
 }
+
 .assistant-proposal header > span {
+  font-size: 12px;
   color: var(--jg-accent-text);
   white-space: nowrap;
-  font-size: 12px;
 }
+
 .assistant-proposal summary {
   padding: 14px 0;
   font-size: 12px;
   color: var(--jg-secondary);
   cursor: pointer;
 }
+
 .assistant-proposal footer {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 12px;
-  justify-content: end;
   align-items: center;
+  justify-content: end;
+  margin-top: 12px;
 }
+
 .assistant-proposal footer > span {
   flex: 1;
   font-size: 12px;
   color: var(--jg-muted);
 }
+
 .assistant-diff-scroll {
   overflow-x: auto;
 }
+
 .assistant-diff-scroll table {
   width: 100%;
+  min-width: 420px;
   table-layout: fixed;
   border-collapse: collapse;
-  min-width: 420px;
 }
+
 .assistant-diff-scroll th,
 .assistant-diff-scroll td {
   padding: 10px;
-  border: 1px solid var(--jg-line);
-  text-align: left;
-  vertical-align: top;
   font-size: 12px;
+  vertical-align: top;
+  text-align: left;
+  border: 1px solid var(--jg-line);
 }
+
 .assistant-diff-scroll th {
-  background: var(--jg-subtle);
   color: var(--jg-secondary);
+  background: var(--jg-subtle);
 }
+
 .assistant-diff-scroll th:first-child {
   width: 120px;
 }
+
 .assistant-diff-scroll pre {
-  margin: 0;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
   max-height: 260px;
+  margin: 0;
   overflow: auto;
   font: 12px/1.7 var(--jg-font);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
+
 .assistant-working {
   margin: 16px 0 0;
   font-size: 13px;
   color: var(--jg-accent-text);
 }
+
 .assistant-notice,
 .assistant-error {
   padding: 10px 12px;
   margin: 0 0 12px;
-  background: var(--jg-subtle);
-  color: var(--jg-secondary);
   font-size: 12px;
+  color: var(--jg-secondary);
+  background: var(--jg-subtle);
   border-radius: 8px;
 }
+
 .assistant-error {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 8px;
   align-items: center;
   margin: 12px 0 0;
-  background: var(--jg-error-bg);
   color: var(--jg-error);
+  background: var(--jg-error-bg);
 }
+
 .assistant-composer {
   padding-top: 14px;
 }
+
 .assistant-composer footer {
   display: flex;
   gap: 12px;
@@ -1655,52 +1952,62 @@ const proposalLabel = (status: string) =>
   justify-content: space-between;
   margin-top: 10px;
 }
+
 .assistant-composer footer span {
   font-size: 11px;
   color: var(--jg-muted);
 }
+
 .assistant-settings {
   display: grid;
   gap: 16px;
   max-height: 72dvh;
-  overflow-y: auto;
   padding-right: 6px;
+  overflow-y: auto;
   color: var(--jg-text);
 }
+
 .assistant-setting-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
 }
+
 .assistant-settings .form-context {
   margin: 0;
 }
+
 .assistant-scope-details {
+  padding: 12px 14px;
   border: 1px solid var(--jg-line);
   border-radius: 8px;
-  padding: 12px 14px;
 }
+
 .assistant-scope-details summary {
-  cursor: pointer;
-  color: var(--jg-secondary);
   font-size: 13px;
+  color: var(--jg-secondary);
+  cursor: pointer;
 }
+
 .assistant-scope-details[open] > :not(summary) {
   margin-top: 14px;
 }
+
 .assistant-settings > .form-footer {
   position: sticky;
   bottom: 0;
   padding: 12px 0 0;
   background: var(--jg-elevated);
 }
+
 .assistant-scope {
-  border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  min-width: 0;
   padding: 14px;
   margin: 0;
-  min-width: 0;
+  border: 1px solid var(--jg-line);
+  border-radius: 8px;
 }
+
 .assistant-scope legend {
   float: none;
   width: auto;
@@ -1709,6 +2016,7 @@ const proposalLabel = (status: string) =>
   font-size: 13px;
   color: var(--jg-secondary);
 }
+
 .assistant-scope :deep(.ant-checkbox-group) {
   display: grid;
   gap: 10px;
@@ -1716,48 +2024,60 @@ const proposalLabel = (status: string) =>
   max-height: 180px;
   overflow-y: auto;
 }
+
 .assistant-scope :deep(.ant-checkbox-wrapper) {
   margin: 0;
 }
+
 .assistant-scope small {
   display: block;
   margin-top: 12px;
-  color: var(--jg-muted);
   line-height: 1.8;
+  color: var(--jg-muted);
 }
+
 .assistant-skeleton {
   display: grid;
   gap: 20px;
   padding-top: 24px;
 }
+
 .assistant-skeleton span {
   height: 110px;
   background: var(--jg-subtle);
   border-radius: 12px;
 }
+
 .assistant-skeleton span:nth-child(2) {
-  margin-left: 40px;
   height: 70px;
+  margin-left: 40px;
 }
+
 @media (max-width: 767px) {
   .assistant-conversation {
     padding: 12px;
   }
+
   .assistant-welcome {
     padding: 18px 4px;
   }
+
   .assistant-message {
     padding: 14px;
   }
+
   .assistant-message-user {
     margin-left: 20px;
   }
+
   .assistant-setting-row {
     grid-template-columns: minmax(0, 1fr);
   }
+
   .assistant-toolbar .ant-select {
     flex-basis: 100%;
   }
+
   .assistant-composer footer span {
     max-width: 65%;
   }

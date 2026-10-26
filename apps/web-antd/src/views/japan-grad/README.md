@@ -90,7 +90,7 @@ pnpm dev:japangrad
 ../../node_modules/.bin/vite --host 127.0.0.1 --port 5666 --strictPort
 ```
 
-打开 `http://127.0.0.1:5666/japan-grad`。Vite 将 `/api/japangrad` 代理至本地服务 5667 端口。
+打开 `http://127.0.0.1:5666/japan-grad/overview`。Vite 将 `/api/japangrad` 代理至本地服务 5667 端口。
 
 ## 构建和启动
 
@@ -99,7 +99,9 @@ pnpm build:japangrad
 pnpm start:japangrad
 ```
 
-生产工作台由同一个本地服务提供，地址为 `http://127.0.0.1:5667/japan-grad`。PDF 直接从本地服务返回给浏览器阅读，不再加载自制阅读器、PDF 解析库或在线 CDN，并已移除模板统计脚本。
+生产工作台由同一个本地服务提供，首页地址为 `http://127.0.0.1:5667/japan-grad/overview`；根地址 `/` 和旧入口 `/japan-grad` 均进入申请总览，大学清单独立位于 `/japan-grad/universities`。资料阅读页位于 `/japan-grad/documents/:documentId`，PDF.js 引擎、worker、CMap 与字体均由本地服务提供，不使用在线 CDN。前端构建前需安装 `local-server` 的锁定依赖，类型声明与运行时使用相同 PDF.js 版本。
+
+阅读服务：`local-server/document-reader-service.mjs`，迁移 8 新增阅读位置、笔记与版本化文字缓存。PDF 高亮保存 PDF 坐标，文字引用保留页码 / 原文 / 上下文。笔记单条修订校验，原文件 hash 变化时旧笔记仍保留但不套用高亮。文档删除通过外键同时清理关联记录。
 
 ## 打包
 

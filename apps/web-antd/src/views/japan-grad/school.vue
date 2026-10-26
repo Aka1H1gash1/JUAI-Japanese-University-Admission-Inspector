@@ -4,6 +4,8 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button, Input } from 'ant-design-vue';
 
+import CollectedAdmissions from './components/collected-admissions.vue';
+import EntityCreateFlow from './components/entity-create-flow.vue';
 import EntityEditor from './components/entity-editor.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
@@ -65,12 +67,11 @@ function deleteSchool() {
 <template>
   <section v-if="school && university" class="explorer-page">
     <nav class="explorer-breadcrumb" aria-label="当前位置">
-      <RouterLink to="/japan-grad">大学清单</RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink
+      <RouterLink to="/japan-grad/universities">大学清单</RouterLink><ExplorerIcon name="chevron" /><RouterLink
         :to="`/japan-grad/universities/${university.id}`"
       >
-        {{ university.name }} </RouterLink
-      ><ExplorerIcon name="chevron" /><span>{{ school.name }}</span>
+        {{ university.name }}
+</RouterLink><ExplorerIcon name="chevron" /><span>{{ school.name }}</span>
     </nav>
     <header class="page-heading detail-heading">
       <div>
@@ -83,8 +84,8 @@ function deleteSchool() {
       </div>
       <div class="detail-actions">
         <Button class="icon-button" @click="schoolEditorOpen = true">
-          <ExplorerIcon name="edit" />编辑研究科 </Button
-        ><Button
+          <ExplorerIcon name="edit" />编辑研究科
+</Button><Button
           class="icon-button"
           aria-label="删除研究科"
           @click="deleteSchool"
@@ -95,20 +96,18 @@ function deleteSchool() {
     </header>
     <section class="entity-overview" aria-label="研究科资料">
       <div class="overview-meta">
-        <span
-          ><ExplorerIcon name="book" />{{
+        <span><ExplorerIcon name="book" />{{
             school.research || '研究领域尚未填写'
-          }}</span
-        ><a
+          }}</span><a
           v-if="websiteUrl(school.website)"
           :href="websiteUrl(school.website)"
           target="_blank"
           rel="noopener noreferrer"
-          ><ExplorerIcon name="globe" />访问研究科官网<ExplorerIcon name="link"
-        /></a>
+          ><ExplorerIcon name="globe" />访问研究科官网<ExplorerIcon name="link" /></a>
       </div>
       <p v-if="school.notes" class="overview-notes">{{ school.notes }}</p>
     </section>
+    <CollectedAdmissions kind="school" :id="school.id" />
     <header class="collection-heading">
       <div>
         <h2>
@@ -142,8 +141,7 @@ function deleteSchool() {
           class="school-card major-card"
         >
           <div class="school-card-top">
-            <span class="entity-symbol"><ExplorerIcon name="book" /></span
-            ><ExplorerIcon name="arrow" />
+            <span class="entity-symbol"><ExplorerIcon name="book" /></span><ExplorerIcon name="arrow" />
           </div>
           <h3>{{ major.name }}</h3>
           <p v-if="major.japaneseName" class="secondary-name">
@@ -154,15 +152,13 @@ function deleteSchool() {
           </p>
           <p v-if="major.notes" class="card-notes">{{ major.notes }}</p>
           <div class="school-card-bottom">
-            <span>{{ store.labsFor(major.id).length }} 个研究室</span
-            ><span
+            <span>{{ store.labsFor(major.id).length }} 个研究室</span><span
               v-if="store.labsFor(major.id).some((item) => item.wantApply)"
               class="favorite-count"
               ><ExplorerIcon name="heart" />{{
                 store.labsFor(major.id).filter((item) => item.wantApply).length
               }}
-              个想考</span
-            ><span class="open-label">查看研究室 →</span>
+              个想考</span><span class="open-label">查看研究室 →</span>
           </div>
         </RouterLink>
       </div>
@@ -186,7 +182,7 @@ function deleteSchool() {
       :parent-id="university.id"
       :parent-name="university.name"
     />
-    <EntityEditor
+    <EntityCreateFlow
       v-model:open="majorEditorOpen"
       kind="major"
       :parent-id="school.id"
@@ -196,6 +192,8 @@ function deleteSchool() {
   <section v-else class="search-empty">
     <h1>这个研究科已不存在</h1>
     <p>返回大学清单重新选择。</p>
-    <RouterLink to="/japan-grad" class="back-link">返回大学清单 →</RouterLink>
+    <RouterLink to="/japan-grad/universities" class="back-link">
+      返回大学清单 →
+    </RouterLink>
   </section>
 </template>

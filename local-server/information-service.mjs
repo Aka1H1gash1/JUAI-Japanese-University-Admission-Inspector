@@ -1,4 +1,6 @@
+import { Buffer } from 'node:buffer';
 import { createHash, randomUUID } from 'node:crypto';
+
 import geography from './japan-geography.json' with { type: 'json' };
 
 const fields = {
@@ -11,6 +13,9 @@ const fields = {
     'prefecture',
     'qsRank',
     'qsYear',
+    'japanRank',
+    'japanRankYear',
+    'japanRankSource',
     'admissionFee',
     'annualTuition',
     'monthlyRent',
@@ -85,24 +90,27 @@ const recordFields = {
 const textSchema = (maxLength = 4000) => ({ type: 'string', maxLength });
 const idSchema = { type: 'string', pattern: '^[\\w-]{1,100}$' };
 function fieldSchema(key) {
-  if (['wantApply', 'favorite'].includes(key)) return { type: 'boolean' };
+  if (['favorite', 'wantApply'].includes(key)) return { type: 'boolean' };
   if (
     [
       'admissionFee',
       'annualTuition',
-      'monthlyRent',
       'monthlyLivingExpenses',
+      'monthlyRent',
     ].includes(key)
   )
     return { type: 'string', pattern: '^(?:[0-9]{1,9})?$' };
   if (
     [
-      'region',
+      'applicationEnd',
+      'applicationStart',
+      'japanRank',
+      'japanRankSource',
+      'japanRankYear',
       'prefecture',
       'qsRank',
       'qsYear',
-      'applicationStart',
-      'applicationEnd',
+      'region',
     ].includes(key)
   )
     return textSchema(120);
@@ -198,17 +206,18 @@ export function informationPermissions(input, fail) {
     !Array.isArray(kinds) ||
     kinds.some((k) => !INFORMATION_KINDS.includes(k)) ||
     kinds.length > 5 ||
-    (access !== 'write' && kinds.length)
+    (access !== 'write' && kinds.length > 0)
   )
     fail('请选择有效的信息文件权限。');
-  if (access === 'write' && !kinds.length) fail('请至少选择一种可编辑资料。');
+  if (access === 'write' && kinds.length === 0)
+    fail('请至少选择一种可编辑资料。');
   return { informationAccess: access, writableKinds: [...new Set(kinds)] };
 }
 const stable = (value) =>
   JSON.stringify(value, (_, item) =>
     item && typeof item === 'object' && !Array.isArray(item)
       ? Object.fromEntries(
-          Object.entries(item).sort(([a], [b]) => a.localeCompare(b)),
+          Object.entries(item).toSorted(([a], [b]) => a.localeCompare(b)),
         )
       : item,
   );
@@ -286,14 +295,18 @@ export function createInformationService({
     };
     return {
       path: entry.path,
-      parentPath:
-        entry.kind === 'school'
-          ? `universities/${entry.entity.universityId}.json`
-          : entry.kind === 'major'
-            ? `schools/${entry.entity.schoolId}.json`
-            : ['lab', 'professor'].includes(entry.kind)
-              ? `majors/${entry.entity.majorId}.json`
-              : '',
+      parentPath: (() => {
+        if (entry.kind === 'school') {
+          return `universities/${entry.entity.universityId}.json`;
+        }
+        if (entry.kind === 'major') {
+          return `schools/${entry.entity.schoolId}.json`;
+        }
+        if (['lab', 'professor'].includes(entry.kind)) {
+          return `majors/${entry.entity.majorId}.json`;
+        }
+        return '';
+      })(),
       name: entry.entity.name,
       kind: entry.kind,
       sha256: hash(value),
@@ -302,7 +315,7 @@ export function createInformationService({
         (scope.writableKinds ?? []).includes(entry.kind),
       editableFields: fields[entry.kind],
       jsonSchema: fileSchemas[entry.kind],
-      content: JSON.stringify(value, null, 2) + '\n',
+      content: `${JSON.stringify(value, null, 2)}\n`,
     };
   }
   function scopeFor(req) {
@@ -401,10 +414,10 @@ export function createInformationService({
       value.kind !== entry.kind ||
       value.id !== entry.entity.id ||
       Object.keys(value).some(
-        (k) => !['schemaVersion', 'kind', 'id', 'data'].includes(k),
+        (k) => !['data', 'id', 'kind', 'schemaVersion'].includes(k),
       ) ||
       !object(value.data) ||
-      !Object.keys(value.data).length ||
+      Object.keys(value.data).length === 0 ||
       Object.keys(value.data).some((k) => !fields[entry.kind].includes(k))
     )
       fail(
@@ -460,10 +473,10 @@ export function createInformationService({
     const changedFields = Object.keys(value.data).filter(
       (k) => stable(entry.entity[k]) !== stable(value.data[k]),
     );
-    if (!changedFields.length)
+    if (changedFields.length === 0)
       return { unchanged: true, file: before, revision: snapshot().revision };
-    const current = snapshot(),
-      data = structuredClone(current.data);
+    const current = snapshot();
+    const data = structuredClone(current.data);
     const entity = data[collections[entry.kind]].find(
       (e) => e.id === entry.entity.id,
     );
@@ -554,9 +567,9 @@ export function createInformationService({
           schema: schema(),
         });
       if (endpoint === '/files' && req.method === 'GET') {
-        const offset = Number(url.searchParams.get('offset') || 0),
-          limit = Number(url.searchParams.get('limit') || 50),
-          query = (url.searchParams.get('query') || '').toLowerCase();
+        const limit = Number(url.searchParams.get('limit') || 50);
+        const offset = Number(url.searchParams.get('offset') || 0);
+        const query = (url.searchParams.get('query') || '').toLowerCase();
         if (
           !Number.isSafeInteger(offset) ||
           offset < 0 ||
@@ -572,7 +585,11 @@ export function createInformationService({
         return respond({
           total: all.length,
           files: all.slice(offset, offset + limit).map((e) => {
-            const { content, jsonSchema, ...meta } = file(e, scope);
+            const {
+              content: _content,
+              jsonSchema: _jsonSchema,
+              ...meta
+            } = file(e, scope);
             return meta;
           }),
           nextOffset: offset + limit < all.length ? offset + limit : null,
@@ -626,14 +643,14 @@ export function createInformationService({
       });
     }
     if (match && req.method === 'POST' && match[2]) {
-      const input = await jsonBody(req),
-        original = loadHistory(match[1]);
+      const input = await jsonBody(req);
+      const original = loadHistory(match[1]);
       if (!input || input.confirm !== true) fail('请确认撤销这项修改。');
       if (!canUndo(original))
         fail('该修改已撤销，或相关字段后来有新修改，不能直接撤销。', 409);
-      const current = snapshot(),
-        data = structuredClone(current.data),
-        entry = resolve(original.path);
+      const current = snapshot();
+      const data = structuredClone(current.data);
+      const entry = resolve(original.path);
       const entity = data[collections[entry.kind]].find(
         (e) => e.id === entry.entity.id,
       );
@@ -641,7 +658,7 @@ export function createInformationService({
       for (const key of original.changedFields)
         if (Object.hasOwn(original.before.data, key))
           entity[key] = structuredClone(original.before.data[key]);
-        else delete entity[key];
+        else Reflect.deleteProperty(entity, key);
       const record = {
         id: randomUUID(),
         action: 'undo',
@@ -680,7 +697,11 @@ export function createInformationService({
     return {
       total: all.length,
       files: all.slice(offset, offset + limit).map((e) => {
-        const { content, jsonSchema, ...meta } = file(e, scope);
+        const {
+          content: _content,
+          jsonSchema: _jsonSchema,
+          ...meta
+        } = file(e, scope);
         return meta;
       }),
       nextOffset: offset + limit < all.length ? offset + limit : null,
@@ -691,14 +712,14 @@ export function createInformationService({
     const before = file(entry, scope);
     if (before.sha256 !== input.expectedHash)
       fail('资料已有新修改，请重新读取后再提出建议。', 409);
-    const data = structuredClone(snapshot().data),
-      entity = data[collections[entry.kind]].find(
-        (e) => e.id === entry.entity.id,
-      );
+    const data = structuredClone(snapshot().data);
+    const entity = data[collections[entry.kind]].find(
+      (e) => e.id === entry.entity.id,
+    );
     const changedFields = Object.keys(value.data).filter(
       (key) => stable(entity[key]) !== stable(value.data[key]),
     );
-    if (!changedFields.length) fail('建议与当前资料相同，无需修改。');
+    if (changedFields.length === 0) fail('建议与当前资料相同，无需修改。');
     Object.assign(entity, value.data);
     validateExplorer(data);
     return {

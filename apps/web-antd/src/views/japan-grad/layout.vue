@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+
 import {
+  useEventListener,
+  useIntervalFn,
   usePreferredDark,
   usePreferredReducedMotion,
   useStorage,
-  useEventListener,
-  useIntervalFn,
 } from '@vueuse/core';
 import {
   theme as antdTheme,
@@ -14,15 +15,14 @@ import {
   Button,
   ConfigProvider,
   Drawer,
-  Dropdown,
-  Menu,
   Modal,
 } from 'ant-design-vue';
+
 import BrandMark from './components/brand-mark.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import WorkspaceNavigation from './components/workspace-navigation.vue';
-import AssistantChat from './components/assistant-chat.vue';
 import { useExplorerStore } from './explorer';
+
 import './style.css';
 import './visual.css';
 
@@ -53,12 +53,36 @@ async function refreshWorkspace() {
     refreshingWorkspace = false;
   }
 }
-useIntervalFn(() => void refreshWorkspace(), 15000);
+useIntervalFn(() => void refreshWorkspace(), 15_000);
 useEventListener(window, 'focus', () => void refreshWorkspace());
 
 const route = useRoute();
 const router = useRouter();
 const parentNavigation = computed(() => {
+  if (
+    ['/japan-grad/ai', '/japan-grad/collection'].includes(route.path) &&
+    typeof route.query.returnTo === 'string' &&
+    route.query.returnTo.startsWith('/japan-grad/') &&
+    !route.query.returnTo.startsWith('/japan-grad/ai') &&
+    !route.query.returnTo.startsWith('/japan-grad/collection')
+  )
+    return { path: route.query.returnTo, label: '之前的页面' };
+  if (route.path.replace(/\/$/, '') === '/japan-grad/overview')
+    return undefined;
+  if (route.params.programId)
+    return { path: '/japan-grad/special-programs', label: '特殊入学项目' };
+  if (
+    [
+      '/japan-grad/ai',
+      '/japan-grad/collection',
+      '/japan-grad/journey',
+      '/japan-grad/settings',
+      '/japan-grad/special-programs',
+      '/japan-grad/universities',
+      '/japan-grad/universities/',
+    ].includes(route.path)
+  )
+    return { path: '/japan-grad/overview', label: '申请总览' };
   if (route.params.analysisMajorId) {
     const major = store.majors.find(
       (m) => m.id === route.params.analysisMajorId,
@@ -69,7 +93,7 @@ const parentNavigation = computed(() => {
           path: `/japan-grad/universities/${school.universityId}/schools/${school.id}/majors/${major.id}`,
           label: '专攻资料',
         }
-      : { path: '/japan-grad', label: '大学清单' };
+      : { path: '/japan-grad/universities', label: '大学清单' };
   }
   const { universityId, schoolId, majorId, labId, professorId } = route.params;
   const universityPath = `/japan-grad/universities/${universityId}`;
@@ -85,21 +109,20 @@ const parentNavigation = computed(() => {
   if (labId) return { path: majorPath, label: '专攻' };
   if (majorId) return { path: schoolPath, label: '研究科' };
   if (schoolId) return { path: universityPath, label: '大学详情' };
-  if (universityId || route.path.replace(/\/$/, '') !== '/japan-grad')
-    return { path: '/japan-grad', label: '大学清单' };
+  if (universityId)
+    return { path: '/japan-grad/universities', label: '大学清单' };
   return undefined;
 });
 function goToParent() {
   if (parentNavigation.value) void router.push(parentNavigation.value.path);
 }
 const navOpen = ref(false);
-const assistantOpen = ref(false);
 const workspaceOpen = ref(false);
 const pathCopied = ref(false);
 const copyError = ref('');
 const preferredDark = usePreferredDark();
 const preferredMotion = usePreferredReducedMotion();
-const appearance = useStorage<'system' | 'light' | 'dark'>(
+const appearance = useStorage<'dark' | 'light' | 'system'>(
   'japangrad-appearance',
   'system',
 );
@@ -108,27 +131,18 @@ const isDark = computed(
     appearance.value === 'dark' ||
     (appearance.value === 'system' && preferredDark.value),
 );
-const previousTheme = document.documentElement.getAttribute(
-  'data-japangrad-theme',
-);
+const previousTheme = document.documentElement.dataset.japangradTheme;
 watch(
   isDark,
   (value) => {
-    document.documentElement.setAttribute(
-      'data-japangrad-theme',
-      value ? 'dark' : 'light',
-    );
+    document.documentElement.dataset.japangradTheme = value ? 'dark' : 'light';
   },
   { immediate: true },
 );
 onUnmounted(() => {
   if (previousTheme === null)
-    document.documentElement.removeAttribute('data-japangrad-theme');
-  else
-    document.documentElement.setAttribute(
-      'data-japangrad-theme',
-      previousTheme,
-    );
+    delete document.documentElement.dataset.japangradTheme;
+  else document.documentElement.dataset.japangradTheme = previousTheme;
 });
 watch(
   () => route.path,
@@ -159,45 +173,60 @@ const theme = computed(() => ({
     fontSize: 14,
     motion: preferredMotion.value !== 'reduce',
     fontFamily:
-      '\"Avenir Next\", \"PingFang SC\", \"Hiragino Sans GB\", \"Microsoft YaHei\", sans-serif',
+      '"Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
   },
 }));
-const saveLabel = computed(() =>
-  store.storageError
-    ? '本地服务异常'
-    : store.loading
-      ? '连接本地工作区…'
-      : store.saving
-        ? '正在保存…'
-        : '已连接本地工作区',
-);
-const contextLabel = computed(() =>
-  route.params.analysisMajorId
-    ? '募集要项分析'
-    : route.path === '/japan-grad/journey'
-      ? '修考之路'
-      : route.params.professorId
-        ? '老师资料'
-        : route.params.labId
-          ? '研究室资料'
-          : route.params.majorId
-            ? '专攻资料'
-            : route.params.schoolId
-              ? '研究科'
-              : route.params.universityId
-                ? '大学详情'
-                : '大学清单',
-);
-const appearanceLabel = computed(
-  () =>
-    ({ system: '跟随系统', light: '浅色模式', dark: '深色模式' })[
-      appearance.value
-    ],
-);
-function chooseAppearance(key: string | number) {
-  if (key === 'system' || key === 'light' || key === 'dark')
-    appearance.value = key;
-}
+const saveLabel = computed(() => {
+  if (store.storageError) {
+    return '本地服务异常';
+  }
+  if (store.loading) {
+    return '连接本地工作区…';
+  }
+  if (store.saving) {
+    return '正在保存…';
+  }
+  return '已连接本地工作区';
+});
+const contextLabel = computed(() => {
+  if (route.path === '/japan-grad/settings') {
+    return '设置';
+  }
+  if (route.path.startsWith('/japan-grad/special-programs')) {
+    return '特殊入学项目';
+  }
+  if (route.path === '/japan-grad/overview') {
+    return '申请总览';
+  }
+  if (route.path === '/japan-grad/ai') {
+    return 'AI 管理';
+  }
+  if (route.path === '/japan-grad/collection') {
+    return '网址解析结果';
+  }
+  if (route.params.analysisMajorId) {
+    return '募集要项分析';
+  }
+  if (route.path === '/japan-grad/journey') {
+    return '修考之路';
+  }
+  if (route.params.professorId) {
+    return '老师资料';
+  }
+  if (route.params.labId) {
+    return '研究室资料';
+  }
+  if (route.params.majorId) {
+    return '专攻资料';
+  }
+  if (route.params.schoolId) {
+    return '研究科';
+  }
+  if (route.params.universityId) {
+    return '大学详情';
+  }
+  return '大学清单';
+});
 async function copyWorkspace() {
   copyError.value = '';
   try {
@@ -216,12 +245,16 @@ watch(workspaceOpen, () => {
 </script>
 
 <template>
-  <ConfigProvider :theme="theme"
-    ><App
-      ><div class="university-explorer" :data-theme="isDark ? 'dark' : 'light'">
+  <ConfigProvider :theme="theme">
+    <App>
+      <div
+        class="university-explorer"
+        :class="{ 'is-document-reader': !!route.params.documentId }"
+        :data-theme="isDark ? 'dark' : 'light'"
+      >
         <a class="skip-to-content" href="#japangrad-main">跳转到主要内容</a>
         <aside class="workspace-sidebar">
-          <WorkspaceNavigation @workspace="workspaceOpen = true" />
+          <WorkspaceNavigation />
         </aside>
         <div class="workspace-content">
           <header class="explorer-topbar">
@@ -234,12 +267,12 @@ watch(workspaceOpen, () => {
                 <ExplorerIcon name="menu" />
               </button>
               <RouterLink
-                to="/japan-grad"
+                to="/japan-grad/overview"
                 class="explorer-brand mobile-brand"
-                aria-label="JapanGrad 大学清单首页"
-                ><span class="brand-mark"><BrandMark /></span
-                ><strong>JapanGrad</strong></RouterLink
+                aria-label="JapanGrad 申请总览首页"
               >
+                <span class="brand-mark"><BrandMark /></span><strong>JapanGrad</strong>
+              </RouterLink>
               <Button
                 class="icon-button workspace-back-button"
                 :disabled="!parentNavigation"
@@ -254,50 +287,16 @@ watch(workspaceOpen, () => {
                     : '当前已是大学清单，无上一级'
                 "
                 @click="goToParent"
-                ><ExplorerIcon name="back" />返回上一级</Button
               >
+                <ExplorerIcon name="back" />返回上一级
+              </Button>
               <span class="workspace-context-label">{{ contextLabel }}</span>
-              <span class="local-state" role="status"
-                ><i
+              <span class="local-state" role="status"><i
                   :class="{
                     error: store.storageError,
                     pending: store.loading || store.saving,
                   }"
-                ></i
-                ><span>{{ saveLabel }}</span></span
-              >
-              <Button
-                class="icon-button assistant-launch-button"
-                :disabled="!store.loaded"
-                aria-label="打开 AI 资料助手"
-                :aria-expanded="assistantOpen"
-                aria-controls="juai-assistant-panel"
-                @click="assistantOpen = !assistantOpen"
-                ><ExplorerIcon name="book" /><span>AI 助手</span></Button
-              >
-              <Dropdown :trigger="['click']"
-                ><Button
-                  class="appearance-button"
-                  :aria-label="`界面主题：${appearanceLabel}`"
-                  ><ExplorerIcon
-                    :name="
-                      appearance === 'system'
-                        ? 'system'
-                        : isDark
-                          ? 'moon'
-                          : 'sun'
-                    "
-                  /><span>{{ appearanceLabel }}</span></Button
-                ><template #overlay
-                  ><Menu
-                    :selected-keys="[appearance]"
-                    @click="({ key }) => chooseAppearance(key)"
-                    ><Menu.Item key="system">跟随系统</Menu.Item
-                    ><Menu.Item key="light">浅色模式</Menu.Item
-                    ><Menu.Item key="dark">深色模式</Menu.Item></Menu
-                  ></template
-                ></Dropdown
-              >
+                ></i><span>{{ saveLabel }}</span></span>
             </div>
           </header>
           <div v-if="store.storageError" class="storage-alert" role="alert">
@@ -310,10 +309,7 @@ watch(workspaceOpen, () => {
               重试连接
             </button>
           </div>
-          <div
-            class="workspace-body"
-            :class="{ 'has-assistant': assistantOpen }"
-          >
+          <div class="workspace-body">
             <div class="workspace-document">
               <main id="japangrad-main" class="explorer-main" tabindex="-1">
                 <p v-if="store.migrationNotice" class="workspace-notice">
@@ -326,9 +322,7 @@ watch(workspaceOpen, () => {
                   aria-busy="true"
                   aria-label="正在打开本地工作区"
                 >
-                  <span class="skeleton-title"></span
-                  ><span class="skeleton-description"></span
-                  ><span class="skeleton-toolbar"></span>
+                  <span class="skeleton-title"></span><span class="skeleton-description"></span><span class="skeleton-toolbar"></span>
                   <div>
                     <span
                       v-for="index in 4"
@@ -338,21 +332,17 @@ watch(workspaceOpen, () => {
                   </div>
                 </section>
                 <section v-else class="collection-empty">
-                  <span class="empty-symbol"
-                    ><ExplorerIcon name="drive"
-                  /></span>
+                  <span class="empty-symbol"><ExplorerIcon name="drive" /></span>
                   <h2>等待本地服务连接</h2>
                   <p>请通过 JapanGrad 启动入口打开工作台。</p>
                 </section>
               </main>
               <footer class="explorer-footer">
-                <span>大学 → 研究科 → 专攻 → 研究室 → 老师</span
-                ><button class="text-button" @click="workspaceOpen = true">
+                <span>大学 → 研究科 → 专攻 → 研究室 → 老师</span><button class="text-button" @click="workspaceOpen = true">
                   <ExplorerIcon name="drive" />本地工作区
                 </button>
               </footer>
             </div>
-            <AssistantChat v-model:open="assistantOpen" />
           </div>
         </div>
         <Drawer
@@ -361,36 +351,35 @@ watch(workspaceOpen, () => {
           placement="left"
           :width="280"
           class="workspace-nav-drawer"
-          ><WorkspaceNavigation
+        >
+          <WorkspaceNavigation
             :show-brand="false"
             @navigate="navOpen = false"
-            @workspace="
-              navOpen = false;
-              workspaceOpen = true;
-            "
-        /></Drawer>
+          />
+        </Drawer>
         <Modal
           v-model:open="workspaceOpen"
           title="本地工作区"
           :footer="null"
           :width="580"
-          ><div class="workspace-info">
+        >
+          <div class="workspace-info">
             <p>大学记录、上传文件、论文和邮件保存在此文件夹。</p>
-            <code>{{ store.workspacePath || '正在连接…' }}</code
-            ><Button
+            <code>{{ store.workspacePath || '正在连接…' }}</code><Button
               class="icon-button"
               :disabled="!store.workspacePath"
               @click="copyWorkspace"
-              ><ExplorerIcon name="copy" />{{
-                pathCopied ? '已复制' : '复制文件夹路径'
-              }}</Button
             >
+              <ExplorerIcon name="copy" />{{
+                pathCopied ? '已复制' : '复制文件夹路径'
+              }}
+            </Button>
             <p v-if="copyError" class="form-error" role="alert">
               {{ copyError }}
             </p>
-          </div></Modal
-        >
-      </div></App
-    ></ConfigProvider
-  >
+          </div>
+        </Modal>
+      </div>
+    </App>
+  </ConfigProvider>
 </template>

@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import {
   chmod,
   cp,
@@ -8,7 +9,6 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import path from 'node:path';
-import { execFileSync } from 'node:child_process';
 
 const root = process.cwd();
 const runtimeDir = process.env.NODE_RUNTIME_DIR;
@@ -32,6 +32,11 @@ if (platform !== 'darwin-arm64')
 const target = path.resolve(root, '../releases/JapanGrad-macOS-arm64');
 await mkdir(path.join(target, 'runtime'), { recursive: true });
 await mkdir(path.join(target, 'local-server'), { recursive: true });
+await mkdir(path.join(target, 'licenses'), { recursive: true });
+await cp(
+  path.join(root, 'LICENSES/PDFjs-Apache-2.0.txt'),
+  path.join(target, 'licenses/PDFjs-Apache-2.0.txt'),
+);
 await cp(runtime, path.join(target, 'runtime/node'));
 await chmod(path.join(target, 'runtime/node'), 0o755);
 await cp(
@@ -60,13 +65,25 @@ await cp(
 );
 for (const name of [
   'analysis-service.mjs',
+  'document-reader-service.mjs',
   'experience-service.mjs',
   'information-service.mjs',
   'assistant-service.mjs',
+  'assistant-document-tools.mjs',
   'assistant-provider.mjs',
   'codex-bridge.mjs',
   'admission-analysis.mjs',
   'admission-parser-worker.mjs',
+  'admission-ai-service.mjs',
+  'ai-management-service.mjs',
+  'collection-service.mjs',
+  'collection-web.mjs',
+  'collection-agent.mjs',
+  'collection-fields.mjs',
+  'special-program-service.mjs',
+  'workspace-settings-service.mjs',
+  'admission-ocr.mjs',
+  'ocr-vision.swift',
   'admission-fields.json',
   'timeline-fields.mjs',
   'agent-mcp.mjs',
@@ -77,6 +94,13 @@ for (const name of [
     path.join(root, 'local-server', name),
     path.join(target, 'local-server', name),
   );
+await mkdir(path.join(target, 'local-server/bin'), { recursive: true });
+execFileSync('swiftc', [
+  '-O',
+  path.join(root, 'local-server/ocr-vision.swift'),
+  '-o',
+  path.join(target, 'local-server/bin/juai-ocr'),
+]);
 await cp(
   path.join(root, 'local-server/node_modules'),
   path.join(target, 'local-server/node_modules'),

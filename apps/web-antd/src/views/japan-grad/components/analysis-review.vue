@@ -1,47 +1,60 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
-import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
 import type {
   AdmissionFieldId,
+  AnalysisContext,
   AnalysisJob,
   AnalysisProposal,
   Evidence,
-  AnalysisContext,
 } from '../analysis-types';
+
+import { computed, ref, watch } from 'vue';
+
+import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
+
 import {
   ADMISSION_FIELDS,
   analysisObjectLabel,
   EXAM_FIELDS,
   PROPOSAL_STATUS_LABELS,
 } from '../analysis-types';
+import { documentReaderPath, fileUrl } from '../documents';
 import { useExplorerStore } from '../explorer';
-import { vAccessibleSelect } from '../select-accessibility';
-import { fileUrl } from '../documents';
 import { jsonOptions, localApi } from '../local-api';
+import { requireValue } from '../required-value';
+import { vAccessibleSelect } from '../select-accessibility';
 const props = defineProps<{
   context: AnalysisContext;
   job?: AnalysisJob;
   proposal?: AnalysisProposal;
 }>();
-const open = defineModel<boolean>('open', { default: false });
 const emit = defineEmits<{ applied: [context: AnalysisContext] }>();
-const store = useExplorerStore(),
-  { message } = App.useApp();
-const selected = ref<AdmissionFieldId[]>([]),
-  values = ref<Partial<Record<AdmissionFieldId, string>>>({}),
-  acknowledged = ref(false),
-  allowReplace = ref(false),
-  createTasks = ref(false),
-  busy = ref(false),
-  feedback = ref('');
-const documentId = ref(''),
-  page = ref(1),
-  sourceText = ref(''),
-  sourceLoading = ref(false),
-  sourceError = ref('');
+const open = defineModel<boolean>('open', { default: false });
+const store = useExplorerStore();
+const { message } = App.useApp();
+const acknowledged = ref(false);
+const allowReplace = ref(false);
+const busy = ref(false);
+const confirmedScopes = ref<AdmissionFieldId[]>([]);
+const createTasks = ref(false);
+const feedback = ref('');
+const selected = ref<AdmissionFieldId[]>([]);
+const values = ref<Partial<Record<AdmissionFieldId, string>>>({});
+const documentId = ref('');
+const page = ref(1);
+const sourceText = ref('');
+const sourceLoading = ref(false);
+const sourceError = ref('');
 let generation = 0;
 const rows = computed(() =>
   ADMISSION_FIELDS.filter((field) => props.proposal?.fields[field.id]),
+);
+const displayWarnings = computed(() =>
+  (props.proposal?.warnings || []).map((warning) => {
+    if (!warning.includes('完成读取的来源页：')) return warning;
+    const total = warning.match(/本次选择\s*(\d+)\s*页/)?.[1];
+    const read = new Set(warning.match(/D\d+P\d+/g) || []).size;
+    return `本次选择 ${total || read} 页，已读取 ${read} 页。每项依据可点击下方原文页码查看。`;
+  }),
 );
 const source = computed(() =>
   props.job?.sources.find((s) => s.id === documentId.value),
@@ -49,10 +62,10 @@ const source = computed(() =>
 const pdf = computed(() =>
   source.value?.filename.toLowerCase().endsWith('.pdf'),
 );
-const examRecordId = ref(''),
-  examYear = ref(''),
-  examSession = ref(''),
-  labId = ref('');
+const examRecordId = ref('');
+const examYear = ref('');
+const examSession = ref('');
+const labId = ref('');
 const hasExam = computed(() =>
   selected.value.some((key) => EXAM_FIELDS.includes(key)),
 );
@@ -60,7 +73,7 @@ function currentValue(key: AdmissionFieldId) {
   return EXAM_FIELDS.includes(key)
     ? (props.context.major.examHistory.find(
         (e) => e.id === examRecordId.value,
-      )?.[key as 'subjects' | 'writtenDate' | 'interviewDate' | 'resultDate'] ??
+      )?.[key as 'interviewDate' | 'resultDate' | 'subjects' | 'writtenDate'] ??
         '')
     : (props.context.requirements.fields[key] ?? '');
 }
@@ -69,6 +82,7 @@ watch(examRecordId, (id) => {
   examYear.value = record?.year ?? '';
   examSession.value = record?.session ?? '';
   acknowledged.value = false;
+  confirmedScopes.value = [];
 });
 const replacing = computed(() =>
   selected.value.some(
@@ -81,6 +95,11 @@ const canApply = computed(
     props.proposal?.status === 'pending' &&
     selected.value.length > 0 &&
     selected.value.every((key) => values.value[key]?.trim()) &&
+    selected.value.every(
+      (key) =>
+        !props.proposal?.fields[key]?.requiresScopeConfirmation ||
+        confirmedScopes.value.includes(key),
+    ) &&
     acknowledged.value &&
     (!hasExam.value || /^\d{4}$/.test(examYear.value)) &&
     (!createTasks.value || !!labId.value) &&
@@ -92,6 +111,7 @@ watch(open, (value) => {
     return;
   }
   selected.value = [];
+  confirmedScopes.value = [];
   values.value = Object.fromEntries(
     Object.entries(props.proposal?.fields ?? {}).map(([key, item]) => [
       key,
@@ -104,7 +124,9 @@ watch(open, (value) => {
   examYear.value = '';
   examSession.value = '';
   labId.value =
-    props.context.labs.length === 1 ? props.context.labs[0]!.id : '';
+    props.context.labs.length === 1
+      ? requireValue(props.context.labs[0]).id
+      : '';
   const evidence = Object.values(props.proposal?.fields ?? {}).flatMap(
     (item) => item?.evidence ?? [],
   )[0];
@@ -128,9 +150,10 @@ async function loadPage() {
             `${p.locator}\n\n${p.text || '此页没有可读取文字，请查看 PDF 页面图像。'}`,
         )
         .join('\n');
-  } catch (e) {
+  } catch (error) {
     if (current === generation)
-      sourceError.value = e instanceof Error ? e.message : '原文读取失败。';
+      sourceError.value =
+        error instanceof Error ? error.message : '原文读取失败。';
   } finally {
     if (current === generation) sourceLoading.value = false;
   }
@@ -164,14 +187,15 @@ async function apply() {
         ),
         allowReplace: allowReplace.value,
         createTasks: createTasks.value,
+        confirmedScopes: confirmedScopes.value,
       }),
     );
     await store.refresh();
     open.value = false;
     emit('applied', result.context);
     message.success('所选要求已采纳到专攻资料');
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '采纳失败。';
+  } catch (error) {
+    feedback.value = error instanceof Error ? error.message : '采纳失败。';
   } finally {
     busy.value = false;
   }
@@ -187,8 +211,8 @@ async function apply() {
     :mask-closable="!busy"
     :keyboard="!busy"
   >
-    <template v-if="proposal && job"
-      ><p class="analysis-review-context">
+    <template v-if="proposal && job">
+      <p class="analysis-review-context">
         {{ analysisObjectLabel(job.context) }}<br />执行器：{{
           proposal.executor
         }}
@@ -198,28 +222,31 @@ async function apply() {
       <div class="analysis-review-body">
         <aside class="analysis-original">
           <header>
-            <strong>{{ source?.title || '原始资料' }}</strong
-            ><a
+            <strong>{{ source?.title || '原始资料' }}</strong><RouterLink
               v-if="source"
-              :href="`${fileUrl(source.id)}#page=${page}`"
+              :to="{
+                path: documentReaderPath(source.id),
+                query: { page: String(page), sha256: source.sha256 },
+              }"
               target="_blank"
               rel="noopener noreferrer"
-              >打开原文件 ↗</a
             >
+              阅读与笔记 ↗
+            </RouterLink>
           </header>
           <iframe
             v-if="source && pdf"
             :key="`${source.id}-${page}`"
             :src="`${fileUrl(source.id)}#page=${page}`"
             :title="`${source.title} 第 ${page} 页`"
-          />
+          ></iframe>
           <pre v-else-if="!sourceLoading">{{ sourceText }}</pre>
           <p v-if="sourceLoading">正在读取原文…</p>
           <p v-if="sourceError" class="form-error">{{ sourceError }}</p>
         </aside>
         <section class="analysis-proposed">
-          <ul v-if="proposal.warnings.length" class="analysis-warnings">
-            <li v-for="(warning, i) in proposal.warnings" :key="i">
+          <ul v-if="displayWarnings.length" class="analysis-warnings">
+            <li v-for="(warning, i) in displayWarnings" :key="i">
               {{ warning }}
             </li>
           </ul>
@@ -233,14 +260,42 @@ async function apply() {
                   !values[field.id]?.trim()
                 "
                 @change="toggle(field.id)"
-                >{{ field.label }}</Checkbox
-              ><span>{{
+              >
+                {{ field.label }}
+</Checkbox><span>{{
                 PROPOSAL_STATUS_LABELS[proposal.fields[field.id]!.status]
               }}</span>
             </header>
             <p class="analysis-current">
               当前值：{{ currentValue(field.id) || '未填写' }}
             </p>
+            <div
+              v-if="proposal.fields[field.id]?.requiresScopeConfirmation"
+              class="analysis-scope-confirm"
+            >
+              <strong>请确认这项时间适用于你的报考对象</strong>
+              <p>{{ proposal.fields[field.id]?.scopeNote }}</p>
+              <Button
+                v-if="proposal.fields[field.id]?.evidence[0]"
+                size="small"
+                type="link"
+                @click="locate(proposal.fields[field.id]!.evidence[0]!)"
+              >
+                查看时间所在原文 · 第
+                {{ proposal.fields[field.id]!.evidence[0]!.page }} 页
+              </Button>
+              <Checkbox
+                :checked="confirmedScopes.includes(field.id)"
+                :disabled="busy || proposal.status === 'applied'"
+                @change="
+                  confirmedScopes = confirmedScopes.includes(field.id)
+                    ? confirmedScopes.filter((id) => id !== field.id)
+                    : [...confirmedScopes, field.id]
+                "
+              >
+                我已核对研究科、专攻及选拔类别，此时间适用于我的申请
+              </Checkbox>
+            </div>
             <Input.TextArea
               v-model:value="values[field.id]"
               :rows="field.date || field.money ? 2 : 3"
@@ -248,15 +303,20 @@ async function apply() {
               :disabled="busy || proposal.status === 'applied'"
               :aria-label="`${field.label}核对后的内容`"
               placeholder="核对后可修改或手动补充；空值不会采纳"
-              @change="acknowledged = false"
+              @change="
+                acknowledged = false;
+                confirmedScopes = confirmedScopes.filter(
+                  (id) => id !== field.id,
+                );
+              "
             />
             <div
               v-for="(evidence, i) in proposal.fields[field.id]!.evidence"
               :key="i"
               class="analysis-evidence"
             >
-              <Button type="link" size="small" @click="locate(evidence)"
-                >{{
+              <Button type="link" size="small" @click="locate(evidence)">
+                {{
                   job.sources.find((s) => s.id === evidence.documentId)?.title
                 }}
                 · 定位 {{ evidence.page
@@ -271,13 +331,11 @@ async function apply() {
                   evidence.verification === 'visual_review'
                     ? ' · 需看图核对'
                     : ''
-                }}</Button
-              >
+                }}
+              </Button>
               <blockquote>{{ evidence.quote }}</blockquote>
             </div>
-            <small v-if="!proposal.fields[field.id]!.evidence.length"
-              >尚无原文依据，补录后将记录为人工核对修改。</small
-            >
+            <small v-if="!proposal.fields[field.id]!.evidence.length">尚无原文依据，补录后将记录为人工核对修改。</small>
           </article>
         </section>
       </div>
@@ -285,8 +343,7 @@ async function apply() {
         v-if="proposal.status === 'pending' && hasExam"
         class="analysis-exam-destination"
       >
-        <label>考试记录</label
-        ><Select
+        <label>考试记录</label><Select
           v-accessible-select
           v-model:value="examRecordId"
           :options="[
@@ -317,19 +374,21 @@ async function apply() {
         v-if="proposal.status === 'pending'"
         class="analysis-review-footer"
       >
-        <Checkbox v-model:checked="acknowledged" :disabled="busy"
-          >我已核对所选字段的来源、年度与选拔类别</Checkbox
-        ><Checkbox
+        <Checkbox v-model:checked="acknowledged" :disabled="busy">
+          我已核对所选字段的来源、年度与选拔类别
+</Checkbox><Checkbox
           v-if="replacing"
           v-model:checked="allowReplace"
           :disabled="busy"
-          >确认替换所选字段的已有内容</Checkbox
-        ><Checkbox
+        >
+          确认替换所选字段的已有内容
+</Checkbox><Checkbox
           v-if="selected.includes('applicationMaterials')"
           v-model:checked="createTasks"
           :disabled="busy"
-          >按核对后的材料内容生成研究室清单</Checkbox
         >
+          按核对后的材料内容生成研究室清单
+        </Checkbox>
         <Select
           v-if="createTasks && selected.includes('applicationMaterials')"
           v-accessible-select
@@ -340,29 +399,50 @@ async function apply() {
         />
         <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
         <div>
-          <span>已选 {{ selected.length }} 项 · 未选字段保留当前内容</span
-          ><Button :disabled="busy" @click="open = false">关闭</Button
-          ><Button
+          <span>已选 {{ selected.length }} 项 · 未选字段保留当前内容</span><Button :disabled="busy" @click="open = false">关闭</Button><Button
             type="primary"
             :disabled="!canApply"
             :loading="busy"
             @click="apply"
-            >采纳所选要求</Button
           >
+            采纳所选要求
+          </Button>
         </div>
       </footer>
       <footer v-else class="form-footer">
-        <span>本草稿已采纳，结果和出处保存在专攻资料中。</span
-        ><Button @click="open = false">关闭</Button>
+        <span>本草稿已采纳，结果和出处保存在专攻资料中。</span><Button @click="open = false">关闭</Button>
       </footer>
     </template>
   </Modal>
 </template>
 <style scoped>
-.analysis-review-context {
-  color: var(--jg-muted);
-  font-size: 13px;
+.analysis-scope-confirm {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  margin: 10px 0;
+  font-size: 12px;
+  color: var(--jg-warning);
+  background: var(--jg-subtle);
+  border-left: 3px solid var(--jg-warning);
+  border-radius: 5px;
 }
+
+.analysis-scope-confirm p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.analysis-scope-confirm .ant-btn {
+  justify-self: start;
+  padding-left: 0;
+}
+
+.analysis-review-context {
+  font-size: 13px;
+  color: var(--jg-muted);
+}
+
 .analysis-review-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
@@ -370,134 +450,159 @@ async function apply() {
   height: 58vh;
   min-height: 240px;
 }
+
 .analysis-original {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--jg-line);
   border-radius: 8px;
-  overflow: hidden;
 }
+
 .analysis-original header {
   display: flex;
   flex-wrap: wrap;
-  justify-content: space-between;
   gap: 8px;
+  justify-content: space-between;
   padding: 12px;
   font-size: 12px;
 }
+
 .analysis-original iframe {
   flex: 1;
   width: 100%;
-  border: 0;
   min-height: 0;
+  border: 0;
 }
+
 .analysis-original pre {
   padding: 16px;
   margin: 0;
   overflow: auto;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
   font-family: inherit;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
+
 .analysis-proposed {
-  overflow: auto;
   padding-right: 8px;
+  overflow: auto;
 }
+
 .analysis-warnings {
-  margin: 0 0 16px;
   padding: 12px 12px 12px 28px;
+  margin: 0 0 16px;
+  font-size: 12px;
   color: var(--jg-warning);
   background: var(--jg-subtle);
-  font-size: 12px;
 }
+
 .analysis-field {
   padding: 16px 0;
   border-bottom: 1px solid var(--jg-line);
 }
+
 .analysis-field > header {
   display: flex;
-  justify-content: space-between;
   gap: 8px;
+  justify-content: space-between;
 }
+
 .analysis-field header > span {
   font-size: 12px;
   color: var(--jg-muted);
 }
+
 .analysis-current {
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 12px;
-  color: var(--jg-muted);
   max-height: 90px;
   overflow: auto;
-}
-.analysis-evidence blockquote {
-  margin: 6px 0;
-  padding-left: 12px;
-  border-left: 2px solid var(--jg-accent-line);
-  white-space: pre-wrap;
+  font-size: 12px;
+  color: var(--jg-muted);
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.analysis-evidence blockquote {
+  max-height: 140px;
+  padding-left: 12px;
+  margin: 6px 0;
+  overflow: auto;
   font-size: 12px;
   color: var(--jg-secondary);
-  max-height: 140px;
-  overflow: auto;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  border-left: 2px solid var(--jg-accent-line);
 }
+
 .analysis-evidence :deep(.ant-btn) {
   height: auto;
-  white-space: normal;
   text-align: left;
+  white-space: normal;
 }
+
 .analysis-field > small {
   display: block;
   margin-top: 8px;
   color: var(--jg-muted);
 }
+
 .analysis-exam-destination {
   display: flex;
+  flex-wrap: wrap;
   gap: 12px;
   margin-top: 16px;
-  flex-wrap: wrap;
 }
+
 .analysis-exam-destination .ant-select {
   min-width: 240px;
 }
+
 .analysis-exam-destination .ant-input {
   max-width: 220px;
 }
+
 .analysis-review-footer {
   display: grid;
   gap: 12px;
   padding-top: 18px;
 }
+
 .analysis-review-footer :deep(.ant-checkbox-wrapper) {
   margin: 0;
 }
+
 .analysis-review-footer > div {
   display: flex;
   gap: 10px;
   align-items: center;
 }
+
 .analysis-review-footer > div > span {
   flex: 1;
   font-size: 12px;
   color: var(--jg-muted);
 }
+
 @media (max-width: 800px) {
   .analysis-review-body {
     grid-template-columns: minmax(0, 1fr);
     height: 62vh;
     overflow: auto;
   }
+
   .analysis-original {
     min-height: 330px;
   }
+
   .analysis-proposed {
     overflow: visible;
   }
+
   .analysis-review-footer > div {
     flex-wrap: wrap;
   }
+
   .analysis-review-footer > div > span {
     flex-basis: 100%;
   }

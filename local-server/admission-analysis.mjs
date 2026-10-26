@@ -2,7 +2,7 @@ import fields from './admission-fields.json' with { type: 'json' };
 import { validPlannerDay } from './planning-fields.mjs';
 export { fields };
 export const normalizeQuote = (value) =>
-  value.normalize('NFKC').replace(/\s+/g, '').trim();
+  value.normalize('NFKC').replaceAll(/\s+/g, '').trim();
 const headers = {
   subjects: /(?:試験科目|試験内容|選抜方法|考试科目)/,
   languageRequirements:
@@ -25,7 +25,7 @@ function explicitDates(value) {
       (m) =>
         `${m[1] || 2018 + (m[2] === '元' ? 1 : Number(m[2]))}-${m[3].padStart(2, '0')}-${m[4].padStart(2, '0')}`,
     )
-    .filter(validPlannerDay);
+    .filter((item) => validPlannerDay(item));
 }
 export function localProposal(job, documents) {
   const values = {};
@@ -35,8 +35,8 @@ export function localProposal(job, documents) {
       for (const page of doc.pages) {
         const lines = page.text.split(/\r?\n/).filter((line) => line.trim());
         for (let index = 0; index < lines.length; index++) {
-          let value = '',
-            quote = '';
+          let quote = '';
+          let value = '';
           if (field.date) {
             const labels = {
               applicationStart: /(?:出願期間|出願受付期間|报名时间|出愿时间)/,
@@ -51,12 +51,15 @@ export function localProposal(job, documents) {
               .join('\n')
               .slice(0, 2500);
             const dates = explicitDates(quote);
-            value =
-              field.id === 'applicationEnd'
-                ? dates.length > 1
-                  ? dates[1]
-                  : ''
-                : (dates[0] ?? '');
+            value = (() => {
+              if (field.id === 'applicationEnd') {
+                if (dates.length > 1) {
+                  return dates[1];
+                }
+                return '';
+              }
+              return dates[0] ?? '';
+            })();
             if (field.id === 'applicationStart' && dates.length < 2) value = '';
           } else if (field.money) {
             if (!/(?:検定料|入学検定料|检定料)/.test(lines[index])) continue;
@@ -163,6 +166,12 @@ export function proposalSchema(job) {
                 value: { type: 'string', maxLength: field.max },
                 status: {
                   enum: ['found', 'not_found', 'unreadable', 'conflict'],
+                },
+                scopeNote: {
+                  type: 'string',
+                  maxLength: 1500,
+                  description:
+                    '仅时间字段：原文适用研究科、专攻或选拔类别与目标对应关系不明确时说明；名称差异本身只写 warnings。',
                 },
                 evidence,
               },

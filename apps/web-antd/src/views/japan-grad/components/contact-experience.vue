@@ -1,12 +1,15 @@
 <script setup lang="ts">
+import type {
+  ProfessorContact as ContactRecord,
+  ContactStatus,
+} from '../application-planning';
+
 import { computed, ref, watch } from 'vue';
-import { storeToRefs } from 'pinia';
+
 import { useEventListener, useIntervalFn } from '@vueuse/core';
 import { App, Button, Input, Modal, Select } from 'ant-design-vue';
-import type {
-  ContactStatus,
-  ProfessorContact as ContactRecord,
-} from '../application-planning';
+import { storeToRefs } from 'pinia';
+
 import {
   CONTACT_EDITABLE_FIELDS,
   CONTACT_LABELS,
@@ -17,26 +20,27 @@ import {
   firstMailTemplate,
   normalizedContact,
 } from '../application-planning';
-import { useExplorerStore } from '../explorer';
 import { useCommunicationsStore } from '../communications';
-import { labContext, labPath } from '../lab-targets';
 import { fileUrl } from '../documents';
+import { useExplorerStore } from '../explorer';
+import { labContext, labPath } from '../lab-targets';
+import { requireValue } from '../required-value';
 import { vAccessibleSelect } from '../select-accessibility';
-import ProfessorMail from './professor-mail.vue';
 import ConsentFiles from './consent-files.vue';
 import ContactStatusBadge from './contact-status.vue';
+import ProfessorMail from './professor-mail.vue';
 const props = defineProps<{ professorId?: string; labId?: string }>();
 const emit = defineEmits<{ saved: [] }>();
-const store = useExplorerStore(),
-  sources = useCommunicationsStore(),
-  { message } = App.useApp();
-const personId = ref(''),
-  experienceId = ref(''),
-  viewStage = ref<ContactStatus>('not_contacted'),
-  busy = ref(false),
-  feedback = ref(''),
-  newOpen = ref(false),
-  newTitle = ref('');
+const sources = useCommunicationsStore();
+const store = useExplorerStore();
+const { message } = App.useApp();
+const busy = ref(false);
+const experienceId = ref('');
+const feedback = ref('');
+const newOpen = ref(false);
+const newTitle = ref('');
+const personId = ref('');
+const viewStage = ref<ContactStatus>('not_contacted');
 const { contactDrafts: drafts } = storeToRefs(sources);
 const people = computed(() =>
   props.professorId
@@ -50,7 +54,9 @@ const experiences = computed(() =>
   person.value
     ? [
         normalizedContact(person.value.contact),
-        ...(person.value.contactHistory ?? []).map(normalizedContact),
+        ...(person.value.contactHistory ?? []).map((item) =>
+          normalizedContact(item),
+        ),
       ]
     : [],
 );
@@ -65,7 +71,7 @@ const dirty = computed(
     CONTACT_EDITABLE_FIELDS.some(
       (key) =>
         JSON.stringify(form.value[key]) !==
-        JSON.stringify(draft.value!.base[key]),
+        JSON.stringify(requireValue(draft.value).base[key]),
     ),
 );
 const mailRows = computed(() =>
@@ -119,7 +125,7 @@ const commonRequirements = computed(() => {
 const profilePath = computed(() =>
   person.value && target.value
     ? `${labPath(target.value)}/professors/${person.value.id}`
-    : '/japan-grad',
+    : '/japan-grad/universities',
 );
 const emailOptions = computed(() => [
   { value: '', label: '手动保存原文 / 尚未选择' },
@@ -128,7 +134,9 @@ const emailOptions = computed(() => [
     label: `${m.date.replace('T', ' ')} · ${m.subject}`,
   })),
 ]);
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value));
+}
 function prepare() {
   if (!people.value.some((p) => p.id === personId.value))
     personId.value =
@@ -170,7 +178,7 @@ function prepare() {
       base: clone(current),
       conflict: false,
     };
-    if (!changed.length) viewStage.value = current.status;
+    if (changed.length === 0) viewStage.value = current.status;
   }
 }
 watch(
@@ -202,13 +210,14 @@ async function refreshSources() {
   try {
     await store.refresh();
     await sources.load([person.value.id]);
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '关联资料更新失败。';
+  } catch (error) {
+    feedback.value =
+      error instanceof Error ? error.message : '关联资料更新失败。';
   } finally {
     refreshing = false;
   }
 }
-useIntervalFn(() => void refreshSources(), 15000);
+useIntervalFn(() => void refreshSources(), 15_000);
 useEventListener(window, 'focus', () => void refreshSources());
 function reload() {
   if (!live.value) return;
@@ -318,7 +327,8 @@ async function save(stage?: ContactStatus) {
     const patch = Object.fromEntries(
       CONTACT_EDITABLE_FIELDS.filter(
         (key) =>
-          JSON.stringify(next[key]) !== JSON.stringify(draft.value!.base[key]),
+          JSON.stringify(next[key]) !==
+          JSON.stringify(requireValue(draft.value).base[key]),
       ).map((key) => [key, next[key]]),
     ) as Partial<ContactRecord>;
     const result = await store.updateContactExperience(
@@ -340,8 +350,8 @@ async function save(stage?: ContactStatus) {
     await sources.load([person.value.id]);
     message.success('考学记录已保存');
     emit('saved');
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '保存失败。';
+  } catch (error) {
+    feedback.value = error instanceof Error ? error.message : '保存失败。';
   } finally {
     busy.value = false;
   }
@@ -364,8 +374,8 @@ async function create() {
     newOpen.value = false;
     await sources.load([person.value.id]);
     message.success('已建立新的经历，上一段记录已保留。');
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '新建失败。';
+  } catch (error) {
+    feedback.value = error instanceof Error ? error.message : '新建失败。';
   } finally {
     busy.value = false;
   }
@@ -402,14 +412,12 @@ function summary(status: ContactStatus) {
       <ContactStatusBadge :contact="live" compact />
     </header>
     <div class="experience-selectors">
-      <label v-if="!professorId"
-        >联系老师<Select
+      <label v-if="!professorId">联系老师<Select
           v-accessible-select
           v-model:value="personId"
           :options="people.map((p) => ({ value: p.id, label: p.name }))"
-          :disabled="busy || store.saving" /></label
-      ><label
-        >考学经历<Select
+          :disabled="busy || store.saving"
+/></label><label>考学经历<Select
           v-accessible-select
           v-model:value="experienceId"
           :options="
@@ -418,19 +426,17 @@ function summary(status: ContactStatus) {
               label: `${c.experienceTitle}${c.experienceId === person!.contact?.experienceId ? '（当前）' : '（历史）'}`,
             }))
           "
-          :disabled="busy || store.saving" /></label
-      ><Button :disabled="busy || store.saving || dirty" @click="newExperience"
-        >新建一段经历</Button
-      >
+          :disabled="busy || store.saving"
+/></label><Button :disabled="busy || store.saving || dirty" @click="newExperience">
+        新建一段经历
+      </Button>
     </div>
     <div class="experience-base">
-      <label
-        >经历名称<Input
+      <label>经历名称<Input
           v-model:value="form.experienceTitle"
           :maxlength="160"
-          :disabled="busy" /></label
-      ><label
-        >当前阶段<Select
+          :disabled="busy"
+/></label><label>当前阶段<Select
           v-accessible-select
           :value="form.status"
           :options="CONTACT_OPTIONS"
@@ -446,8 +452,9 @@ function summary(status: ContactStatus) {
       这段记录有新的修改。你的填写已保留，请核对后重新读取。<Button
         size="small"
         @click="reload"
-        >重新读取记录</Button
       >
+        重新读取记录
+      </Button>
     </p>
     <nav class="experience-stage-tabs" aria-label="查看不同阶段的记录">
       <button
@@ -472,13 +479,14 @@ function summary(status: ContactStatus) {
         size="small"
         :disabled="busy"
         @click="setStage(viewStage)"
-        >设为当前阶段</Button
       >
+        设为当前阶段
+      </Button>
     </header>
     <table class="experience-stage-table">
       <tbody>
-        <template v-if="viewStage === 'not_contacted'"
-          ><tr>
+        <template v-if="viewStage === 'not_contacted'">
+          <tr>
             <th scope="row">研究方向</th>
             <td>
               <p>
@@ -486,9 +494,9 @@ function summary(status: ContactStatus) {
                   person.research || target?.lab.research || '尚未填写研究方向'
                 }}
               </p>
-              <RouterLink :to="`${profilePath}?tab=profile`"
-                >查看老师资料 →</RouterLink
-              >
+              <RouterLink :to="`${profilePath}?tab=profile`">
+                查看老师资料 →
+              </RouterLink>
             </td>
           </tr>
           <tr>
@@ -500,18 +508,15 @@ function summary(status: ContactStatus) {
                     :href="fileUrl(paper.id)"
                     target="_blank"
                     rel="noopener noreferrer"
-                    >{{ paper.title }} ↗</a
-                  ><small
-                    >{{ paper.year }} 年{{
+                    >{{ paper.title }} ↗</a><small>{{ paper.year }} 年{{
                       paper.venue ? ` · ${paper.venue}` : ''
-                    }}</small
-                  >
+                    }}</small>
                 </li>
               </ul>
               <p v-else class="planner-muted">尚未归档论文</p>
-              <RouterLink :to="`${profilePath}?tab=papers`"
-                >进入老师论文库 →</RouterLink
-              >
+              <RouterLink :to="`${profilePath}?tab=papers`">
+                进入老师论文库 →
+              </RouterLink>
             </td>
           </tr>
           <tr>
@@ -540,10 +545,11 @@ function summary(status: ContactStatus) {
                 type="date"
                 :disabled="busy"
               />
-            </td></tr
-        ></template>
-        <template v-if="viewStage === 'first_sent'"
-          ><tr>
+            </td>
+          </tr>
+        </template>
+        <template v-if="viewStage === 'first_sent'">
+          <tr>
             <th scope="row">首封发送日期</th>
             <td>
               <Input
@@ -556,10 +562,7 @@ function summary(status: ContactStatus) {
           <tr>
             <th scope="row">已发第一封原文</th>
             <td v-if="firstMail">
-              <strong>{{ firstMail.subject }}</strong
-              ><small
-                >{{ firstMail.date.replace('T', ' ') }} · 原邮件记录时间</small
-              >
+              <strong>{{ firstMail.subject }}</strong><small>{{ firstMail.date.replace('T', ' ') }} · 原邮件记录时间</small>
               <pre class="experience-original">{{ firstMail.body }}</pre>
             </td>
             <td v-else>
@@ -567,10 +570,10 @@ function summary(status: ContactStatus) {
                 尚未在“邮件往来”保存已发送邮件。下方为草稿，未作为已发送原文。
               </p>
             </td>
-          </tr></template
-        >
-        <template v-if="viewStage === 'replied'"
-          ><tr>
+          </tr>
+        </template>
+        <template v-if="viewStage === 'replied'">
+          <tr>
             <th scope="row">来往信件</th>
             <td>
               <p>
@@ -595,14 +598,16 @@ function summary(status: ContactStatus) {
                 :disabled="busy"
                 placeholder="整理教授回复与后续需要处理的事项；邮件原文保持关联显示。"
               />
-            </td></tr
-        ></template>
+            </td>
+          </tr>
+        </template>
         <template
           v-if="
             viewStage === 'interview_scheduled' ||
             viewStage === 'interview_completed'
           "
-          ><tr>
+        >
+          <tr>
             <th scope="row">预约面试时间</th>
             <td>
               <div class="experience-date-inputs">
@@ -637,10 +642,11 @@ function summary(status: ContactStatus) {
                 :disabled="busy"
                 placeholder="研究计划、自我介绍、论文阅读、预想问题与准备材料……"
               />
-            </td></tr
-        ></template>
-        <template v-if="viewStage === 'interview_completed'"
-          ><tr>
+            </td>
+          </tr>
+        </template>
+        <template v-if="viewStage === 'interview_completed'">
+          <tr>
             <th scope="row">实际面试时间</th>
             <td>
               <div class="experience-date-inputs">
@@ -676,8 +682,9 @@ function summary(status: ContactStatus) {
                   setInterviewDate(dateValue(), true);
                   setInterviewTime(timeValue(), true);
                 "
-                >使用预约时间</Button
               >
+                使用预约时间
+              </Button>
             </td>
           </tr>
           <tr>
@@ -689,8 +696,7 @@ function summary(status: ContactStatus) {
                 class="experience-qa"
               >
                 <header>
-                  <strong>问题 {{ index + 1 }}</strong
-                  ><Button
+                  <strong>问题 {{ index + 1 }}</strong><Button
                     size="small"
                     type="text"
                     danger
@@ -700,8 +706,9 @@ function summary(status: ContactStatus) {
                         (q) => q.id !== entry.id,
                       )
                     "
-                    >移除</Button
                   >
+                    移除
+                  </Button>
                 </header>
                 <Input.TextArea
                   v-model:value="entry.question"
@@ -722,8 +729,9 @@ function summary(status: ContactStatus) {
               <Button
                 :disabled="busy || form.interviewQA.length >= 30"
                 @click="addQuestion"
-                >新增问答（{{ form.interviewQA.length }}/30）</Button
               >
+                新增问答（{{ form.interviewQA.length }}/30）
+              </Button>
             </td>
           </tr>
           <tr>
@@ -736,10 +744,11 @@ function summary(status: ContactStatus) {
                 :disabled="busy"
                 placeholder="教授反馈、需要补充的资料、自己的复盘……"
               />
-            </td></tr
-        ></template>
-        <template v-if="viewStage === 'consent'"
-          ><tr>
+            </td>
+          </tr>
+        </template>
+        <template v-if="viewStage === 'consent'">
+          <tr>
             <th scope="row">内诺确认日期</th>
             <td>
               <Input
@@ -759,26 +768,23 @@ function summary(status: ContactStatus) {
                 :disabled="busy"
                 aria-label="选择内诺邮件"
                 @change="chooseMail($event)"
-              /><template v-if="consentMail"
-                ><strong>{{ consentMail.subject }}</strong
-                ><small
-                  >{{ consentMail.date.replace('T', ' ') }} ·
-                  来自老师邮件往来</small
-                >
+              /><template v-if="consentMail">
+                <strong>{{ consentMail.subject }}</strong><small>{{ consentMail.date.replace('T', ' ') }} ·
+                  来自老师邮件往来</small>
                 <pre class="experience-original">{{
                   consentMail.body
-                }}</pre></template
-              ><template v-else
-                ><small v-if="form.consentSourceNote">{{
+                }}</pre>
+</template><template v-else>
+                <small v-if="form.consentSourceNote">{{
                   form.consentSourceNote
-                }}</small
-                ><Input.TextArea
+                }}</small><Input.TextArea
                   v-model:value="form.consentOriginal"
                   :rows="7"
                   :maxlength="100000"
                   :disabled="busy"
                   placeholder="也可手动保存内诺邮件原文；已归档的来信可直接在上方关联。"
-              /></template>
+                />
+              </template>
             </td>
           </tr>
           <tr>
@@ -788,10 +794,11 @@ function summary(status: ContactStatus) {
                 :professor-id="person.id"
                 :experience-id="experienceId"
               />
-            </td></tr
-        ></template>
-        <template v-if="viewStage === 'closed'"
-          ><tr>
+            </td>
+          </tr>
+        </template>
+        <template v-if="viewStage === 'closed'">
+          <tr>
             <th scope="row">最终结果</th>
             <td>
               <Select
@@ -839,24 +846,25 @@ function summary(status: ContactStatus) {
                 :disabled="busy"
                 aria-label="选择结果邮件"
                 @change="chooseMail($event, true)"
-              /><template v-if="resultMail"
-                ><strong>{{ resultMail.subject }}</strong>
+              /><template v-if="resultMail">
+                <strong>{{ resultMail.subject }}</strong>
                 <pre class="experience-original">{{
                   resultMail.body
-                }}</pre></template
-              ><template v-else
-                ><small v-if="form.resultSourceNote">{{
+                }}</pre>
+</template><template v-else>
+                <small v-if="form.resultSourceNote">{{
                   form.resultSourceNote
-                }}</small
-                ><Input.TextArea
+                }}</small><Input.TextArea
                   v-model:value="form.resultOriginal"
                   :rows="5"
                   :maxlength="100000"
                   :disabled="busy"
                   placeholder="可选，手动保存结果邮件原文"
-              /></template>
-            </td></tr
-        ></template>
+                />
+              </template>
+            </td>
+          </tr>
+        </template>
       </tbody>
     </table>
     <details
@@ -865,14 +873,15 @@ function summary(status: ContactStatus) {
     >
       <summary>第一封信草稿</summary>
       <div class="experience-draft-actions">
-        <Button size="small" :disabled="busy" @click="template"
-          >插入日文模板</Button
-        ><Button
+        <Button size="small" :disabled="busy" @click="template">
+          插入日文模板
+</Button><Button
           size="small"
           :disabled="busy || !form.draftBody"
           @click="copyDraft"
-          >复制草稿</Button
         >
+          复制草稿
+        </Button>
       </div>
       <Input
         v-model:value="form.draftSubject"
@@ -898,13 +907,11 @@ function summary(status: ContactStatus) {
       />
     </details>
     <div class="experience-followup">
-      <label
-        >下次跟进日期<Input
+      <label>下次跟进日期<Input
           v-model:value="form.followUpDate"
           type="date"
-          :disabled="busy" /></label
-      ><label
-        >联络备注<Input.TextArea
+          :disabled="busy"
+/></label><label>联络备注<Input.TextArea
           v-model:value="form.notes"
           :rows="2"
           :maxlength="4000"
@@ -927,9 +934,9 @@ function summary(status: ContactStatus) {
               <th scope="row">{{ CONTACT_LABELS[status] }}</th>
               <td>{{ summary(status) }}</td>
               <td>
-                <Button size="small" type="link" @click="viewStage = status"
-                  >查看阶段</Button
-                >
+                <Button size="small" type="link" @click="viewStage = status">
+                  查看阶段
+                </Button>
               </td>
             </tr>
           </tbody>
@@ -937,10 +944,7 @@ function summary(status: ContactStatus) {
       </div>
       <ol v-if="live.stageHistory.length" class="experience-stage-history">
         <li v-for="entry in live.stageHistory" :key="entry.id">
-          <time>{{ new Date(entry.at).toLocaleString() }}</time
-          ><span
-            >{{ CONTACT_LABELS[entry.status] }} · {{ entry.description }}</span
-          >
+          <time>{{ new Date(entry.at).toLocaleString() }}</time><span>{{ CONTACT_LABELS[entry.status] }} · {{ entry.description }}</span>
         </li>
       </ol>
     </details>
@@ -948,30 +952,33 @@ function summary(status: ContactStatus) {
     <footer class="experience-footer">
       <span>{{
         dirty ? '有未保存的修改' : '各阶段记录保留在同一段经历中'
-      }}</span
-      ><Button
+      }}</span><Button
         v-if="viewStage === 'interview_scheduled'"
         :loading="busy"
         @click="save('interview_scheduled')"
-        >保存面试预约</Button
-      ><Button
+      >
+        保存面试预约
+</Button><Button
         v-if="viewStage === 'interview_completed'"
         :loading="busy"
         @click="save('interview_completed')"
-        >记录面试完成</Button
-      ><Button
+      >
+        记录面试完成
+</Button><Button
         v-if="viewStage === 'consent'"
         :loading="busy"
         @click="save('consent')"
-        >确认内诺并保存</Button
-      ><Button
+      >
+        确认内诺并保存
+</Button><Button
         v-if="viewStage === 'closed'"
         :loading="busy"
         @click="save('closed')"
-        >保存结果并结束经历</Button
-      ><Button type="primary" :loading="busy || store.saving" @click="save()"
-        >保存整段经历</Button
       >
+        保存结果并结束经历
+</Button><Button type="primary" :loading="busy || store.saving" @click="save()">
+        保存整段经历
+      </Button>
     </footer>
     <Modal
       v-model:open="newOpen"
@@ -980,7 +987,8 @@ function summary(status: ContactStatus) {
       :width="540"
       :closable="!busy"
       :mask-closable="!busy"
-      ><p class="form-context">
+    >
+      <p class="form-context">
         上一段经历、邮件和文件会保留，新经历从未联系开始。
       </p>
       <Input
@@ -990,12 +998,11 @@ function summary(status: ContactStatus) {
       />
       <p v-if="feedback" class="form-error">{{ feedback }}</p>
       <div class="form-footer">
-        <Button :disabled="busy" @click="newOpen = false">取消</Button
-        ><Button type="primary" :loading="busy" @click="create"
-          >建立新经历</Button
-        >
-      </div></Modal
-    >
+        <Button :disabled="busy" @click="newOpen = false">取消</Button><Button type="primary" :loading="busy" @click="create">
+          建立新经历
+        </Button>
+      </div>
+    </Modal>
   </section>
   <div v-else class="collection-empty">
     <h3>尚未添加联系老师</h3>
@@ -1006,22 +1013,26 @@ function summary(status: ContactStatus) {
 .contact-experience {
   min-width: 0;
 }
+
 .experience-heading {
   display: flex;
+  gap: 16px;
   align-items: start;
   justify-content: space-between;
-  gap: 16px;
   margin-bottom: 20px;
 }
+
 .experience-heading h3 {
-  font-size: 19px;
   margin: 0;
+  font-size: 19px;
 }
+
 .experience-heading p {
-  color: var(--jg-muted);
   margin: 8px 0 0;
   font-size: 13px;
+  color: var(--jg-muted);
 }
+
 .experience-selectors,
 .experience-base {
   display: grid;
@@ -1030,9 +1041,11 @@ function summary(status: ContactStatus) {
   align-items: end;
   margin: 16px 0;
 }
+
 .experience-base {
   grid-template-columns: minmax(0, 1.5fr) minmax(180px, 1fr);
 }
+
 .experience-selectors label,
 .experience-base label,
 .experience-followup label {
@@ -1041,206 +1054,243 @@ function summary(status: ContactStatus) {
   font-size: 13px;
   color: var(--jg-secondary);
 }
+
 .experience-stage-tabs {
   display: flex;
   gap: 8px;
-  overflow-x: auto;
   padding: 12px 0 18px;
+  overflow-x: auto;
   border-bottom: 1px solid var(--jg-line);
 }
+
 .experience-stage-tabs button {
   padding: 8px 12px;
+  color: var(--jg-secondary);
   white-space: nowrap;
+  cursor: pointer;
+  background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: 6px;
-  background: var(--jg-surface);
-  color: var(--jg-secondary);
-  cursor: pointer;
 }
+
 .experience-stage-tabs button.is-current::before {
-  content: '';
   display: inline-block;
   width: 5px;
   height: 5px;
   margin-right: 6px;
-  border-radius: 50%;
+  content: '';
   background: var(--jg-accent);
+  border-radius: 50%;
 }
+
 .experience-stage-tabs button.is-selected {
-  background: var(--jg-accent-soft);
   color: var(--jg-accent-text);
+  background: var(--jg-accent-soft);
   border-color: var(--jg-accent-line);
 }
+
 .experience-section-heading {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   margin: 18px 0;
 }
+
 .experience-section-heading h4 {
   margin: 0;
   font-size: 15px;
 }
+
 .experience-stage-table,
 .experience-overview {
   width: 100%;
-  border-collapse: separate;
+  overflow: hidden;
   border-spacing: 0;
+  border-collapse: separate;
   border: 1px solid var(--jg-line);
   border-radius: 8px;
-  overflow: hidden;
 }
+
 .experience-stage-table th,
 .experience-stage-table td,
 .experience-overview th,
 .experience-overview td {
   padding: 16px;
-  border-bottom: 1px solid var(--jg-line);
   vertical-align: top;
   text-align: left;
+  border-bottom: 1px solid var(--jg-line);
 }
+
 .experience-stage-table tbody > tr:last-child > *,
 .experience-overview tbody > tr:last-child > * {
   border-bottom: 0;
 }
+
 .experience-stage-table th {
   width: 160px;
   font-size: 13px;
   font-weight: 500;
-  background: var(--jg-subtle);
   color: var(--jg-secondary);
+  background: var(--jg-subtle);
 }
+
 .experience-stage-table td {
   min-width: 0;
   background: var(--jg-surface);
 }
+
 .experience-stage-table p,
 .experience-overview td {
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
+
 .experience-stage-table td > .ant-select {
   width: 100%;
   margin-bottom: 14px;
 }
+
 .experience-stage-table td > small,
 .experience-paper-list small {
   display: block;
-  color: var(--jg-muted);
   margin-top: 7px;
   font-size: 12px;
+  color: var(--jg-muted);
 }
+
 .experience-stage-table a {
   color: var(--jg-accent-text);
 }
+
 .experience-original {
-  margin: 14px 0 0;
+  max-height: 340px;
   padding: 16px;
-  background: var(--jg-subtle);
-  border-radius: 6px;
+  margin: 14px 0 0;
+  overflow: auto;
   font-family: inherit;
   font-size: 13px;
   line-height: 1.8;
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
-  max-height: 340px;
-  overflow: auto;
+  white-space: pre-wrap;
+  background: var(--jg-subtle);
+  border-radius: 6px;
 }
+
 .experience-paper-list {
   display: grid;
   gap: 12px;
   padding-left: 18px;
 }
+
 .experience-date-inputs {
   display: flex;
   gap: 12px;
 }
+
 .experience-date-inputs > * {
   max-width: 240px;
 }
+
 .experience-qa {
   padding-bottom: 16px;
   margin-bottom: 16px;
   border-bottom: 1px solid var(--jg-line);
 }
+
 .experience-qa header {
   display: flex;
   justify-content: space-between;
   margin-bottom: 8px;
 }
+
 .experience-qa textarea + textarea {
   margin-top: 8px;
 }
+
 .experience-extra {
-  margin: 18px 0;
   padding: 14px 16px;
+  margin: 18px 0;
   border: 1px solid var(--jg-line);
   border-radius: 8px;
 }
+
 .experience-extra summary {
-  cursor: pointer;
-  color: var(--jg-secondary);
   font-size: 13px;
+  color: var(--jg-secondary);
+  cursor: pointer;
 }
+
 .experience-extra[open] > summary {
   margin-bottom: 18px;
 }
+
 .experience-draft-actions {
   display: flex;
   gap: 10px;
   margin-bottom: 12px;
 }
+
 .experience-extra > textarea {
   margin-top: 12px;
 }
+
 .experience-followup {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
   gap: 16px;
   margin: 20px 0;
 }
+
 .experience-overview-scroll {
   overflow-x: auto;
 }
+
 .experience-overview {
   min-width: 550px;
   font-size: 13px;
 }
+
 .experience-overview th {
-  background: var(--jg-subtle);
   font-weight: 500;
+  background: var(--jg-subtle);
 }
+
 .experience-stage-history {
   display: grid;
   gap: 12px;
-  margin-top: 20px;
   padding-left: 20px;
+  margin-top: 20px;
   font-size: 12px;
   color: var(--jg-muted);
 }
+
 .experience-stage-history time {
   margin-right: 12px;
 }
+
 .experience-footer {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
-  align-items: center;
   gap: 10px;
-  border-top: 1px solid var(--jg-line);
+  align-items: center;
+  justify-content: flex-end;
   padding-top: 18px;
+  border-top: 1px solid var(--jg-line);
 }
+
 .experience-footer > span {
   margin-right: auto;
-  color: var(--jg-muted);
   font-size: 12px;
+  color: var(--jg-muted);
 }
+
 @media (max-width: 760px) {
   .experience-selectors,
   .experience-base,
   .experience-followup {
     grid-template-columns: minmax(0, 1fr);
   }
+
   .experience-stage-table,
   .experience-stage-table tbody,
   .experience-stage-table tr,
@@ -1249,13 +1299,16 @@ function summary(status: ContactStatus) {
     display: block;
     width: 100%;
   }
+
   .experience-stage-table th {
     padding-bottom: 10px;
     border-bottom: 0;
   }
+
   .experience-date-inputs {
     flex-wrap: wrap;
   }
+
   .experience-heading {
     flex-direction: column;
   }

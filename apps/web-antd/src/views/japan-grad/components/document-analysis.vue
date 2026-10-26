@@ -1,6 +1,14 @@
 <script setup lang="ts">
+import type {
+  AnalysisContext,
+  AnalysisJob,
+  AnalysisProposal,
+} from '../analysis-types';
+import type { StoredDocument } from '../documents';
+
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
+
 import {
   App,
   Button,
@@ -9,49 +17,46 @@ import {
   InputNumber,
   Select,
 } from 'ant-design-vue';
-import type {
-  AnalysisContext,
-  AnalysisJob,
-  AnalysisProposal,
-} from '../analysis-types';
+
 import {
   ADMISSION_FIELDS,
   DEGREE_LABELS,
   JOB_STATUS_LABELS,
 } from '../analysis-types';
-import type { StoredDocument } from '../documents';
 import { fileUrl } from '../documents';
 import { jsonOptions, localApi } from '../local-api';
+import { requireValue } from '../required-value';
 import { vAccessibleSelect } from '../select-accessibility';
-import AnalysisReview from './analysis-review.vue';
 import AgentConnections from './agent-connections.vue';
+import AnalysisAi from './analysis-ai.vue';
+import AnalysisReview from './analysis-review.vue';
 const props = defineProps<{ majorId: string }>();
-const route = useRoute(),
-  router = useRouter(),
-  { message } = App.useApp();
-const context = ref<AnalysisContext>(),
-  documents = ref<StoredDocument[]>([]),
-  jobs = ref<AnalysisJob[]>([]),
-  ids = ref<string[]>([]),
-  selectedJob = ref<AnalysisJob>(),
-  proposals = ref<AnalysisProposal[]>([]),
-  proposal = ref<AnalysisProposal>();
-const reviewOpen = ref(false),
-  agentOpen = ref(false),
-  busy = ref(false),
-  loading = ref(false),
-  feedback = ref(''),
-  fileInput = ref<HTMLInputElement>();
-const admissionYear = ref(new Date().getFullYear() + 1),
-  degree = ref('master'),
-  selectionType = ref(''),
-  analysisNotes = ref('');
-let generation = 0,
-  timer: ReturnType<typeof setTimeout> | undefined;
+const route = useRoute();
+const router = useRouter();
+const { message } = App.useApp();
+const context = ref<AnalysisContext>();
+const documents = ref<StoredDocument[]>([]);
+const jobs = ref<AnalysisJob[]>([]);
+const ids = ref<string[]>([]);
+const selectedJob = ref<AnalysisJob>();
+const proposals = ref<AnalysisProposal[]>([]);
+const proposal = ref<AnalysisProposal>();
+const agentOpen = ref(false);
+const busy = ref(false);
+const feedback = ref('');
+const fileInput = ref<HTMLInputElement>();
+const loading = ref(false);
+const reviewOpen = ref(false);
+const admissionYear = ref(new Date().getFullYear() + 1);
+const degree = ref('master');
+const selectionType = ref('');
+const analysisNotes = ref('');
+let generation = 0;
+let timer: ReturnType<typeof setTimeout> | undefined;
 const canRead = computed(
   () =>
     selectedJob.value &&
-    ['ready', 'awaiting_review'].includes(selectedJob.value.status),
+    ['awaiting_review', 'ready'].includes(selectedJob.value.status),
 );
 const accepted = computed(() =>
   ADMISSION_FIELDS.filter((f) => context.value?.requirements.fields[f.id]),
@@ -82,10 +87,11 @@ async function load() {
       admissionYear.value = doc.year;
     }
     if (selectedJob.value?.id || jobs.value[0]?.id)
-      await viewJob(selectedJob.value?.id || jobs.value[0]!.id);
-  } catch (e) {
+      await viewJob(selectedJob.value?.id || requireValue(jobs.value[0]).id);
+  } catch (error) {
     if (current === generation)
-      feedback.value = e instanceof Error ? e.message : '分析资料读取失败。';
+      feedback.value =
+        error instanceof Error ? error.message : '分析资料读取失败。';
   } finally {
     loading.value = false;
   }
@@ -102,12 +108,13 @@ async function viewJob(id: string) {
     selectedJob.value = result.job;
     proposals.value = result.proposals;
     const index = jobs.value.findIndex((j) => j.id === id);
-    if (index >= 0) jobs.value[index] = result.job;
-    if (['queued', 'parsing'].includes(result.job.status))
+    if (index !== -1) jobs.value[index] = result.job;
+    if (['parsing', 'queued'].includes(result.job.status))
       timer = setTimeout(() => void viewJob(id), 2500);
-  } catch (e) {
+  } catch (error) {
     if (current === generation)
-      feedback.value = e instanceof Error ? e.message : '任务读取失败。';
+      feedback.value =
+        error instanceof Error ? error.message : '任务读取失败。';
   }
 }
 watch(
@@ -153,9 +160,9 @@ async function create() {
     );
     jobs.value.unshift(result);
     await viewJob(result.id);
-    message.success('读取任务已创建，完成后可核对草稿或交给 Agent 分析。');
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '任务创建失败。';
+    message.success('读取任务已创建，完成后可选择 AI 提取并核对填表。');
+  } catch (error) {
+    feedback.value = error instanceof Error ? error.message : '任务创建失败。';
   } finally {
     busy.value = false;
   }
@@ -170,8 +177,8 @@ async function retry() {
       jsonOptions('POST', {}),
     );
     await viewJob(selectedJob.value.id);
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '重试失败。';
+  } catch (error) {
+    feedback.value = error instanceof Error ? error.message : '重试失败。';
   } finally {
     busy.value = false;
   }
@@ -195,8 +202,9 @@ async function importFile(file?: File) {
     );
     await viewJob(selectedJob.value.id);
     message.success('Agent 分析结果已导入待核对列表');
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : 'JSON 读取或导入失败。';
+  } catch (error) {
+    feedback.value =
+      error instanceof Error ? error.message : 'JSON 读取或导入失败。';
   } finally {
     busy.value = false;
     if (fileInput.value) fileInput.value.value = '';
@@ -220,11 +228,19 @@ async function review(item: AnalysisProposal) {
     );
     proposal.value = item;
     reviewOpen.value = true;
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '核对资料读取失败。';
+  } catch (error) {
+    feedback.value =
+      error instanceof Error ? error.message : '核对资料读取失败。';
   } finally {
     busy.value = false;
   }
+}
+async function reviewAi(id: string) {
+  if (!selectedJob.value) return;
+  await viewJob(selectedJob.value.id);
+  const item = proposals.value.find((p) => p.id === id);
+  if (item) await review(item);
+  else feedback.value = '草稿不在最近结果中，请刷新任务后重试。';
 }
 async function applied(value: AnalysisContext) {
   context.value = { ...value, jobs: jobs.value };
@@ -248,8 +264,7 @@ function goToMajor() {
         </p>
       </div>
       <div class="detail-actions">
-        <Button :disabled="busy || loading" @click="load">刷新任务</Button
-        ><Button @click="agentOpen = true">连接我的 Agent</Button>
+        <Button :disabled="busy || loading" @click="load">刷新任务</Button><Button @click="agentOpen = true">连接我的 Agent</Button>
       </div>
     </header>
     <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
@@ -258,15 +273,13 @@ function goToMajor() {
       <h3>选择分析资料</h3>
       <p>选择募集要项、专攻补充说明或修订通知，并说明这次要分析的对象。</p>
       <div class="analysis-context-fields">
-        <label
-          >资料年度<InputNumber
+        <label>资料年度<InputNumber
             v-model:value="admissionYear"
             :min="1900"
             :max="2200"
             :precision="0"
-            :disabled="busy" /></label
-        ><label
-          >学位 / 身份<Select
+            :disabled="busy"
+/></label><label>学位 / 身份<Select
             v-accessible-select
             v-model:value="degree"
             :options="
@@ -275,9 +288,8 @@ function goToMajor() {
                 label,
               }))
             "
-            :disabled="busy" /></label
-        ><label
-          >选拔类别<Input
+            :disabled="busy"
+/></label><label>选拔类别<Input
             v-model:value="selectionType"
             :maxlength="100"
             :disabled="busy"
@@ -299,25 +311,23 @@ function goToMajor() {
           :checked="ids.includes(doc.id)"
           :disabled="busy"
           @change="toggle(doc.id)"
-          ><strong>{{ doc.title }}</strong
-          ><small>{{ doc.year }} 年 · {{ doc.filename }}</small></Checkbox
         >
+          <strong>{{ doc.title }}</strong><small>{{ doc.year }} 年 · {{ doc.filename }}</small>
+        </Checkbox>
       </div>
       <p v-if="!documents.length">还没有募集要项，请先在专攻资料库上传。</p>
       <div class="detail-actions">
-        <Button @click="goToMajor">前往专攻资料库</Button
-        ><Button
+        <Button @click="goToMajor">前往专攻资料库</Button><Button
           type="primary"
           :disabled="!ids.length || ids.length > 10"
           :loading="busy"
           @click="create"
-          >读取并生成待核对草稿</Button
         >
+          读取资料，准备分析
+        </Button>
       </div>
-      <small
-        >本地读取支持文字型 PDF、DOCX、MD、TXT。扫描 PDF 可交给支持图片理解的
-        Agent 按页分析；旧 DOC 请先转为 PDF 或 DOCX。</small
-      >
+      <small>先读取 PDF、DOCX、MD、TXT，随后选择助手、本机 Luna 或独立 API 提取。
+        扫描 PDF 支持本机 OCR 或图片模型；旧 DOC 请先转为 PDF 或 DOCX。</small>
     </div>
     <section v-if="jobs.length" class="analysis-jobs">
       <h3>分析任务</h3>
@@ -332,8 +342,8 @@ function goToMajor() {
         "
         aria-label="选择募集要项分析任务"
         @change="typeof $event === 'string' && viewJob($event)"
-      /><template v-if="selectedJob"
-        ><p>
+      /><template v-if="selectedJob">
+        <p>
           {{ JOB_STATUS_LABELS[selectedJob.status] }} ·
           {{ selectedJob.sources.length }} 份资料
         </p>
@@ -344,24 +354,30 @@ function goToMajor() {
           v-if="selectedJob.status === 'failed'"
           :loading="busy"
           @click="retry"
-          >重新读取</Button
         >
-        <div v-if="canRead" class="analysis-agent-actions">
+          重新读取
+        </Button>
+        <AnalysisAi
+          v-if="canRead"
+          :key="selectedJob.id"
+          :job="selectedJob"
+          @updated="viewJob(selectedJob.id)"
+          @review="reviewAi"
+        />
+        <details v-if="canRead" class="analysis-agent-actions">
+          <summary>其他方式：外部 Agent / 导入分析结果</summary>
           <a
             class="analysis-package-link"
             :href="`/api/japangrad/analysis/jobs/${selectedJob.id}/package`"
-            >下载 Agent 任务包（ZIP）</a
-          ><Button :disabled="busy" @click="viewJob(selectedJob.id)"
-            >刷新 Agent 回传结果</Button
-          >
+            >下载 Agent 任务包（ZIP）</a><Button :disabled="busy" @click="viewJob(selectedJob.id)">
+            刷新 Agent 回传结果
+          </Button>
           <p>
             任务包解压后交给有本地文件能力的 Agent 生成
             result.json，再导入下方。连接 MCP 后可直接回传草稿。
           </p>
           <div class="analysis-import" @dragover.prevent @drop.prevent="drop">
-            <label :for="`analysis-result-${majorId}`"
-              >拖拽一个结果 JSON 文件到这里，或点击选择文件</label
-            ><input
+            <label :for="`analysis-result-${majorId}`">拖拽一个结果 JSON 文件到这里，或点击选择文件</label><input
               :id="`analysis-result-${majorId}`"
               ref="fileInput"
               type="file"
@@ -372,28 +388,25 @@ function goToMajor() {
               "
             />
           </div>
-        </div>
+        </details>
         <div class="analysis-proposals">
           <article v-for="item in proposals" :key="item.id">
             <div>
-              <strong>{{ item.executor }}</strong
-              ><small
-                >{{ new Date(item.createdAt).toLocaleString() }} ·
+              <strong>{{ item.executor }}</strong><small>{{ new Date(item.createdAt).toLocaleString() }} ·
                 {{ item.status === 'applied' ? '已采纳' : '待核对' }} ·
                 {{
                   Object.values(item.fields).filter(
                     (f) => f?.status === 'found',
                   ).length
                 }}
-                项已定位</small
-              >
+                项已定位</small>
             </div>
-            <Button :disabled="busy" @click="review(item)">{{
-              item.status === 'applied' ? '查看核对记录' : '对照原文核对'
-            }}</Button>
+            <Button :disabled="busy" @click="review(item)">
+              {{ item.status === 'applied' ? '查看核对记录' : '对照原文核对' }}
+            </Button>
           </article>
-        </div></template
-      >
+        </div>
+      </template>
     </section>
     <section v-if="accepted.length && context" class="analysis-accepted">
       <h3>已确认的报考资料</h3>
@@ -413,8 +426,7 @@ function goToMajor() {
               :href="`${fileUrl(e.documentId)}#page=${e.page}`"
               target="_blank"
               rel="noopener noreferrer"
-              >来源定位 {{ e.page }} ↗</a
-            >
+              >来源定位 {{ e.page }} ↗</a>
             <p>{{ e.quote }}</p>
           </blockquote>
         </details>
@@ -433,137 +445,164 @@ function goToMajor() {
 <style scoped>
 .analysis-setup {
   padding: 20px;
+  margin: 20px 0;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: 10px;
-  margin: 20px 0;
 }
+
 .analysis-setup h3,
 .analysis-jobs h3 {
   margin: 0 0 12px;
   font-size: 16px;
 }
+
 .analysis-setup p,
 .analysis-setup > small {
-  color: var(--jg-muted);
   font-size: 13px;
+  color: var(--jg-muted);
 }
+
 .analysis-context-fields {
   display: grid;
   grid-template-columns: 140px 160px minmax(180px, 1fr);
   gap: 16px;
   margin: 18px 0;
 }
+
 .analysis-context-fields label {
   display: grid;
   gap: 8px;
   font-size: 13px;
 }
+
 .analysis-context-fields :is(.ant-select, .ant-input-number) {
   width: 100%;
 }
+
 .analysis-setup .detail-actions {
-  margin: 16px 0;
   justify-content: flex-start;
+  margin: 16px 0;
 }
+
 .analysis-document-list {
   display: grid;
   gap: 12px;
-  margin-top: 16px;
   max-height: 250px;
+  margin-top: 16px;
   overflow: auto;
 }
+
 .analysis-document-list .ant-checkbox-wrapper {
-  margin: 0;
   align-items: flex-start;
+  margin: 0;
 }
+
 .analysis-document-list small,
 .analysis-proposals small {
   display: block;
   margin-top: 4px;
   color: var(--jg-muted);
 }
+
 .analysis-jobs > .ant-select {
   width: 100%;
 }
+
 .analysis-agent-actions {
   padding: 20px 0;
 }
+
 .analysis-agent-actions p {
-  color: var(--jg-muted);
   font-size: 13px;
+  color: var(--jg-muted);
 }
+
 .analysis-package-link {
   display: inline-block;
   margin-right: 16px;
   color: var(--jg-accent-text);
   text-decoration: underline;
 }
+
 .analysis-import {
   position: relative;
-  border: 1px dashed var(--jg-border);
-  border-radius: 8px;
   padding: 24px;
   text-align: center;
   background: var(--jg-subtle);
+  border: 1px dashed var(--jg-border);
+  border-radius: 8px;
 }
+
 .analysis-import label {
   display: block;
   cursor: pointer;
 }
+
 .analysis-import input {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0;
   cursor: pointer;
+  opacity: 0;
 }
+
 .analysis-import:focus-within {
   outline: 2px solid var(--jg-accent);
   outline-offset: 3px;
 }
+
 .analysis-proposals {
   display: grid;
   gap: 12px;
   margin-top: 16px;
 }
+
 .analysis-proposals article {
   display: flex;
-  align-items: center;
   gap: 16px;
+  align-items: center;
   justify-content: space-between;
   padding: 18px;
+  background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: 8px;
-  background: var(--jg-surface);
 }
+
 .analysis-proposals small {
   font-size: 12px;
 }
+
 .analysis-accepted {
   margin-top: 28px;
 }
+
 .analysis-accepted > article {
   padding: 16px 0;
   border-bottom: 1px solid var(--jg-line);
 }
+
 .analysis-accepted p {
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
+
 .analysis-accepted details {
-  color: var(--jg-muted);
   font-size: 12px;
+  color: var(--jg-muted);
 }
+
 .analysis-accepted summary {
   cursor: pointer;
 }
+
 .analysis-accepted blockquote {
-  margin: 12px 0;
   padding-left: 12px;
+  margin: 12px 0;
   border-left: 2px solid var(--jg-accent-line);
 }
+
 @media (max-width: 680px) {
   .analysis-context-fields {
     grid-template-columns: minmax(0, 1fr);

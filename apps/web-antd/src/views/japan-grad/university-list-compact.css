@@ -1,0 +1,110 @@
+.university-collection-page .page-heading {
+  margin-bottom: 24px;
+}
+
+.university-collection-page .page-heading h1 {
+  margin: 0;
+  font-size: 30px;
+  letter-spacing: -0.04em;
+}
+
+.university-collection-page .university-grid {
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.university-collection-page .university-card {
+  gap: 12px;
+  min-height: 0;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+.university-collection-page .university-card-header {
+  gap: 10px;
+  align-items: center;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+.university-collection-page .university-card-header :deep(.university-logo) {
+  width: 42px;
+  min-width: 42px;
+  height: 42px;
+  border-radius: 9px;
+}
+
+.university-collection-page .university-card-identity h2 {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.university-collection-page .university-card-identity p {
+  margin: 3px 0 0;
+  font-size: 11px;
+}
+
+.university-collection-page .university-card-compare {
+  padding: 1px 0 0 3px;
+  font-size: 10px;
+}
+
+.compact-university-type {
+  align-self: flex-start;
+  padding: 3px 7px;
+  font-size: 10px;
+  line-height: 1.5;
+  color: var(--jg-accent-text);
+  background: var(--jg-accent-soft);
+  border-radius: 4px;
+}
+
+.compact-university-ranks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  padding-top: 12px;
+  border-top: 1px solid var(--jg-line);
+}
+
+.compact-university-ranks > div {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.compact-university-ranks > div + div {
+  padding-left: 16px;
+  border-left: 1px solid var(--jg-line);
+}
+
+.compact-university-ranks span {
+  font-size: 10px;
+  color: var(--jg-muted);
+}
+
+.compact-university-ranks strong {
+  font-size: 23px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  letter-spacing: -0.04em;
+}
+
+.compact-university-ranks small {
+  font-size: 10px;
+  color: var(--jg-muted);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 550px) {
+  .university-collection-page .university-grid {
+    grid-template-columns: 1fr;
+  }
+}

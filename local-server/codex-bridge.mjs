@@ -1,25 +1,31 @@
+import { Buffer } from 'node:buffer';
 import { spawn } from 'node:child_process';
-import { access, mkdtemp, open, realpath } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { constants } from 'node:fs';
+import { access, mkdtemp, open, realpath } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
-import { randomUUID } from 'node:crypto';
+import process from 'node:process';
 import { createInterface } from 'node:readline';
 
-const toml = (value) =>
-  typeof value === 'string'
-    ? JSON.stringify(value)
-    : typeof value === 'boolean' || typeof value === 'number'
-      ? String(value)
-      : Array.isArray(value)
-        ? `[${value.map(toml).join(',')}]`
-        : `{${Object.entries(value)
-            .map(([key, item]) => `${JSON.stringify(key)}=${toml(item)}`)
-            .join(',')}}`;
+const toml = (value) => {
+  if (typeof value === 'string') {
+    return JSON.stringify(value);
+  }
+  if (typeof value === 'boolean' || typeof value === 'number') {
+    return String(value);
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map((item) => toml(item)).join(',')}]`;
+  }
+  return `{${Object.entries(value)
+    .map(([key, item]) => `${JSON.stringify(key)}=${toml(item)}`)
+    .join(',')}}`;
+};
 const safeMessage = (value) =>
   String(value || '本机 Codex 操作失败。')
-    .replace(/Bearer\s+\S+/gi, 'Bearer [已隐藏]')
-    .replace(/sk-[\w-]{8,}/g, '[已隐藏密钥]')
+    .replaceAll(/Bearer\s+\S+/gi, 'Bearer [已隐藏]')
+    .replaceAll(/sk-[\w-]{8,}/g, '[已隐藏密钥]')
     .slice(0, 600);
 async function executable(explicit) {
   if (
@@ -52,8 +58,8 @@ async function executable(explicit) {
     try {
       const actual = await realpath(candidate);
       await access(actual, constants.R_OK);
-      const handle = await open(actual, 'r'),
-        buffer = Buffer.alloc(256);
+      const buffer = Buffer.alloc(256);
+      const handle = await open(actual, 'r');
       try {
         await handle.read(buffer, 0, buffer.length, 0);
       } finally {
@@ -74,28 +80,28 @@ async function executable(explicit) {
   );
 }
 export function createCodexBridge() {
-  let child,
-    booting,
-    ready = false,
-    profileVerified = false,
-    cwd = '',
-    profile = '',
-    requestedPath = '',
-    connection = {
-      connected: false,
-      ready: false,
-      needsLogin: false,
-      models: [],
-    },
-    serial = 0;
-  const pending = new Map(),
-    listeners = new Map();
+  let booting;
+  let child;
+  let connection = {
+    connected: false,
+    ready: false,
+    needsLogin: false,
+    models: [],
+  };
+  let cwd = '';
+  let profile = '';
+  let profileVerified = false;
+  let ready = false;
+  let requestedPath = '';
+  let serial = 0;
+  const listeners = new Map();
+  const pending = new Map();
   const write = (value) => {
     if (!child?.stdin.writable)
       throw new Error('Codex 连接已关闭，请重新连接。');
-    child.stdin.write(JSON.stringify(value) + '\n');
+    child.stdin.write(`${JSON.stringify(value)}\n`);
   };
-  function rpc(method, params = {}, timeout = 30000) {
+  function rpc(method, params = {}, timeout = 30_000) {
     const id = ++serial;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
@@ -144,8 +150,8 @@ export function createCodexBridge() {
     if (child !== processRef) return;
     if (message.method && message.id !== undefined) {
       if (message.method === 'item/tool/call') {
-        const params = message.params || {},
-          listener = listeners.get(params.threadId);
+        const params = message.params || {};
+        const listener = listeners.get(params.threadId);
         try {
           if (!listener) throw new Error('此对话没有活动的资料工具。');
           if (!params.tool?.startsWith('juai_'))
@@ -181,10 +187,10 @@ export function createCodexBridge() {
         }
       } else if (
         [
+          'applyPatchApproval',
+          'execCommandApproval',
           'item/commandExecution/requestApproval',
           'item/fileChange/requestApproval',
-          'execCommandApproval',
-          'applyPatchApproval',
         ].includes(message.method)
       )
         write({ id: message.id, result: { decision: 'decline' } });
@@ -192,7 +198,7 @@ export function createCodexBridge() {
         write({
           id: message.id,
           error: {
-            code: -32601,
+            code: -32_601,
             message:
               'JUAI does not grant system, file, or external tool access.',
           },
@@ -217,16 +223,16 @@ export function createCodexBridge() {
         connection = {
           ...connection,
           loginPending: false,
-          ...(!params.success
-            ? { error: safeMessage(params.error || 'Codex 登录未完成。') }
-            : {}),
+          ...(params.success
+            ? {}
+            : { error: safeMessage(params.error || 'Codex 登录未完成。') }),
         };
     }
   }
   async function start(explicit = '') {
     if (ready && requestedPath === (explicit || '')) return;
     if (booting) return booting;
-    if (listeners.size)
+    if (listeners.size > 0)
       throw new Error('请先停止当前 Codex 回答，再切换程序。');
     terminate();
     booting = (async () => {
@@ -355,11 +361,15 @@ export function createCodexBridge() {
         Object.entries(config.mcp_servers || {}).map(([name, value]) => [
           name,
           {
-            ...(value.url
-              ? { url: value.url }
-              : value.command
-                ? { command: value.command, args: value.args || [] }
-                : {}),
+            ...(() => {
+              if (value.url) {
+                return { url: value.url };
+              }
+              if (value.command) {
+                return { command: value.command, args: value.args || [] };
+              }
+              return {};
+            })(),
             enabled: false,
             required: false,
           },
@@ -450,8 +460,8 @@ export function createCodexBridge() {
       error: '',
     };
     if (connection.needsLogin) return { ...connection, ready: false };
-    let cursor,
-      models = [];
+    let cursor;
+    let models = [];
     for (let i = 0; i < 3; i++) {
       const result = await rpc('model/list', {
         limit: 50,
@@ -468,8 +478,9 @@ export function createCodexBridge() {
         id: m.model || m.id,
         name: m.displayName || m.model || m.id,
         isDefault: !!m.isDefault,
+        inputModalities: m.inputModalities || ['text'],
       }));
-    if (!models.length)
+    if (models.length === 0)
       throw new Error('Codex 没有返回可用模型，请检查本机登录或模型配置。');
     profileVerified = false;
     connection.ready = false;
@@ -532,23 +543,37 @@ export function createCodexBridge() {
     signal,
     onText,
     onTool,
+    images = [],
+    outputSchema,
   }) {
     const state = await connect(config.codexPath || '');
     if (!state.ready)
       throw new Error('本机 Codex 尚未登录，请先在助手中登录。');
+    const model = state.models.find(
+      (m) => m.id === (config.model || state.defaultModel),
+    );
+    if (!model)
+      throw new Error(
+        '所选模型不在本机 Codex 的可用模型列表中，请刷新后重新选择。',
+      );
+    if (images.length > 0 && !model.inputModalities.includes('image'))
+      throw new Error(
+        '所选本机模型未声明支持图片，请改用 OCR 或选择图片模型。',
+      );
     if (signal.aborted) throw new Error('本次对话已停止。');
     for (const item of tools)
       instructions = instructions.replaceAll(item.name, `juai_${item.name}`);
-    const threadId = await thread(config.model, tools, instructions),
-      allowed = new Set(tools.map((t) => t.name));
-    let turnId,
-      settled = false,
-      nativeCompleted = false,
-      lastItem = '',
-      text = '',
-      calls = 0;
+    const allowed = new Set(tools.map((t) => t.name));
+    const threadId = await thread(config.model, tools, instructions);
+    let calls = 0;
+    let lastItem = '';
+    let nativeCompleted = false;
+    let schemaText = '';
+    let settled = false;
+    let text = '';
+    let turnId;
     const itemText = new Map();
-    let resolveDone, rejectDone;
+    let rejectDone, resolveDone;
     const done = new Promise((resolve, reject) => {
       resolveDone = resolve;
       rejectDone = reject;
@@ -570,19 +595,29 @@ export function createCodexBridge() {
       itemText.set(id, (itemText.get(id) || '') + delta);
       onText(delta);
     };
-    const interrupt = () => {
+    const interrupt = (error = new Error('本次对话已停止。')) => {
+      // Settle with the actual cause before the interruption notification arrives.
+      finish(error);
       if (turnId)
         void rpc('turn/interrupt', { threadId, turnId }, 5000).catch(() => {});
-      finish(new Error('本次对话已停止。'));
     };
+    const abort = () =>
+      interrupt(
+        signal.reason instanceof Error
+          ? signal.reason
+          : new Error('本次对话已停止。'),
+      );
     listeners.set(threadId, {
       failure: finish,
       tool: async (name, input) => {
         if (signal.aborted || settled) throw new Error('本轮对话已停止。');
         if (!allowed.has(name)) throw new Error('此工具未授权。');
         if (++calls > 20) {
-          interrupt();
-          throw new Error('工具调用已达上限。');
+          const error = Object.assign(new Error('工具调用已达上限。'), {
+            code: 'CODEX_TOOL_LIMIT',
+          });
+          interrupt(error);
+          throw error;
         }
         return onTool(name, input);
       },
@@ -590,6 +625,18 @@ export function createCodexBridge() {
         try {
           if (method === 'item/agentMessage/delta')
             add(params.itemId, params.delta || '');
+          if (
+            outputSchema &&
+            method === 'item/completed' &&
+            params.item?.type === 'agentMessage'
+          ) {
+            const candidate =
+              params.item.text || itemText.get(params.item.id) || '';
+            try {
+              JSON.parse(candidate);
+              schemaText = candidate;
+            } catch {}
+          }
           if (
             method === 'item/completed' &&
             params.item?.type === 'agentMessage' &&
@@ -599,15 +646,14 @@ export function createCodexBridge() {
           if (
             method === 'item/started' &&
             [
+              'collabToolCall',
               'commandExecution',
               'fileChange',
               'mcpToolCall',
               'webSearch',
-              'collabToolCall',
             ].includes(params.item?.type)
           ) {
-            interrupt();
-            finish(new Error('本轮尝试了资料范围以外的操作，已停止。'));
+            interrupt(new Error('本轮尝试了资料范围以外的操作，已停止。'));
           }
           if (method === 'turn/completed') {
             nativeCompleted = true;
@@ -633,28 +679,36 @@ export function createCodexBridge() {
         }
       },
     });
-    signal.addEventListener('abort', interrupt, { once: true });
+    signal.addEventListener('abort', abort, { once: true });
     try {
       if (signal.aborted) throw new Error('本次对话已停止。');
       const input = JSON.stringify({
         notice:
-          '请回答 messages 最后一条用户问题；其余消息是上下文。工作区事实仍需从 JUAI 资料工具读取。',
+          tools.length > 0
+            ? '请回答 messages 最后一条用户问题；其余消息是上下文。工作区事实仍需从 JUAI 资料工具读取。'
+            : '仅依据 messages 中提供的原文和图片执行指定提取任务，遵守输出 Schema；不要使用外部知识。',
         messages,
       });
       const started = await rpc('turn/start', {
         threadId,
-        input: [{ type: 'text', text: input }],
+        input: [
+          { type: 'text', text: input },
+          ...images.map((url) => ({ type: 'image', url, detail: 'high' })),
+        ],
+        ...(outputSchema ? { outputSchema } : {}),
         approvalPolicy: 'never',
         permissions: profile,
         environments: [],
       });
       turnId = started.turn?.id;
-      if (signal.aborted) interrupt();
+      if (signal.aborted) abort();
       const result = await done;
       if (!result.text.trim()) throw new Error('Codex 没有返回文本回答。');
-      return result;
+      return outputSchema && schemaText
+        ? { ...result, text: schemaText }
+        : result;
     } finally {
-      signal.removeEventListener('abort', interrupt);
+      signal.removeEventListener('abort', abort);
       listeners.delete(threadId);
       if (turnId && !nativeCompleted)
         await rpc('turn/interrupt', { threadId, turnId }, 5000).catch(() => {});

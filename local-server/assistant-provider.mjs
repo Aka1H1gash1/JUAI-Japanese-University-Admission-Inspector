@@ -23,7 +23,7 @@ export function providerConfig(input, fail) {
     typeof input.model !== 'string' ||
     !input.model.trim() ||
     input.model.length > 160 ||
-    !['responses', 'chat_completions'].includes(input.protocol) ||
+    !['chat_completions', 'responses'].includes(input.protocol) ||
     (input.stream !== undefined && typeof input.stream !== 'boolean')
   )
     fail('请填写 API 地址、模型 ID 和有效接口类型。');
@@ -33,7 +33,7 @@ export function providerConfig(input, fail) {
   } catch {
     fail('API 地址不是有效 URL。');
   }
-  const local = ['127.0.0.1', 'localhost', '[::1]'].includes(url.hostname);
+  const local = ['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname);
   if (
     (url.protocol !== 'https:' && !(local && url.protocol === 'http:')) ||
     url.username ||
@@ -47,12 +47,49 @@ export function providerConfig(input, fail) {
   url.pathname = url.pathname
     .replace(/\/(?:chat\/completions|responses)\/?$/, '')
     .replace(/\/$/, '');
+  const adapter =
+    input.adapter === 'deepseek' || url.hostname === 'api.deepseek.com'
+      ? 'deepseek'
+      : 'standard';
+  if (adapter === 'deepseek' && input.protocol !== 'chat_completions')
+    fail('DeepSeek 连接请选择 Chat Completions 接口。');
+  if (
+    input.thinking !== undefined &&
+    !['disabled', 'enabled'].includes(input.thinking)
+  )
+    fail('思考模式格式无效。');
+  if (
+    input.reasoningEffort !== undefined &&
+    !['high', 'low', 'max'].includes(input.reasoningEffort)
+  )
+    fail('思考强度格式无效。');
+  if (
+    input.maxOutputTokens !== undefined &&
+    (!Number.isInteger(input.maxOutputTokens) ||
+      input.maxOutputTokens < 256 ||
+      input.maxOutputTokens > 32_768)
+  )
+    fail('输出上限应为 256–32768 tokens。');
+  if (
+    input.jsonMode !== undefined &&
+    !['json', 'prompt', 'schema'].includes(input.jsonMode)
+  )
+    fail('JSON 输出模式无效。');
   return {
     baseUrl: url.toString().replace(/\/$/, ''),
     model: input.model.trim(),
     protocol: input.protocol,
     stream: input.stream !== false,
     local,
+    adapter,
+    ...(adapter === 'deepseek'
+      ? {
+          thinking: input.thinking || 'disabled',
+          reasoningEffort: input.reasoningEffort || 'high',
+        }
+      : {}),
+    maxOutputTokens: input.maxOutputTokens || 8192,
+    jsonMode: adapter === 'deepseek' ? 'json' : input.jsonMode || 'prompt',
   };
 }
 const tool = (item, protocol) =>
@@ -77,15 +114,15 @@ function cleanError(error, key) {
   let message = error?.message || '模型请求失败。';
   if (key) message = message.replaceAll(key, '[已隐藏密钥]');
   return message
-    .replace(/Bearer\s+\S+/gi, 'Bearer [已隐藏]')
-    .replace(/sk-[\w-]{8,}/g, '[已隐藏密钥]')
+    .replaceAll(/Bearer\s+\S+/gi, 'Bearer [已隐藏]')
+    .replaceAll(/sk-[\w-]{8,}/g, '[已隐藏密钥]')
     .slice(0, 500);
 }
 async function readBody(response, limit = 4 * 1024 * 1024) {
-  const reader = response.body.getReader(),
-    decoder = new TextDecoder();
-  let size = 0,
-    text = '';
+  const decoder = new TextDecoder();
+  const reader = response.body.getReader();
+  let size = 0;
+  let text = '';
   try {
     for (;;) {
       const { done, value } = await reader.read();
@@ -103,16 +140,16 @@ async function readBody(response, limit = 4 * 1024 * 1024) {
   }
 }
 async function events(response, receive) {
-  const reader = response.body.getReader(),
-    decoder = new TextDecoder();
-  let buffer = '',
-    size = 0;
+  const decoder = new TextDecoder();
+  const reader = response.body.getReader();
+  let buffer = '';
+  let size = 0;
   async function process(raw) {
     const lines = raw
       .split('\n')
       .filter((line) => line.startsWith('data:'))
       .map((line) => line.slice(5).trimStart());
-    if (!lines.length) return;
+    if (lines.length === 0) return;
     const data = lines.join('\n');
     if (data === '[DONE]') return;
     let value;
@@ -129,8 +166,8 @@ async function events(response, receive) {
       if (done) break;
       size += value.length;
       if (size > 8 * 1024 * 1024) throw new Error('模型流式响应超过大小限制。');
-      buffer = (buffer + decoder.decode(value, { stream: true })).replace(
-        /\r\n/g,
+      buffer = (buffer + decoder.decode(value, { stream: true })).replaceAll(
+        '\r\n',
         '\n',
       );
       let index;
@@ -196,16 +233,60 @@ export async function modelTurn({
   tools,
   signal,
   onText,
+  images = [],
+  outputSchema,
+  maxOutputTokens,
 }) {
   const protocol = config.protocol;
+  const deepseek =
+    config.adapter === 'deepseek' ||
+    new URL(config.baseUrl).hostname === 'api.deepseek.com';
+  maxOutputTokens ??= config.maxOutputTokens || 4096;
+  if (images.length > 0) {
+    messages = structuredClone(messages);
+    const last = messages.at(-1);
+    if (last?.role !== 'user' || typeof last.content !== 'string')
+      throw new Error('图片需要随用户消息一起提交。');
+    last.content =
+      protocol === 'responses'
+        ? [
+            { type: 'input_text', text: last.content },
+            ...images.map((url) => ({
+              type: 'input_image',
+              image_url: url,
+              detail: 'high',
+            })),
+          ]
+        : [
+            { type: 'text', text: last.content },
+            ...images.map((url) => ({
+              type: 'image_url',
+              image_url: { url, detail: 'high' },
+            })),
+          ];
+  }
   const body =
     protocol === 'responses'
       ? {
           model: config.model,
           instructions,
           input: messages,
-          tools: tools.map((t) => tool(t, protocol)),
-          max_output_tokens: 4096,
+          ...(tools.length > 0
+            ? { tools: tools.map((t) => tool(t, protocol)) }
+            : {}),
+          ...(outputSchema
+            ? {
+                text: {
+                  format: {
+                    type: 'json_schema',
+                    name: 'admission_extract',
+                    strict: true,
+                    schema: outputSchema,
+                  },
+                },
+              }
+            : {}),
+          max_output_tokens: maxOutputTokens,
           stream: config.stream,
           store: false,
           include: ['reasoning.encrypted_content'],
@@ -213,8 +294,35 @@ export async function modelTurn({
       : {
           model: config.model,
           messages: [{ role: 'system', content: instructions }, ...messages],
-          tools: tools.map((t) => tool(t, protocol)),
-          max_tokens: 4096,
+          ...(deepseek
+            ? {
+                thinking: { type: config.thinking || 'disabled' },
+                ...((config.thinking || 'disabled') === 'enabled'
+                  ? { reasoning_effort: config.reasoningEffort || 'high' }
+                  : {}),
+              }
+            : {}),
+          ...(tools.length > 0
+            ? { tools: tools.map((t) => tool(t, protocol)) }
+            : {}),
+          ...(outputSchema
+            ? {
+                response_format:
+                  deepseek || config.jsonMode === 'json'
+                    ? { type: 'json_object' }
+                    : {
+                        type: 'json_schema',
+                        json_schema: {
+                          name: 'admission_extract',
+                          strict: true,
+                          schema: outputSchema,
+                        },
+                      },
+              }
+            : {}),
+          ...(new URL(config.baseUrl).hostname === 'api.openai.com'
+            ? { max_completion_tokens: maxOutputTokens }
+            : { max_tokens: maxOutputTokens }),
           stream: config.stream,
         };
   try {
@@ -223,7 +331,7 @@ export async function modelTurn({
       {
         method: 'POST',
         redirect: 'error',
-        signal: AbortSignal.any([signal, AbortSignal.timeout(75000)]),
+        signal: AbortSignal.any([signal, AbortSignal.timeout(75_000)]),
         headers: {
           'Content-Type': 'application/json',
           ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
@@ -234,7 +342,7 @@ export async function modelTurn({
     if (!response.ok) {
       let detail = '';
       try {
-        const raw = JSON.parse(await readBody(response, 32768));
+        const raw = JSON.parse(await readBody(response, 32_768));
         detail = raw.error?.message || raw.message || '';
       } catch {}
       throw new Error(
@@ -246,8 +354,8 @@ export async function modelTurn({
       response.headers.get('content-type')?.includes('text/event-stream')
     ) {
       if (protocol === 'responses') {
-        let completed,
-          text = '';
+        let completed;
+        let text = '';
         const items = new Map();
         await events(response, (value) => {
           if (value.type === 'response.output_text.delta') {
@@ -274,7 +382,7 @@ export async function modelTurn({
           );
         const output =
           completed.output ??
-          [...items.entries()].sort(([a], [b]) => a - b).map(([, v]) => v);
+          [...items.entries()].toSorted(([a], [b]) => a - b).map(([, v]) => v);
         if (!text) {
           text = responseText(output);
           if (text) onText(text);
@@ -292,8 +400,9 @@ export async function modelTurn({
           usage: completed.usage,
         };
       }
-      let text = '',
-        finish = '';
+      let finish = '';
+      let reasoningContent = '';
+      let text = '';
       const calls = new Map();
       let usage;
       await events(response, (value) => {
@@ -306,6 +415,8 @@ export async function modelTurn({
           text += choice.delta.content;
           onText(choice.delta.content);
         }
+        if (typeof choice.delta?.reasoning_content === 'string')
+          reasoningContent += choice.delta.reasoning_content;
         for (const part of choice.delta?.tool_calls ?? []) {
           if (
             !Number.isInteger(part.index) ||
@@ -326,9 +437,14 @@ export async function modelTurn({
         }
         if (choice.finish_reason) finish = choice.finish_reason;
       });
-      if (!finish || ['length', 'content_filter'].includes(finish))
+      if (!finish || ['content_filter', 'length'].includes(finish))
         throw new Error('模型响应未完成，请缩小问题后重试。');
-      return { text, calls: [...calls.values()], usage };
+      return {
+        text,
+        calls: [...calls.values()],
+        usage,
+        ...(deepseek ? { reasoningContent } : {}),
+      };
     }
     const value = JSON.parse(await readBody(response));
     if (protocol === 'responses') {
@@ -351,9 +467,9 @@ export async function modelTurn({
         usage: value.usage,
       };
     }
-    const choice = value.choices?.[0],
-      message = choice?.message;
-    if (!message || ['length', 'content_filter'].includes(choice.finish_reason))
+    const choice = value.choices?.[0];
+    const message = choice?.message;
+    if (!message || ['content_filter', 'length'].includes(choice.finish_reason))
       throw new Error('Chat Completions 返回格式错误或响应不完整。');
     const text =
       typeof message.content === 'string'
@@ -368,18 +484,32 @@ export async function modelTurn({
         arguments: c.function?.arguments,
       })),
       usage: value.usage,
+      ...(deepseek
+        ? {
+            reasoningContent:
+              typeof message.reasoning_content === 'string'
+                ? message.reasoning_content
+                : '',
+          }
+        : {}),
     };
   } catch (error) {
-    if (signal.aborted) throw new Error('本次对话已停止。');
-    throw new Error(cleanError(error, apiKey));
+    if (signal.aborted) throw new Error('本次对话已停止。', { cause: error });
+    throw new Error(cleanError(error, apiKey), { cause: error });
   }
 }
 function responseText(output) {
   return output
     .filter((i) => i.type === 'message')
     .flatMap((i) => i.content ?? [])
-    .map((c) =>
-      c.type === 'output_text' ? c.text : c.type === 'refusal' ? c.refusal : '',
-    )
+    .map((c) => {
+      if (c.type === 'output_text') {
+        return c.text;
+      }
+      if (c.type === 'refusal') {
+        return c.refusal;
+      }
+      return '';
+    })
     .join('\n');
 }

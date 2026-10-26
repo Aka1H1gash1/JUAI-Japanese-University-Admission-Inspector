@@ -1,13 +1,13 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
+
 import { useExplorerStore } from '../explorer';
 import BrandMark from './brand-mark.vue';
 import ExplorerIcon from './explorer-icon.vue';
-import UniversityLogo from './university-logo.vue';
 
 withDefaults(defineProps<{ showBrand?: boolean }>(), { showBrand: true });
-const emit = defineEmits<{ navigate: []; workspace: [] }>();
+const emit = defineEmits<{ navigate: [] }>();
 const store = useExplorerStore();
 const route = useRoute();
 const currentUniversity = computed(() =>
@@ -38,40 +38,36 @@ const currentLab = computed(() =>
         )),
   ),
 );
-const shortcuts = computed(() => {
-  const recent = store.universities.toReversed();
-  if (
-    currentUniversity.value &&
-    !recent.slice(0, 5).some((item) => item.id === currentUniversity.value?.id)
-  )
-    return [
-      currentUniversity.value,
-      ...recent.filter((item) => item.id !== currentUniversity.value?.id),
-    ].slice(0, 5);
-  return recent.slice(0, 5);
-});
 </script>
 
 <template>
   <div class="workspace-navigation">
     <RouterLink
       v-if="showBrand"
-      to="/japan-grad"
+      to="/japan-grad/overview"
       class="explorer-brand"
-      aria-label="JapanGrad 择校笔记，大学清单首页"
+      aria-label="JapanGrad 申请总览首页"
       @click="emit('navigate')"
-      ><span class="brand-mark"><BrandMark /></span
-      ><strong>JapanGrad<span>择校笔记</span></strong></RouterLink
     >
+      <span class="brand-mark"><BrandMark /></span><strong>JapanGrad<span>择校笔记</span></strong>
+    </RouterLink>
     <nav class="workspace-primary-nav" aria-label="工作区导航">
       <RouterLink
-        to="/japan-grad"
+        to="/japan-grad/overview"
         class="workspace-nav-link"
-        :class="{ 'is-active': route.path === '/japan-grad' }"
+        :class="{ 'is-active': route.path === '/japan-grad/overview' }"
         @click="emit('navigate')"
-        ><ExplorerIcon name="grid" /><span>大学清单</span
-        ><small>{{ store.universities.length }}</small></RouterLink
       >
+        <ExplorerIcon name="home" /><span>申请总览</span>
+      </RouterLink>
+      <RouterLink
+        to="/japan-grad/universities"
+        class="workspace-nav-link"
+        :class="{ 'is-active': route.path === '/japan-grad/universities' }"
+        @click="emit('navigate')"
+      >
+        <ExplorerIcon name="grid" /><span>大学清单</span><small>{{ store.universities.length }}</small>
+      </RouterLink>
       <RouterLink
         to="/japan-grad/journey"
         class="workspace-nav-link"
@@ -79,30 +75,39 @@ const shortcuts = computed(() => {
           'is-active': route.path === '/japan-grad/journey',
         }"
         @click="emit('navigate')"
-        ><ExplorerIcon name="book" /><span>修考之路</span
-        ><small>{{
-          store.labs.filter((item) => item.wantApply).length
-        }}</small></RouterLink
       >
+        <ExplorerIcon name="book" /><span>修考之路</span><small>{{ store.labs.filter((item) => item.wantApply).length }}</small>
+      </RouterLink>
     </nav>
-    <section
-      v-if="shortcuts.length"
-      class="workspace-shortcuts"
-      aria-label="大学快捷导航"
-    >
-      <h2>我的大学</h2>
+    <nav class="workspace-primary-nav" aria-label="管理">
+      <h2 class="workspace-management-label">管理</h2>
       <RouterLink
-        v-for="item in shortcuts"
-        :key="item.id"
-        :to="`/japan-grad/universities/${item.id}`"
-        class="workspace-university-link"
-        :class="{ 'is-active': currentUniversity?.id === item.id }"
+        to="/japan-grad/special-programs"
+        class="workspace-nav-link"
+        :class="{
+          'is-active': route.path.startsWith('/japan-grad/special-programs'),
+        }"
         @click="emit('navigate')"
-        ><UniversityLogo :logo-id="item.logoId" :name="item.name" /><span>{{
-          item.name
-        }}</span></RouterLink
       >
-    </section>
+        <ExplorerIcon name="folder" /><span>特殊入学项目</span>
+      </RouterLink>
+      <RouterLink
+        to="/japan-grad/ai"
+        class="workspace-nav-link"
+        :class="{ 'is-active': route.path === '/japan-grad/ai' }"
+        @click="emit('navigate')"
+      >
+        <ExplorerIcon name="chat" /><span>AI 管理</span>
+      </RouterLink>
+      <RouterLink
+        to="/japan-grad/settings"
+        class="workspace-nav-link"
+        :class="{ 'is-active': route.path === '/japan-grad/settings' }"
+        @click="emit('navigate')"
+      >
+        <ExplorerIcon name="system" /><span>设置</span>
+      </RouterLink>
+    </nav>
     <section
       v-if="currentSchool && currentUniversity"
       class="workspace-context"
@@ -113,48 +118,35 @@ const shortcuts = computed(() => {
         :to="`/japan-grad/universities/${currentUniversity.id}/schools/${currentSchool.id}`"
         class="workspace-context-link"
         @click="emit('navigate')"
-        ><ExplorerIcon name="book" /><span>{{
+      >
+        <ExplorerIcon name="book" /><span>{{
           currentSchool.name
-        }}</span></RouterLink
-      ><RouterLink
+        }}</span>
+</RouterLink><RouterLink
         v-if="currentMajor"
         :to="`/japan-grad/universities/${currentUniversity.id}/schools/${currentSchool.id}/majors/${currentMajor.id}`"
         class="workspace-context-link"
         @click="emit('navigate')"
-        ><ExplorerIcon name="folder" /><span>{{
-          currentMajor.name
-        }}</span></RouterLink
       >
+        <ExplorerIcon name="folder" /><span>{{ currentMajor.name }}</span>
+      </RouterLink>
       <RouterLink
         v-if="currentLab && currentMajor"
         :to="`/japan-grad/universities/${currentUniversity.id}/schools/${currentSchool.id}/majors/${currentMajor.id}/labs/${currentLab.id}`"
         class="workspace-context-link"
         @click="emit('navigate')"
-        ><ExplorerIcon name="book" /><span>{{
-          currentLab.name
-        }}</span></RouterLink
       >
+        <ExplorerIcon name="book" /><span>{{ currentLab.name }}</span>
+      </RouterLink>
     </section>
-    <div class="workspace-nav-bottom">
-      <dl class="workspace-counts">
-        <div>
-          <dt>研究科</dt>
-          <dd>{{ store.schools.length }}</dd>
-        </div>
-        <div>
-          <dt>专攻</dt>
-          <dd>{{ store.majors.length }}</dd>
-        </div>
-        <div>
-          <dt>想考研究室</dt>
-          <dd>{{ store.labs.filter((item) => item.wantApply).length }}</dd>
-        </div>
-      </dl>
-      <button class="workspace-location" @click="emit('workspace')">
-        <ExplorerIcon name="drive" /><span
-          >本地工作区<small>查看资料保存位置</small></span
-        ><ExplorerIcon name="chevron" />
-      </button>
-    </div>
   </div>
 </template>
+<style scoped>
+.workspace-management-label {
+  margin: 8px 12px 6px;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--jg-muted);
+  letter-spacing: 0.12em;
+}
+</style>
