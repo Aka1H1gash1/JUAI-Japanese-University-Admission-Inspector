@@ -20,12 +20,21 @@ if (
   throw new Error(
     'Specify seed/verify, an app executable and a dedicated juai-upgrade-* test workspace.',
   );
-const application = await electron.launch({
+let application;
+const watchdog = setTimeout(() => {
+  console.error(`Upgrade ${mode} verification exceeded 90 seconds.`);
+  application?.process().kill();
+  // oxlint-disable-next-line unicorn/no-process-exit -- This dedicated fixture process must never hang a release runner.
+  process.exit(1);
+}, 90_000);
+console.warn(`Upgrade ${mode}: launching the installed app.`);
+application = await electron.launch({
   executablePath: path.resolve(executable),
   env: { ...process.env, JAPANGRAD_WORKSPACE: path.resolve(workspace) },
   timeout: 30_000,
 });
 try {
+  console.warn(`Upgrade ${mode}: desktop process connected.`);
   let window;
   for (let attempt = 0; attempt < 150; attempt++) {
     window = application
@@ -39,6 +48,7 @@ try {
     'The upgraded desktop must finish backup and open its welcome page',
   );
   await window.locator('#welcome-title').waitFor();
+  console.warn(`Upgrade ${mode}: welcome page ready.`);
   if (mode === 'seed') {
     const status = await window.evaluate(async () => {
       const response = await fetch('/api/japangrad/workspace');
@@ -112,5 +122,12 @@ try {
   // oxlint-disable-next-line no-console -- Report the real installed-app upgrade verification result.
   console.log(`Upgrade ${mode}: university, note and original file verified.`);
 } finally {
-  await application.close();
+  try {
+    await Promise.race([
+      application.close(),
+      delay(5000).then(() => application.process().kill()),
+    ]);
+  } finally {
+    clearTimeout(watchdog);
+  }
 }

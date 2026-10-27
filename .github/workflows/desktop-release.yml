@@ -131,18 +131,24 @@ jobs:
             Start-Process msiexec.exe -ArgumentList @('/x', "`"$installer`"", '/qn', '/norestart') -Wait
           }
       - name: Verify upgrade from v0.1.0 preserves existing data
+        timeout-minutes: 10
         if: runner.os == 'Windows'
         working-directory: ${{ env.PACKAGING_ROOT }}
         shell: pwsh
         run: |
+          $ProgressPreference = 'SilentlyContinue'
           $legacy = Join-Path $env:RUNNER_TEMP 'JUAI-0.1.0-win-x64.msi'
-          Invoke-WebRequest 'https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector/releases/download/v0.1.0/JUAI-0.1.0-win-x64.msi' -OutFile $legacy
+          Write-Host 'Downloading the verified 0.1.0 installer'
+          curl.exe --fail --location --retry 1 --connect-timeout 15 --max-time 180 'https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector/releases/download/v0.1.0/JUAI-0.1.0-win-x64.msi' --output $legacy
+          if ($LASTEXITCODE -ne 0) { throw 'Legacy installer download failed' }
           if ((Get-FileHash $legacy -Algorithm SHA256).Hash.ToLower() -ne '676e93993f4e65fe97aef8dc177cffa1a532ff0f5c37cc2a3cf0d034ef2d65c0') { throw 'Legacy installer hash mismatch' }
           $current = (Get-ChildItem desktop/dist/*.msi | Select-Object -First 1).FullName
           $destination = Join-Path $env:RUNNER_TEMP 'JUAI-upgrade-installed'
           $workspace = Join-Path $env:RUNNER_TEMP 'juai-upgrade-preservation'
           function Install-Juai($file) {
-            $result = Start-Process msiexec.exe -ArgumentList @('/i', "`"$file`"", '/qn', '/norestart', "APPLICATIONFOLDER=`"$destination`"") -Wait -PassThru
+            Write-Host "Installing $file"
+            $result = Start-Process msiexec.exe -ArgumentList @('/i', "`"$file`"", '/qn', '/norestart', "APPLICATIONFOLDER=`"$destination`"") -PassThru
+            if (!$result.WaitForExit(180000)) { $result.Kill(); throw 'MSI installation exceeded 180 seconds' }
             if ($result.ExitCode -notin @(0, 3010)) { throw "Install failed: $($result.ExitCode)" }
           }
           try {
@@ -153,6 +159,7 @@ jobs:
             node desktop/verify-upgrade.mjs verify "$destination/JUAI.exe" "$workspace"
             if ($LASTEXITCODE -ne 0) { throw 'Upgrade did not preserve the workspace' }
           } finally {
+            Get-Process JUAI -ErrorAction SilentlyContinue | Stop-Process -Force
             Start-Process msiexec.exe -ArgumentList @('/x', "`"$current`"", '/qn', '/norestart') -Wait
             Start-Process msiexec.exe -ArgumentList @('/x', "`"$legacy`"", '/qn', '/norestart') -Wait
           }
@@ -173,6 +180,7 @@ jobs:
             ${{ env.PACKAGING_ROOT }}/desktop/dist/__msi-x64/project.wxs
             ${{ env.PACKAGING_ROOT }}/desktop/dist/builder-effective-config.yaml
             ${{ runner.temp }}/JUAI-msi-install.log
+            C:/Users/runneradmin/AppData/Roaming/*/logs/juai-desktop.log
           if-no-files-found: ignore
           retention-days: 7
 
