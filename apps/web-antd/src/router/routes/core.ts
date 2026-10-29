@@ -44,12 +44,12 @@ const coreRoutes: RouteRecordRaw[] = [
     meta: { title: 'JapanGrad', ignoreAccess: true, hideInMenu: true },
   },
   {
-    name: 'JapanGrad',
     path: '/japan-grad',
     component: () => import('#/views/japan-grad/layout.vue'),
     meta: { title: '大学选择与对比' },
     children: [
       {
+        name: 'JapanGrad',
         path: '',
         redirect: { name: 'ApplicationOverview' },
       },

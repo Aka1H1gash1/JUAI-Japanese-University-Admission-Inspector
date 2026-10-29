@@ -17,6 +17,8 @@ export default defineConfig({
     },
     exclude: [
       ...configDefaults.exclude,
+      // Standalone integration suites use Node's built-in test runner.
+      '**/*.test.mjs',
       '**/e2e/**',
       '**/dist/**',
       '**/.{idea,git,cache,output,temp}/**',

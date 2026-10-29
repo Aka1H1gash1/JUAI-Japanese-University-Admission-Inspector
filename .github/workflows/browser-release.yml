@@ -1,0 +1,135 @@
+name: JUAI Browser Release
+
+on:
+  push:
+    tags:
+      - 'v1.2.0'
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Create the GitHub Release after all packages pass'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: juai-browser-release
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: '24.22.1'
+
+jobs:
+  frontend:
+    name: Build shared frontend
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: pnpm
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Type-check browser UI
+        run: pnpm -F @vben/web-antd run typecheck
+      - name: Build workspace frontend
+        run: pnpm build:japangrad
+      - uses: actions/upload-artifact@v7
+        with:
+          name: juai-browser-web
+          path: apps/web-antd/dist
+          if-no-files-found: error
+          retention-days: 7
+
+  portable:
+    name: Package ${{ matrix.platform }}-${{ matrix.arch }}
+    needs: frontend
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: mac
+            arch: arm64
+          - os: macos-15-intel
+            platform: mac
+            arch: x64
+          - os: windows-latest
+            platform: windows
+            arch: x64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          architecture: ${{ matrix.arch }}
+      - uses: actions/download-artifact@v8
+        with:
+          name: juai-browser-web
+          path: apps/web-antd/dist
+      - name: Install locked local-service dependencies
+        run: npm ci --prefix local-server --ignore-scripts --no-audit --no-fund
+      - name: Prepare portable payload
+        run: node browser/prepare.mjs
+      - name: Verify packaged runtime and mobile gateway
+        run: node browser/verify-package.mjs browser/dist/payload
+      - name: Build macOS application ZIP
+        if: runner.os == 'macOS'
+        run: node browser/package-macos.mjs
+      - name: Build Windows portable ZIP
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: ./browser/package-windows.ps1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: juai-browser-${{ matrix.platform }}-${{ matrix.arch }}
+          path: browser/dist/JUAI-*.zip
+          if-no-files-found: error
+          retention-days: 14
+
+  checksums:
+    name: Collect portable packages
+    needs: portable
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: juai-browser-*-*
+          merge-multiple: true
+          path: release
+      - name: Generate SHA-256 checksums
+        working-directory: release
+        run: sha256sum JUAI-*.zip > SHA256SUMS.txt
+      - uses: actions/upload-artifact@v7
+        with:
+          name: juai-browser-release
+          path: |
+            release/JUAI-*.zip
+            release/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  release:
+    name: Publish GitHub Release
+    needs: checksums
+    if: github.ref == 'refs/tags/v1.2.0' || github.event.inputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          name: juai-browser-release
+          path: release
+      - name: Publish v1.2.0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create v1.2.0 release/* --target "$GITHUB_SHA" --title "JUAI v1.2.0 · Local Browser Edition" --notes-file browser/RELEASE_NOTES.md

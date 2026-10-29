@@ -6,13 +6,15 @@ JUAI 面向准备报考日本修士、博士的学生，把大学、研究科、
 
 当前版本为本地 MVP，支持手动维护、修考日程、文档阅读与笔记，以及募集要项 AI 提取后核对填表。可复用已接入助手、选择本机可用 Luna，或单独配置模型 API；扫描件支持本机 OCR / 图片模型。资料以你确认的内容为准。
 
-## 桌面安装版
+## v1.2 本地浏览器版
 
-在 [GitHub Releases](https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector/releases) 下载 macOS DMG 或 Windows MSI，安装包内置运行时，无需配置开发环境。macOS 分 Apple Silicon 和 Intel 两个版本，Windows 提供 x64 版本。首版为未签名预览版，支持范围、安装方法及 OCR 限制见[桌面版说明](desktop/RELEASE_NOTES.md)。
+在 [GitHub Releases](https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector/releases) 下载 Windows x64、macOS Apple Silicon 或 macOS Intel 便携 ZIP。解压后双击 JUAI，软件会启动内置的本地 Node.js 数据服务，并优先用你现有的 Google Chrome 打开工作台。不需要安装 Node.js、pnpm、Electron 或数据库。
 
-资料默认继续保存在用户文档目录下的 `JapanGradWorkspace`，与原有便携版兼容。桌面应用的「文件」菜单可以打开资料和日志文件夹。
+资料继续保存在用户文档目录下的 `JapanGradWorkspace`，浏览器只是操作界面。再次点击 JUAI 会重新打开页面，不会启动第二个数据库进程。
 
-从 0.1.1 起，桌面版支持「帮助 → 检查更新」、自动检查 GitHub Release、下载进度和完整性校验；新版本首次启动会在数据库迁移前备份现有资料。0.1.0 需要先手动覆盖安装一次新版。Windows 通过 MSI 向导更新，Mac 打开 DMG 后替换应用，原工作区继续保留。
+在「设置 → 手机访问」可以临时开启局域网入口。手机与电脑需连接同一 Wi-Fi；链接带本次启动的随机密钥，默认不开放，退出 JUAI 后立即失效。详见 [v1.2 发布说明](browser/RELEASE_NOTES.md)。
+
+Electron 0.1.x 安装版仍保留作为历史兼容方案，但 v1.2 起不再作为主发行物。
 
 ## 能做什么
 
@@ -96,6 +98,13 @@ pnpm --filter @vben/web-antd dev --host 127.0.0.1 --port 5666
 
 打开 `http://127.0.0.1:5666/japan-grad/overview`。
 
+要以 v1.2 的本地浏览器模式运行已构建页面：
+
+```sh
+pnpm build:japangrad
+pnpm start:browser
+```
+
 ### 构建与启动
 
 ```sh
@@ -109,6 +118,7 @@ pnpm start:japangrad
 
 ```text
 apps/web-antd/          前端应用与 JUAI 页面
+browser/                v1.2 浏览器启动器、便携包与发布验证
 local-server/          本地 API、SQLite 和文件存储
 packages/              共享组件与框架能力
 internal/              构建、TypeScript 和代码规范工具

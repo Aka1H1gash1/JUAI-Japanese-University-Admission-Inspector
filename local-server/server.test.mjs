@@ -1,22 +1,22 @@
 /* oxlint-disable vitest/no-import-node-test, unicorn/no-await-expression-member -- This standalone Node server test runs without frontend or Vitest dependencies. */
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
+import { once } from 'node:events';
 import {
   mkdtemp,
-  readFile,
   readdir,
+  readFile,
   stat,
   symlink,
   unlink,
 } from 'node:fs/promises';
+import { request as httpRequest } from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import { once } from 'node:events';
 import test from 'node:test';
 
 import { createLocalApp } from './server.mjs';
-
 import { sampleData, sampleDocx, samplePdf } from './test-fixtures.mjs';
-import { request as httpRequest } from 'node:http';
 
 test('local workspace: disk files, pairing, persistence, validation and safe deletion', async () => {
   const workspace = await mkdtemp(
@@ -186,8 +186,10 @@ test('local workspace: disk files, pairing, persistence, validation and safe del
     assert.deepEqual(
       (
         await (await request(`/documents/${question.id}`, 'DELETE')).json()
-      ).removed.toSorted(),
-      [question.id, answer.id].toSorted(),
+      ).removed.toSorted((left, right) => left.localeCompare(right)),
+      [question.id, answer.id].toSorted((left, right) =>
+        left.localeCompare(right),
+      ),
     );
     assert.ok(
       (await stat(path.join(workspace, '.trash', `${question.id}.pdf`))).size >
@@ -197,11 +199,16 @@ test('local workspace: disk files, pairing, persistence, validation and safe del
       (await stat(path.join(workspace, '.trash', `${answer.id}.pdf`))).size > 0,
     );
     assert.equal((await request(`/documents/${answer.id}/file`)).status, 404);
-    const parentless = structuredClone(sampleData);
+    const current = await (await request('/workspace')).json();
+    const parentless = structuredClone(current.data);
     parentless.professors = [];
     assert.equal(
-      (await request('/workspace', 'PUT', { data: parentless, revision: 1 }))
-        .status,
+      (
+        await request('/workspace', 'PUT', {
+          data: parentless,
+          revision: current.revision,
+        })
+      ).status,
       200,
     );
     assert.equal((await request(`/documents/${paper.id}`)).status, 404);

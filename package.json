@@ -1,6 +1,6 @@
 {
   "name": "juai-japanese-university-admission-inspector",
-  "version": "5.7.0",
+  "version": "1.2.0",
   "private": true,
   "keywords": [
     "juai",
@@ -72,7 +72,10 @@
     "start:japangrad": "node local-server/server.mjs --open",
     "test:japangrad": "node --test local-server/server.test.mjs",
     "test:japangrad-ui": "node scripts/japangrad-smoke.mjs && node scripts/japangrad-archive-smoke.mjs",
-    "package:japangrad": "node scripts/package-japangrad.mjs"
+    "package:japangrad": "node scripts/package-japangrad.mjs",
+    "start:browser": "node browser/launcher.mjs",
+    "test:browser": "node --test browser/launcher.test.mjs",
+    "prepare:browser": "node browser/prepare.mjs"
   },
   "dependencies": {
     "sortablejs": "catalog:"

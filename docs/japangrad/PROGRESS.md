@@ -2,6 +2,14 @@
 
 当前交付为本地浏览器工作台，基于 Vue Vben Admin 的 `apps/web-antd`、Node.js 本地服务和 SQLite。资料默认保存在 `~/Documents/JapanGradWorkspace`，软件包与用户资料独立。
 
+## 2026-10-30 · v1.2 本地浏览器版
+
+- 主发行方式从 Electron 切换为用户现有 Chrome / Edge；便携包仅携带 Node.js 24、本地服务和前端静态文件。
+- 新增跨平台单实例启动器、动态回环端口、后台退出、Windows 轻量 EXE 包装层和 macOS App 包装层。
+- 新增默认关闭的手机局域网网关：仅在用户主动开启时监听，使用随机临时密钥和 HttpOnly Cookie，不对手机开放运行管理接口。
+- 新增 Windows x64、macOS arm64 / x64 便携 ZIP 的 GitHub Actions 构建、包内运行验证、SHA-256 和 GitHub Release 发布流程。
+- 保留 Electron 0.1.x 代码作为历史兼容方案。
+
 ## 已实现
 
 ### 2026-10-26 更新

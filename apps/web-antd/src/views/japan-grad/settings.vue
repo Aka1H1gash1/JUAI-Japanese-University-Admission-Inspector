@@ -19,13 +19,32 @@ interface Profile {
   admissionYear: number;
   identity: string;
 }
+interface BrowserRuntime {
+  browserMode: boolean;
+  mobile: {
+    available: boolean;
+    enabled: boolean;
+    urls: string[];
+  };
+  origin?: string;
+  remote?: boolean;
+  version: string;
+  workspace: string;
+}
 const route = useRoute();
 const { message } = App.useApp();
 const busy = ref(false);
 const errorMessage = ref('');
 const loading = ref(false);
-const tab = ref(route.query.tab === 'browser' ? 'browser' : 'profile');
+const tab = ref(
+  route.query.tab === 'browser' || route.query.tab === 'mobile'
+    ? route.query.tab
+    : 'profile',
+);
 const browser = ref<CollectionStatus['browser']>();
+const runtime = ref<BrowserRuntime>();
+const runtimeBusy = ref(false);
+const runtimeMessage = ref('');
 const connectingBrowser = ref(false);
 const browserLabel = computed(() => {
   if (connectingBrowser.value)
@@ -58,6 +77,14 @@ async function load() {
   }
 }
 void load();
+async function loadRuntime() {
+  try {
+    runtime.value = await localApi<BrowserRuntime>('/runtime/browser');
+  } catch {
+    runtime.value = undefined;
+  }
+}
+void loadRuntime();
 async function save() {
   busy.value = true;
   errorMessage.value = '';
@@ -95,6 +122,47 @@ async function connect() {
   } finally {
     connectingBrowser.value = false;
     busy.value = false;
+  }
+}
+async function setMobileAccess(enabled: boolean) {
+  runtimeBusy.value = true;
+  runtimeMessage.value = '';
+  try {
+    const mobile = await localApi<BrowserRuntime['mobile']>(
+      '/runtime/mobile',
+      jsonOptions('POST', { enabled }),
+    );
+    if (runtime.value) runtime.value.mobile = mobile;
+    runtimeMessage.value = enabled
+      ? '手机访问已开启；关闭 JUAI 后链接会自动失效。'
+      : '手机访问已关闭。';
+  } catch (error) {
+    runtimeMessage.value =
+      error instanceof Error ? error.message : '手机访问设置失败。';
+  } finally {
+    runtimeBusy.value = false;
+  }
+}
+async function copyMobileUrl(url: string) {
+  try {
+    await navigator.clipboard.writeText(url);
+    message.success('手机访问链接已复制。');
+  } catch {
+    runtimeMessage.value = '复制失败，请长按或选中链接手动复制。';
+  }
+}
+async function shutdownRuntime() {
+  runtimeBusy.value = true;
+  try {
+    await localApi<{ closing: boolean }>(
+      '/runtime/shutdown',
+      jsonOptions('POST', {}),
+    );
+    runtimeMessage.value = 'JUAI 已退出，可以关闭当前页面。';
+  } catch (error) {
+    runtimeMessage.value =
+      error instanceof Error ? error.message : 'JUAI 退出失败。';
+    runtimeBusy.value = false;
   }
 }
 </script>
@@ -217,6 +285,77 @@ async function connect() {
           <p>查询只创建并关闭自己的标签页。登录和验证码由你在浏览器中完成。</p>
         </section>
       </Tabs.TabPane>
+      <Tabs.TabPane key="mobile" tab="手机访问">
+        <section class="settings-panel">
+          <h2>在手机上打开 JUAI</h2>
+          <p>
+            电脑和手机连接同一个 Wi-Fi
+            后，可以临时让手机访问这台电脑上的工作区。数据仍保存在电脑，不会上传到云端。
+          </p>
+          <template v-if="runtime">
+            <div class="settings-browser-state">
+              <i :class="{ ready: runtime.mobile.enabled }"></i>
+              {{
+                runtime.remote
+                  ? '当前正通过电脑上的手机链接访问'
+                  : runtime.mobile.enabled
+                    ? '手机访问已开启'
+                    : runtime.mobile.available
+                      ? '手机访问已关闭'
+                      : '未检测到可用的局域网'
+              }}
+            </div>
+            <div
+              v-if="runtime.mobile.enabled && !runtime.remote"
+              class="mobile-access-links"
+            >
+              <p>将下方链接发送到自己的手机并打开：</p>
+              <div v-for="url in runtime.mobile.urls" :key="url">
+                <Input :value="url" readonly />
+                <Button @click="copyMobileUrl(url)">复制链接</Button>
+              </div>
+              <p>
+                链接带有本次启动的临时密钥，不要发给其他人。退出 JUAI
+                后密钥自动失效。仅在信任的家庭或个人网络中使用。
+              </p>
+            </div>
+            <div v-if="!runtime.remote" class="runtime-actions">
+              <Button
+                v-if="!runtime.mobile.enabled"
+                type="primary"
+                :disabled="!runtime.mobile.available"
+                :loading="runtimeBusy"
+                @click="setMobileAccess(true)"
+              >
+                开启手机访问
+              </Button>
+              <Button
+                v-else
+                danger
+                :loading="runtimeBusy"
+                @click="setMobileAccess(false)"
+              >
+                关闭手机访问
+              </Button>
+              <Button :disabled="runtimeBusy" @click="shutdownRuntime">
+                完全退出 JUAI
+              </Button>
+            </div>
+            <p v-else>
+              运行管理只能在电脑上操作。需要关闭手机访问或退出 JUAI
+              时，请回到电脑设置页。
+            </p>
+            <p>JUAI {{ runtime.version }} · {{ runtime.workspace }}</p>
+          </template>
+          <template v-else>
+            <div class="settings-browser-state">
+              <i></i>开发服务器 / 旧桌面版不提供手机访问开关
+            </div>
+            <p>该功能将随 JUAI v1.2 本地浏览器版提供。</p>
+          </template>
+          <p v-if="runtimeMessage" role="status">{{ runtimeMessage }}</p>
+        </section>
+      </Tabs.TabPane>
     </Tabs>
   </section>
 </template>
@@ -333,6 +472,28 @@ async function connect() {
   color: var(--jg-muted);
 }
 
+.mobile-access-links {
+  padding: 16px;
+  margin: 18px 0;
+  background: var(--jg-subtle);
+  border: 1px solid var(--jg-line);
+  border-radius: 8px;
+}
+
+.mobile-access-links > div {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  margin: 10px 0;
+}
+
+.runtime-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0;
+}
+
 .settings-panel summary {
   margin-bottom: 12px;
   cursor: pointer;
@@ -345,6 +506,10 @@ async function connect() {
 
   .settings-panel {
     padding: 18px;
+  }
+
+  .mobile-access-links > div {
+    grid-template-columns: 1fr;
   }
 }
 </style>
