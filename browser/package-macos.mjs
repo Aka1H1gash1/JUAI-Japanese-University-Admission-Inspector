@@ -7,7 +7,6 @@ import { fileURLToPath } from 'node:url';
 if (process.platform !== 'darwin')
   throw new Error('macOS 便携包只能在 macOS 上构建。');
 const directory = path.dirname(fileURLToPath(import.meta.url));
-const root = path.dirname(directory);
 const manifest = JSON.parse(
   await readFile(path.join(directory, 'package.json'), 'utf8'),
 );
@@ -18,10 +17,6 @@ const resources = path.join(contents, 'Resources');
 await rm(application, { force: true, recursive: true });
 await mkdir(path.join(contents, 'MacOS'), { recursive: true });
 await cp(path.join(directory, 'dist/payload'), resources, { recursive: true });
-await cp(
-  path.join(root, 'desktop/build/icon.icns'),
-  path.join(resources, 'JUAI.icns'),
-);
 const executable = path.join(contents, 'MacOS/JUAI');
 await writeFile(
   executable,

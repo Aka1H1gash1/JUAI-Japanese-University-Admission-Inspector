@@ -9,12 +9,15 @@ import {
   rm,
   writeFile,
 } from 'node:fs/promises';
+import { createRequire } from 'node:module';
 import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
 const root = path.dirname(directory);
+const require = createRequire(path.join(root, 'local-server/package.json'));
+const { createCanvas } = require('@napi-rs/canvas');
 const manifest = JSON.parse(
   await readFile(path.join(directory, 'package.json'), 'utf8'),
 );
@@ -122,7 +125,77 @@ await cp(
   path.join(target, '使用说明.md'),
 );
 
+function icon(size) {
+  const canvas = createCanvas(size, size);
+  const context = canvas.getContext('2d');
+  context.scale(size / 1024, size / 1024);
+  context.fillStyle = '#454ec0';
+  context.beginPath();
+  context.roundRect(24, 24, 976, 976, 220);
+  context.fill();
+  context.strokeStyle = '#f7f7ff';
+  context.fillStyle = '#f7f7ff';
+  context.lineWidth = 29;
+  context.lineJoin = 'round';
+  context.lineCap = 'round';
+  context.beginPath();
+  context.moveTo(512, 350);
+  context.bezierCurveTo(430, 296, 310, 296, 224, 325);
+  context.lineTo(224, 674);
+  context.bezierCurveTo(310, 645, 430, 645, 512, 700);
+  context.bezierCurveTo(594, 645, 714, 645, 800, 674);
+  context.lineTo(800, 325);
+  context.bezierCurveTo(714, 296, 594, 296, 512, 350);
+  context.lineTo(512, 700);
+  context.stroke();
+  context.fillStyle = '#f3a38b';
+  context.beginPath();
+  context.arc(725, 250, 69, 0, Math.PI * 2);
+  context.fill();
+  return canvas.toBuffer('image/png');
+}
+
+const icoImages = [16, 32, 48, 64, 128, 256].map((size) => ({
+  data: icon(size),
+  size,
+}));
+const icoHeader = Buffer.alloc(6 + 16 * icoImages.length);
+icoHeader.writeUInt16LE(1, 2);
+icoHeader.writeUInt16LE(icoImages.length, 4);
+let icoOffset = icoHeader.length;
+icoImages.forEach(({ data, size }, index) => {
+  const position = 6 + index * 16;
+  icoHeader[position] = size === 256 ? 0 : size;
+  icoHeader[position + 1] = size === 256 ? 0 : size;
+  icoHeader.writeUInt16LE(1, position + 4);
+  icoHeader.writeUInt16LE(32, position + 6);
+  icoHeader.writeUInt32LE(data.length, position + 8);
+  icoHeader.writeUInt32LE(icoOffset, position + 12);
+  icoOffset += data.length;
+});
+await writeFile(
+  path.join(target, 'JUAI.ico'),
+  Buffer.concat([icoHeader, ...icoImages.map(({ data }) => data)]),
+);
+
 if (runtime.platform === 'darwin') {
+  const iconset = path.join(target, 'JUAI.iconset');
+  await mkdir(iconset, { recursive: true });
+  for (const size of [16, 32, 128, 256, 512]) {
+    await writeFile(path.join(iconset, `icon_${size}x${size}.png`), icon(size));
+    await writeFile(
+      path.join(iconset, `icon_${size}x${size}@2x.png`),
+      icon(size * 2),
+    );
+  }
+  execFileSync('iconutil', [
+    '-c',
+    'icns',
+    iconset,
+    '-o',
+    path.join(target, 'JUAI.icns'),
+  ]);
+  await rm(iconset, { force: true, recursive: true });
   await mkdir(path.join(target, 'local-server/bin'), { recursive: true });
   execFileSync(
     'swiftc',

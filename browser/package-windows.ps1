@@ -4,7 +4,7 @@ $payload = Join-Path $browserDir 'dist/payload'
 $manifest = Get-Content (Join-Path $browserDir 'package.json') -Raw | ConvertFrom-Json
 $source = Get-Content (Join-Path $browserDir 'windows-launcher.cs') -Raw
 $output = Join-Path $payload 'JUAI.exe'
-$icon = (Resolve-Path (Join-Path $browserDir '../desktop/build/icon.ico')).Path
+$icon = (Resolve-Path (Join-Path $payload 'JUAI.ico')).Path
 Add-Type -TypeDefinition $source -OutputAssembly $output -OutputType WindowsApplication -ReferencedAssemblies @('System.dll', 'System.Windows.Forms.dll') -CompilerOptions "/win32icon:$icon"
 $folder = "JUAI-$($manifest.version)-windows-x64"
 $portable = Join-Path $browserDir "dist/$folder"
