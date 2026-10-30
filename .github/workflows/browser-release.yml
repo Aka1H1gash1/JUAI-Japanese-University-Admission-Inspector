@@ -36,6 +36,8 @@ jobs:
           cache: pnpm
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
+      - name: Install locked local-service type dependencies
+        run: npm ci --prefix local-server --ignore-scripts --no-audit --no-fund
       - name: Type-check browser UI
         run: pnpm -F @vben/web-antd run typecheck
       - name: Build workspace frontend
