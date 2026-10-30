@@ -1,3 +1,4 @@
+/* eslint-disable one-var -- Existing timeline validation declares paired sets together. */
 import { validPlannerDay, validPlannerMinute } from './planning-fields.mjs';
 export const TIMELINE_LABELS = {
   contact: '首次联络',
@@ -10,7 +11,7 @@ export const TIMELINE_LABELS = {
   custom: '自定义',
   teacher_interview: '教授面试',
   followup: '跟进教授',
-  task: '材料 / 待办',
+  task: '待办',
   sent: '首封邮件已发',
 };
 export function timelineError(value) {

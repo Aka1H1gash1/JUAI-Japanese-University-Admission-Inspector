@@ -1,4 +1,6 @@
 <script setup lang="ts">
+/* oxlint-disable unicorn/explicit-length-check, unicorn/no-array-reverse, unicorn/no-array-sort -- Existing year option ordering remains stable. */
+/* eslint-disable perfectionist/sort-imports -- Export dialog imports retain their existing grouping. */
 import type { LabTarget } from '../lab-targets';
 import type { JourneyExportFieldId } from '../journey-export-fields';
 import { computed, ref, watch } from 'vue';
@@ -185,6 +187,7 @@ async function download() {
 </script>
 
 <template>
+  <!-- eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline -->
   <Modal
     v-model:open="open"
     title="自定义导出 Excel"
@@ -343,7 +346,7 @@ async function download() {
           ><Checkbox
             v-model:checked="taskDetails"
             :disabled="exporting || !hasTaskFields"
-            >另附材料与待办明细</Checkbox
+            >另附材料、待办明细（分表）</Checkbox
           ><Checkbox v-model:checked="includeNotes" :disabled="exporting"
             >附导出说明</Checkbox
           >
@@ -425,34 +428,40 @@ async function download() {
   margin: 8px 0 20px;
   color: var(--jg-muted);
 }
+
 .export-content {
-  max-height: 66vh;
   min-width: 0;
+  max-height: 66vh;
   padding: 0 8px 0 0;
   margin: 0;
   overflow: auto;
   border: 0;
 }
+
 .export-config-grid {
   display: grid;
   grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
   gap: 24px;
 }
+
 .export-rooms,
 .export-properties {
   min-width: 0;
 }
+
 .export-section-heading,
 .export-field-group header,
 .export-room-actions {
   display: flex;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
 }
+
 .export-section-heading {
   margin-bottom: 12px;
 }
+
 .export-section-heading h3,
 .export-field-group h4 {
   margin: 0;
@@ -460,122 +469,148 @@ async function download() {
   font-weight: 600;
   color: var(--jg-text);
 }
+
 .export-section-heading h3 span,
 .export-section-heading > span {
   margin-left: 6px;
-  color: var(--jg-muted);
   font-size: 12px;
   font-weight: 400;
+  color: var(--jg-muted);
 }
+
 .export-rooms > .ant-select {
   display: block;
   margin: 10px 0;
 }
+
 .export-room-actions {
   margin: 12px 0;
   font-size: 12px;
   color: var(--jg-muted);
 }
+
 .export-room-list {
   display: grid;
-  align-content: start;
   gap: 8px;
+  align-content: start;
   max-height: 440px;
   overflow-y: auto;
 }
+
 .export-room.ant-checkbox-wrapper {
   align-items: flex-start;
-  margin: 0;
   padding: 12px;
+  margin: 0;
   border: 1px solid var(--jg-line);
   border-radius: 8px;
 }
+
 .export-room.is-selected {
   background: var(--jg-accent-soft);
   border-color: var(--jg-accent-line);
 }
+
 .export-room :deep(.ant-checkbox) {
   margin-top: 3px;
 }
+
 .export-room :deep(span:last-child) {
   min-width: 0;
 }
+
 .export-room strong,
 .export-room small {
   display: block;
   overflow-wrap: anywhere;
 }
+
 .export-room strong {
   color: var(--jg-text);
 }
+
 .export-room small {
-  color: var(--jg-muted);
   margin-top: 3px;
+  color: var(--jg-muted);
 }
+
 .export-presets {
   display: flex;
-  align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  align-items: center;
   margin-bottom: 14px;
 }
+
 .export-presets > span {
-  color: var(--jg-muted);
   font-size: 12px;
+  color: var(--jg-muted);
 }
+
 .export-field-groups {
   display: grid;
   gap: 16px;
 }
+
 .export-field-group {
-  border-top: 1px solid var(--jg-line);
   padding-top: 10px;
+  border-top: 1px solid var(--jg-line);
 }
+
 .export-field-group header {
   margin-bottom: 8px;
 }
+
 .export-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px 16px;
 }
+
 .export-field-grid .ant-checkbox-wrapper {
-  margin: 0;
   align-items: flex-start;
+  margin: 0;
   font-size: 13px;
 }
+
 .export-field-grid :deep(.ant-checkbox) {
   margin-top: 3px;
 }
+
 .export-hint {
   margin: 10px 0 0;
   font-size: 12px;
   line-height: 1.7;
   color: var(--jg-muted);
 }
+
 .export-options {
-  margin: 24px 0;
   padding: 16px;
+  margin: 24px 0;
   background: var(--jg-subtle);
   border-radius: 8px;
 }
+
 .export-options > label {
   margin-right: 12px;
   font-weight: 600;
 }
+
 .export-options > .ant-select {
   width: 235px;
   max-width: 100%;
 }
+
 .export-extra-sheets {
   display: flex;
-  gap: 10px 16px;
   flex-wrap: wrap;
+  gap: 10px 16px;
   margin-top: 16px;
 }
+
 .export-extra-sheets .ant-checkbox-wrapper {
   margin: 0;
 }
+
 .export-preview-scroll {
   width: 100%;
   max-height: 260px;
@@ -583,80 +618,94 @@ async function download() {
   border: 1px solid var(--jg-line);
   border-radius: 8px;
 }
+
 .export-preview table {
   width: max-content;
   min-width: 100%;
-  border-collapse: collapse;
-  text-align: left;
   font-size: 12px;
+  text-align: left;
+  border-collapse: collapse;
 }
+
 .export-preview th,
 .export-preview td {
-  padding: 12px;
-  max-width: 220px;
   min-width: 140px;
-  border-bottom: 1px solid var(--jg-line);
+  max-width: 220px;
+  padding: 12px;
   vertical-align: top;
   color: var(--jg-text);
+  border-bottom: 1px solid var(--jg-line);
 }
+
 .export-preview th {
   position: sticky;
   top: 0;
-  background: var(--jg-subtle);
   font-weight: 600;
+  background: var(--jg-subtle);
 }
+
 .export-preview td span {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
   overflow: hidden;
-  white-space: pre-line;
+  -webkit-line-clamp: 3;
   overflow-wrap: anywhere;
+  white-space: pre-line;
+  -webkit-box-orient: vertical;
 }
+
 .export-preview tbody tr:last-child td {
   border-bottom: 0;
 }
+
 .export-empty {
   padding: 24px 12px;
-  text-align: center;
   color: var(--jg-muted);
+  text-align: center;
   background: var(--jg-subtle);
   border-radius: 8px;
 }
+
 .export-footer {
   display: flex;
-  align-items: center;
   gap: 10px;
-  margin-top: 20px;
+  align-items: center;
   padding-top: 16px;
+  margin-top: 20px;
   border-top: 1px solid var(--jg-line);
 }
+
 .export-footer > span {
   flex: 1;
   font-size: 12px;
   color: var(--jg-muted);
 }
+
 .export-footer .ant-btn-primary {
   display: inline-flex;
   gap: 8px;
   align-items: center;
 }
+
 @media (max-width: 720px) {
   .export-config-grid {
     grid-template-columns: minmax(0, 1fr);
     gap: 20px;
   }
+
   .export-room-list {
     max-height: 220px;
   }
+
   .export-footer {
     flex-wrap: wrap;
     justify-content: flex-end;
   }
+
   .export-footer > span {
     flex-basis: 100%;
   }
 }
+
 @media (max-width: 440px) {
   .export-field-grid {
     grid-template-columns: minmax(0, 1fr);

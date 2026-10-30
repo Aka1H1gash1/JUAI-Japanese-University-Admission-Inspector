@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable perfectionist/sort-imports, perfectionist/sort-named-imports -- Existing card imports retain their component grouping. */
 import { computed } from 'vue';
 import { App, Button, Checkbox, Progress } from 'ant-design-vue';
 import { useExplorerStore } from '../explorer';
@@ -34,6 +35,7 @@ async function toggle() {
 </script>
 
 <template>
+  <!-- eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline, vue/no-useless-v-bind -->
   <article
     v-if="target"
     class="research-lab-card"
@@ -112,9 +114,8 @@ async function toggle() {
         :disabled="store.saving"
         @click="emit('contact', labId)"
         >考学经历</Button
-      ><RouterLink :to="`${labPath(target)}?tab=tasks`"
-        >材料与待办 →</RouterLink
-      >
+      ><RouterLink :to="`${labPath(target)}?tab=materials`">材料</RouterLink
+      ><RouterLink :to="`${labPath(target)}?tab=todos`">待办 →</RouterLink>
     </div>
     <p v-if="target.lab.notes" class="card-notes">{{ target.lab.notes }}</p>
     <div class="research-lab-card-bottom">

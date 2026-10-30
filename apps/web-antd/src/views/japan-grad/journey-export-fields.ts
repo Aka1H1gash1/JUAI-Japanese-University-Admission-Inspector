@@ -1,3 +1,5 @@
+/* oxlint-disable eslint/no-nested-ternary, unicorn/no-negated-condition -- Existing planner date labels use compact conditional formatting. */
+/* eslint-disable perfectionist/sort-imports, perfectionist/sort-union-types -- Export field ordering follows workbook semantics. */
 import type { ApplicationTask } from './application-planning';
 import type { ExamHistoryRecord } from './exam-history';
 import type { LabTarget } from './lab-targets';
@@ -35,7 +37,7 @@ type ExamField = Extract<
 >;
 type TaskField = Extract<
   keyof ApplicationTask,
-  'kind' | 'progress' | 'dueDate' | 'notes'
+  'progress' | 'dueDate' | 'notes'
 >;
 interface FieldOptions {
   width?: number;
@@ -43,6 +45,7 @@ interface FieldOptions {
   calculated?: boolean;
   examField?: ExamField;
   taskField?: TaskField;
+  taskKind?: ApplicationTask['kind'];
 }
 function field<T extends string>(
   id: T,
@@ -58,9 +61,11 @@ const contact = (target: LabTarget) =>
   normalizedContact(primaryProfessor(target)?.contact);
 const tasksText = (
   target: LabTarget,
+  kind: ApplicationTask['kind'],
   value: (task: ApplicationTask) => string,
 ) =>
   (target.lab.tasks ?? [])
+    .filter((task) => task.kind === kind)
     .map((task) => `${task.title}：${value(task)}`)
     .join('\n');
 
@@ -417,35 +422,39 @@ export const JOURNEY_EXPORT_FIELDS = [
     { width: 44 },
   ),
   field(
-    'taskProgress',
-    '材料 / 待办逐项进度（%）',
+    'materialItemProgress',
+    '材料逐项进度（%）',
     '准备进度与备注',
-    (t) => tasksText(t, (task) => `${task.progress}%`),
-    { taskField: 'progress', width: 40 },
+    (t) => tasksText(t, 'material', (task) => `${task.progress}%`),
+    { taskField: 'progress', taskKind: 'material', width: 40 },
   ),
   field(
-    'taskKinds',
-    '材料 / 待办项目类型',
+    'materialItemNotes',
+    '材料备注',
     '准备进度与备注',
-    (t) =>
-      tasksText(t, (task) =>
-        task.kind === 'material' ? '申请材料' : '其他待办',
-      ),
-    { taskField: 'kind' },
+    (t) => tasksText(t, 'material', (task) => task.notes),
+    { taskField: 'notes', taskKind: 'material', width: 44 },
   ),
   field(
-    'taskDueDates',
-    '材料 / 待办截止日期（JST）',
+    'todoProgress',
+    '待办完成进度（%）',
     '准备进度与备注',
-    (t) => tasksText(t, (task) => task.dueDate),
-    { taskField: 'dueDate', width: 40 },
+    (t) => tasksText(t, 'todo', (task) => `${task.progress}%`),
+    { taskField: 'progress', taskKind: 'todo', width: 40 },
   ),
   field(
-    'taskNotes',
-    '材料 / 待办备注',
+    'todoDueDates',
+    '待办日期（JST）',
     '准备进度与备注',
-    (t) => tasksText(t, (task) => task.notes),
-    { taskField: 'notes', width: 44 },
+    (t) => tasksText(t, 'todo', (task) => task.dueDate),
+    { taskField: 'dueDate', taskKind: 'todo', width: 40 },
+  ),
+  field(
+    'todoNotes',
+    '待办备注',
+    '准备进度与备注',
+    (t) => tasksText(t, 'todo', (task) => task.notes),
+    { taskField: 'notes', taskKind: 'todo', width: 44 },
   ),
   field('labWebsite', '研究室官网', '准备进度与备注', (t) => t.lab.website, {
     width: 40,

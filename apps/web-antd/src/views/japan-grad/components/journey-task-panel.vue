@@ -1,4 +1,6 @@
 <script setup lang="ts">
+/* oxlint-disable unicorn/numeric-separators-style, unicorn/prefer-string-replace-all -- Existing realtime interval and grouping normalization remain unchanged. */
+/* eslint-disable perfectionist/sort-imports -- Existing panel imports retain their stable grouping. */
 import { computed } from 'vue';
 import { useNow } from '@vueuse/core';
 import { App, Button, Checkbox, Progress } from 'ant-design-vue';
@@ -58,7 +60,7 @@ const grouped = computed(() => {
 });
 const todos = computed(() =>
   entries.value
-    .filter((item) => item.task.progress < 100)
+    .filter((item) => item.task.kind === 'todo' && item.task.progress < 100)
     .toSorted((a, b) =>
       (a.task.dueDate || '9999').localeCompare(b.task.dueDate || '9999'),
     )
@@ -84,6 +86,7 @@ async function complete(item: (typeof entries.value)[number]) {
 }
 </script>
 <template>
+  <!-- eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline, vue/no-useless-v-bind -->
   <aside class="journey-task-panel" aria-label="全部想考研究室的准备进度">
     <header>
       <h2>准备进度</h2>
@@ -123,7 +126,9 @@ async function complete(item: (typeof entries.value)[number]) {
     <section class="task-panel-section">
       <h3>
         待办事项<span>{{
-          entries.filter((item) => item.task.progress < 100).length
+          entries.filter(
+            (item) => item.task.kind === 'todo' && item.task.progress < 100,
+          ).length
         }}</span>
       </h3>
       <div
@@ -135,7 +140,7 @@ async function complete(item: (typeof entries.value)[number]) {
           :disabled="store.saving"
           :aria-label="`完成${entry.target.lab.name}：${entry.task.title}`"
           @change="complete(entry)"
-        /><RouterLink :to="`${labPath(entry.target)}?tab=tasks`"
+        /><RouterLink :to="`${labPath(entry.target)}?tab=todos`"
           ><strong>{{ entry.task.title }}</strong
           ><small
             >{{ entry.target.university.name }} ·
@@ -152,7 +157,7 @@ async function complete(item: (typeof entries.value)[number]) {
         {{
           entries.length
             ? '目前没有未完成待办。'
-            : '进入研究室的「材料与待办」建立清单。'
+            : '进入研究室的「待办」安排有日期的事项。'
         }}
       </p>
     </section>

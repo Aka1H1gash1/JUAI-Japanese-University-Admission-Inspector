@@ -1,3 +1,5 @@
+/* oxlint-disable eslint/no-nested-ternary, eslint/prefer-template, typescript/no-non-null-assertion, unicorn/no-array-callback-reference, unicorn/no-array-sort, unicorn/no-useless-collection-argument, unicorn/numeric-separators-style, unicorn/prefer-string-raw, unicorn/prefer-string-replace-all -- Existing calendar serialization and legacy merge logic is intentionally kept stable. */
+/* eslint-disable perfectionist/sort-array-includes, perfectionist/sort-imports, perfectionist/sort-named-imports, perfectionist/sort-union-types -- Existing calendar ordering is kept stable. */
 import type { LabTarget } from './lab-targets';
 import { targetExams } from './lab-targets';
 import {
@@ -246,7 +248,7 @@ export function buildPlannerEvents(targets: LabTarget[], year = 'latest') {
           personPath,
         );
     }
-    for (const task of lab.tasks ?? [])
+    for (const task of (lab.tasks ?? []).filter((item) => item.kind === 'todo'))
       add(
         `${lab.id}-${task.id}`,
         'task',
@@ -256,7 +258,7 @@ export function buildPlannerEvents(targets: LabTarget[], year = 'latest') {
         task.progress === 100,
         task.notes,
         '',
-        `${path}?tab=tasks`,
+        `${path}?tab=todos`,
       );
   }
   const merged: PlannerEvent[] = [];

@@ -29,6 +29,31 @@ const isText = (value, max = 4000) =>
 const identifier = (value) =>
   typeof value === 'string' && /^[\w-]{1,100}$/.test(value);
 const fieldIds = new Set(fields.map((field) => field.id));
+export function guidelineTodoCandidates(
+  values,
+  examYear = '',
+  examSession = '',
+) {
+  const entries = [];
+  const add = (title, key, source) => {
+    const dueDate = values[key]?.trim();
+    if (!validPlannerDay(dueDate)) return;
+    entries.push({
+      title,
+      dueDate,
+      notes: `智能导入自募集要项 · ${source}`,
+    });
+  };
+  add('开始出愿手续', 'applicationStart', '出愿开始日');
+  add('完成出愿提交', 'applicationEnd', '出愿截止日');
+  const context = examYear
+    ? `${examYear} 年${examSession?.trim() ? ` · ${examSession.trim()}` : ''}`
+    : '入学考试';
+  add(`${context} · 参加笔试`, 'writtenDate', '笔试日期');
+  add(`${context} · 参加面试`, 'interviewDate', '面试日期');
+  add(`${context} · 确认合格结果`, 'resultDate', '结果发布日');
+  return entries;
+}
 export function createAnalysisService({
   db,
   snapshot,
@@ -933,16 +958,28 @@ export function createAnalysisService({
           major.examHistory.push(record);
         }
       }
-      if (input.createTasks === true && input.fields.applicationMaterials) {
-        const lab = data.labs.find(
-          (l) => l.id === input.labId && l.majorId === major.id,
-        );
-        if (!lab) fail('请选择该专攻的研究室接收材料清单。');
+      const createMaterials =
+        input.createMaterials === true || input.createTasks === true;
+      const createTodos = input.createTodos === true;
+      const importLab =
+        createMaterials || createTodos
+          ? data.labs.find(
+              (lab) => lab.id === input.labId && lab.majorId === major.id,
+            )
+          : undefined;
+      if ((createMaterials || createTodos) && !importLab)
+        fail('请选择该专攻的研究室接收智能导入内容。');
+      if (createMaterials && input.fields.applicationMaterials) {
+        const lab = importLab;
         lab.tasks ??= [];
-        const names = new Set(lab.tasks.map((t) => normalizeQuote(t.title)));
+        const names = new Set(
+          lab.tasks
+            .filter((task) => task.kind === 'material')
+            .map((task) => normalizeQuote(task.title)),
+        );
         for (const line of input.fields.applicationMaterials
           .split(/\r?\n/)
-          .map((v) => v.trim())
+          .map((value) => value.trim())
           .filter(Boolean)) {
           if (line.length > 160)
             fail('材料条目超过 160 字，请拆分为逐项内容。');
@@ -954,9 +991,36 @@ export function createAnalysisService({
             kind: 'material',
             progress: 0,
             dueDate: '',
-            notes: '',
+            notes: '智能导入自募集要项 · 出愿材料',
           });
           names.add(normalizeQuote(line));
+        }
+      }
+      if (createTodos) {
+        const lab = importLab;
+        lab.tasks ??= [];
+        const existing = new Set(
+          lab.tasks
+            .filter((task) => task.kind === 'todo')
+            .map((task) => `${normalizeQuote(task.title)}:${task.dueDate}`),
+        );
+        for (const candidate of guidelineTodoCandidates(
+          input.fields,
+          input.examYear,
+          input.examSession,
+        )) {
+          const key = `${normalizeQuote(candidate.title)}:${candidate.dueDate}`;
+          if (existing.has(key)) continue;
+          if (lab.tasks.length >= 200) fail('研究室清单超过 200 项。');
+          lab.tasks.push({
+            id: randomUUID(),
+            title: candidate.title,
+            kind: 'todo',
+            progress: 0,
+            dueDate: candidate.dueDate,
+            notes: candidate.notes,
+          });
+          existing.add(key);
         }
       }
       validateExplorer(data);

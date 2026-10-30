@@ -1,4 +1,5 @@
 <script setup lang="ts">
+/* eslint-disable perfectionist/sort-array-includes, perfectionist/sort-imports -- Guideline dates and paired type/value imports follow the user workflow. */
 import type {
   AdmissionFieldId,
   AnalysisContext,
@@ -11,6 +12,7 @@ import { computed, ref, watch } from 'vue';
 
 import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
 
+import { validPlannerDay } from '../application-planning';
 import {
   ADMISSION_FIELDS,
   analysisObjectLabel,
@@ -35,7 +37,8 @@ const acknowledged = ref(false);
 const allowReplace = ref(false);
 const busy = ref(false);
 const confirmedScopes = ref<AdmissionFieldId[]>([]);
-const createTasks = ref(false);
+const createMaterials = ref(false);
+const createTodos = ref(false);
 const feedback = ref('');
 const selected = ref<AdmissionFieldId[]>([]);
 const values = ref<Partial<Record<AdmissionFieldId, string>>>({});
@@ -68,6 +71,18 @@ const examSession = ref('');
 const labId = ref('');
 const hasExam = computed(() =>
   selected.value.some((key) => EXAM_FIELDS.includes(key)),
+);
+const hasTodoDates = computed(() =>
+  selected.value.some(
+    (key) =>
+      [
+        'applicationStart',
+        'applicationEnd',
+        'writtenDate',
+        'interviewDate',
+        'resultDate',
+      ].includes(key) && validPlannerDay(values.value[key]?.trim() ?? ''),
+  ),
 );
 function currentValue(key: AdmissionFieldId) {
   return EXAM_FIELDS.includes(key)
@@ -102,7 +117,7 @@ const canApply = computed(
     ) &&
     acknowledged.value &&
     (!hasExam.value || /^\d{4}$/.test(examYear.value)) &&
-    (!createTasks.value || !!labId.value) &&
+    (!(createMaterials.value || createTodos.value) || !!labId.value) &&
     (!replacing.value || allowReplace.value),
 );
 watch(open, (value) => {
@@ -118,7 +133,8 @@ watch(open, (value) => {
       item?.value ?? '',
     ]),
   );
-  acknowledged.value = allowReplace.value = createTasks.value = false;
+  acknowledged.value = allowReplace.value = false;
+  createMaterials.value = createTodos.value = false;
   feedback.value = '';
   examRecordId.value = '';
   examYear.value = '';
@@ -186,7 +202,8 @@ async function apply() {
           selected.value.map((key) => [key, values.value[key]?.trim()]),
         ),
         allowReplace: allowReplace.value,
-        createTasks: createTasks.value,
+        createMaterials: createMaterials.value,
+        createTodos: createTodos.value,
         confirmedScopes: confirmedScopes.value,
       }),
     );
@@ -202,6 +219,7 @@ async function apply() {
 }
 </script>
 <template>
+  <!-- eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline -->
   <Modal
     v-model:open="open"
     title="核对募集要项提取草稿"
@@ -222,7 +240,8 @@ async function apply() {
       <div class="analysis-review-body">
         <aside class="analysis-original">
           <header>
-            <strong>{{ source?.title || '原始资料' }}</strong><RouterLink
+            <strong>{{ source?.title || '原始资料' }}</strong
+            ><RouterLink
               v-if="source"
               :to="{
                 path: documentReaderPath(source.id),
@@ -261,8 +280,8 @@ async function apply() {
                 "
                 @change="toggle(field.id)"
               >
-                {{ field.label }}
-</Checkbox><span>{{
+                {{ field.label }} </Checkbox
+              ><span>{{
                 PROPOSAL_STATUS_LABELS[proposal.fields[field.id]!.status]
               }}</span>
             </header>
@@ -335,7 +354,9 @@ async function apply() {
               </Button>
               <blockquote>{{ evidence.quote }}</blockquote>
             </div>
-            <small v-if="!proposal.fields[field.id]!.evidence.length">尚无原文依据，补录后将记录为人工核对修改。</small>
+            <small v-if="!proposal.fields[field.id]!.evidence.length"
+              >尚无原文依据，补录后将记录为人工核对修改。</small
+            >
           </article>
         </section>
       </div>
@@ -343,7 +364,8 @@ async function apply() {
         v-if="proposal.status === 'pending' && hasExam"
         class="analysis-exam-destination"
       >
-        <label>考试记录</label><Select
+        <label>考试记录</label
+        ><Select
           v-accessible-select
           v-model:value="examRecordId"
           :options="[
@@ -375,31 +397,40 @@ async function apply() {
         class="analysis-review-footer"
       >
         <Checkbox v-model:checked="acknowledged" :disabled="busy">
-          我已核对所选字段的来源、年度与选拔类别
-</Checkbox><Checkbox
+          我已核对所选字段的来源、年度与选拔类别 </Checkbox
+        ><Checkbox
           v-if="replacing"
           v-model:checked="allowReplace"
           :disabled="busy"
         >
-          确认替换所选字段的已有内容
-</Checkbox><Checkbox
+          确认替换所选字段的已有内容 </Checkbox
+        ><Checkbox
           v-if="selected.includes('applicationMaterials')"
-          v-model:checked="createTasks"
+          v-model:checked="createMaterials"
           :disabled="busy"
         >
-          按核对后的材料内容生成研究室清单
+          智能导入材料到研究室
+        </Checkbox>
+        <Checkbox
+          v-if="hasTodoDates"
+          v-model:checked="createTodos"
+          :disabled="busy"
+        >
+          智能导入带日期的待办到研究室
         </Checkbox>
         <Select
-          v-if="createTasks && selected.includes('applicationMaterials')"
+          v-if="createMaterials || createTodos"
           v-accessible-select
           v-model:value="labId"
           :options="context.labs.map((l) => ({ value: l.id, label: l.name }))"
-          placeholder="选择接收材料清单的研究室"
-          aria-label="材料清单接收研究室"
+          placeholder="选择接收智能导入内容的研究室"
+          aria-label="智能导入内容接收研究室"
         />
         <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
         <div>
-          <span>已选 {{ selected.length }} 项 · 未选字段保留当前内容</span><Button :disabled="busy" @click="open = false">关闭</Button><Button
+          <span>已选 {{ selected.length }} 项 · 未选字段保留当前内容</span
+          ><Button :disabled="busy" @click="open = false">关闭</Button
+          ><Button
             type="primary"
             :disabled="!canApply"
             :loading="busy"
@@ -410,7 +441,8 @@ async function apply() {
         </div>
       </footer>
       <footer v-else class="form-footer">
-        <span>本草稿已采纳，结果和出处保存在专攻资料中。</span><Button @click="open = false">关闭</Button>
+        <span>本草稿已采纳，结果和出处保存在专攻资料中。</span
+        ><Button @click="open = false">关闭</Button>
       </footer>
     </template>
   </Modal>

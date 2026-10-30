@@ -1061,6 +1061,8 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     return mutate(() => {
       const lab = labs.value.find((item) => item.id === labId);
       if (!lab) throw new Error('研究室已不存在。');
+      if (task.kind === 'todo' && !task.dueDate)
+        throw new Error('请为待办选择日期。');
       const tasks = [...(lab.tasks ?? [])];
       const index = tasks.findIndex((item) => item.id === task.id);
       const value = {

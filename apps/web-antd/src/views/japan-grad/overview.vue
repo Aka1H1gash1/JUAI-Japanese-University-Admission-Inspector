@@ -64,7 +64,7 @@ const tasks = computed(() =>
   targets.value
     .flatMap((target) =>
       (target.lab.tasks ?? [])
-        .filter((task) => task.progress < 100)
+        .filter((task) => task.kind === 'todo' && task.progress < 100)
         .map((task) => ({ target, task })),
     )
     .toSorted(
@@ -185,6 +185,7 @@ function addUniversity() {
 </script>
 
 <template>
+  <!-- eslint-disable vue/html-closing-bracket-newline -->
   <section class="explorer-page overview-page">
     <header class="overview-heading">
       <div>
@@ -230,15 +231,22 @@ function addUniversity() {
                 "
               >
                 <div class="overview-event-date">
-                  <strong>{{ actionDay(event, today).slice(8) }}</strong><span>{{
+                  <strong>{{ actionDay(event, today).slice(8) }}</strong
+                  ><span>{{
                     actionDay(event, today).slice(0, 7).replace('-', '/')
                   }}</span>
                 </div>
                 <div class="overview-event-copy">
-                  <strong>{{ event.title }}</strong><span>{{ event.universityName }} · {{ event.labName }}</span><time :datetime="event.start">{{ event.start
+                  <strong>{{ event.title }}</strong
+                  ><span>{{ event.universityName }} · {{ event.labName }}</span
+                  ><time :datetime="event.start"
+                    >{{ event.start
                     }}<template v-if="event.end !== event.start">
-                      至 {{ event.end }}</template><template v-if="event.at">
-                      · {{ event.at.slice(11) }} JST</template></time>
+                      至 {{ event.end }}</template
+                    ><template v-if="event.at">
+                      · {{ event.at.slice(11) }} JST</template
+                    ></time
+                  >
                 </div>
                 <span
                   class="overview-countdown"
@@ -247,7 +255,8 @@ function addUniversity() {
                       dayNumber(actionDay(event, today)) - dayNumber(today) <=
                       3,
                   }"
-                  >{{ eventCountdown(event, today) }}</span>
+                  >{{ eventCountdown(event, today) }}</span
+                >
                 <ExplorerIcon name="chevron" />
               </RouterLink>
               <button
@@ -315,16 +324,20 @@ function addUniversity() {
                     }}</span>
                   </RouterLink>
                   <RouterLink
-                    :to="`${labPath(target)}?tab=tasks`"
+                    :to="`${labPath(target)}?tab=materials`"
                     class="overview-lab-material"
                   >
-                    <span>材料</span><strong>{{
+                    <span>材料</span
+                    ><strong>{{
                       progressByLab.get(target.lab.id)?.count
                         ? `${progressByLab.get(target.lab.id)!.percent}%`
                         : '未建清单'
-                    }}</strong><span v-if="progressByLab.get(target.lab.id)?.count">{{ progressByLab.get(target.lab.id)!.done }}/{{
+                    }}</strong
+                    ><span v-if="progressByLab.get(target.lab.id)?.count"
+                      >{{ progressByLab.get(target.lab.id)!.done }}/{{
                         progressByLab.get(target.lab.id)!.count
-                      }}</span>
+                      }}</span
+                    >
                   </RouterLink>
                 </div>
                 <RouterLink
@@ -332,7 +345,9 @@ function addUniversity() {
                   :to="eventPath(nextByLab.get(target.lab.id)!)"
                   class="overview-lab-next"
                 >
-                  <span>下一步</span><strong>{{ nextByLab.get(target.lab.id)!.title }}</strong><small>{{
+                  <span>下一步</span
+                  ><strong>{{ nextByLab.get(target.lab.id)!.title }}</strong
+                  ><small>{{
                     eventCountdown(nextByLab.get(target.lab.id)!, today)
                   }}</small>
                 </RouterLink>
@@ -341,7 +356,8 @@ function addUniversity() {
                   to="/japan-grad/journey?view=timeline"
                   class="overview-lab-next"
                 >
-                  <span>下一步</span><strong>安排时间节点</strong><ExplorerIcon name="plus" />
+                  <span>下一步</span><strong>安排时间节点</strong
+                  ><ExplorerIcon name="plus" />
                 </RouterLink>
               </article>
             </div>
@@ -400,14 +416,18 @@ function addUniversity() {
                   :aria-label="`完成${target.lab.name}的${task.title}`"
                   @change="completeTask(target, task)"
                 />
-                <RouterLink :to="`${labPath(target)}?tab=tasks`">
-                  <strong>{{ task.title }}</strong><span>{{ target.university.name }} · {{ target.lab.name }}</span>
+                <RouterLink :to="`${labPath(target)}?tab=todos`">
+                  <strong>{{ task.title }}</strong
+                  ><span
+                    >{{ target.university.name }} · {{ target.lab.name }}</span
+                  >
                   <div>
                     <small
                       :class="{
                         'overview-danger': task.dueDate && task.dueDate < today,
                       }"
-                      >{{ dueLabel(task.dueDate) }}</small><small>{{ task.progress }}%</small>
+                      >{{ dueLabel(task.dueDate) }}</small
+                    ><small>{{ task.progress }}%</small>
                   </div>
                 </RouterLink>
               </div>
@@ -433,7 +453,7 @@ function addUniversity() {
               <span>{{
                 materials.count
                   ? '可以继续检查近期节点和申请资料。'
-                  : '在研究室的「材料与待办」添加准备事项。'
+                  : '在研究室的「待办」中安排有日期的事项。'
               }}</span>
             </div>
           </section>
@@ -458,7 +478,11 @@ function addUniversity() {
                 class="overview-gap"
                 @click="fillGap(gap)"
               >
-                <span><strong>{{ gap.name }}</strong><small>{{ gap.context }}</small><span>{{ gap.fields.join('、') }}</span></span><ExplorerIcon name="chevron" />
+                <span
+                  ><strong>{{ gap.name }}</strong
+                  ><small>{{ gap.context }}</small
+                  ><span>{{ gap.fields.join('、') }}</span></span
+                ><ExplorerIcon name="chevron" />
               </button>
               <button
                 v-if="gaps.length > gapLimit"

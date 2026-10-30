@@ -113,7 +113,7 @@ export function informationGaps(targets: LabTarget[]) {
             return 'teachers';
           }
           if (fields.includes('材料清单')) {
-            return 'tasks';
+            return 'materials';
           }
           return 'admissions';
         })()}`,

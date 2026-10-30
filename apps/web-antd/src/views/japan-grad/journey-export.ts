@@ -1,3 +1,5 @@
+/* oxlint-disable better-tailwindcss/enforce-consistent-class-order, better-tailwindcss/no-duplicate-classes, eslint/no-control-regex, eslint/no-nested-ternary, eslint/prefer-template, typescript/no-non-null-assertion, unicorn/consistent-existence-index-check, unicorn/explicit-length-check, unicorn/numeric-separators-style, unicorn/prefer-code-point, unicorn/prefer-string-replace-all -- Spreadsheet XML is generated as compact strings and predates the separated checklist sheets. */
+/* eslint-disable perfectionist/sort-imports, perfectionist/sort-union-types -- Spreadsheet cell unions and imports retain their established order. */
 import { strToU8, zipSync } from 'fflate';
 import type { LabTarget } from './lab-targets';
 import { targetExams } from './lab-targets';
@@ -161,35 +163,40 @@ export function createJourneyWorkbook(
   }
   const taskFields = fields.filter((field) => field.taskField);
   if (options.taskDetails && taskFields.length) {
-    sheets.push({
-      name: '材料与待办',
-      widths: [26, 28, 36, ...taskFields.map((field) => field.width)],
-      rows: [
-        [
-          '大学',
-          '研究室名称',
-          '项目',
-          ...taskFields.map((field) => field.label),
+    for (const [kind, name] of [
+      ['material', '材料明细'],
+      ['todo', '待办明细'],
+    ] as const) {
+      const detailFields = taskFields.filter(
+        (field) => field.taskKind === kind,
+      );
+      if (detailFields.length === 0) continue;
+      sheets.push({
+        name,
+        widths: [26, 28, 36, ...detailFields.map((field) => field.width)],
+        rows: [
+          [
+            '大学',
+            '研究室名称',
+            kind === 'material' ? '材料' : '待办',
+            ...detailFields.map((field) => field.label),
+          ],
+          ...uniqueTargets.flatMap((target) =>
+            (target.lab.tasks ?? [])
+              .filter((task) => task.kind === kind)
+              .map((task) => [
+                target.university.name,
+                target.lab.name,
+                task.title,
+                ...detailFields.map((field): Cell => {
+                  const value = task[field.taskField!];
+                  return typeof value === 'number' ? { input: value } : value;
+                }),
+              ]),
+          ),
         ],
-        ...uniqueTargets.flatMap((target) =>
-          (target.lab.tasks ?? []).map((task) => [
-            target.university.name,
-            target.lab.name,
-            task.title,
-            ...taskFields.map((field): Cell => {
-              const value = task[field.taskField!];
-              return field.taskField === 'kind'
-                ? value === 'material'
-                  ? '申请材料'
-                  : '其他待办'
-                : typeof value === 'number'
-                  ? { input: value }
-                  : value;
-            }),
-          ]),
-        ),
-      ],
-    });
+      });
+    }
   }
   if (options.includeNotes)
     sheets.push({

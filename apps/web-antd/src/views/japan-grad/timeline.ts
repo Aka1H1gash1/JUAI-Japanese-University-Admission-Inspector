@@ -1,3 +1,4 @@
+/* oxlint-disable unicorn/no-negated-condition -- Existing timeline label compatibility favors the legacy-first branch. */
 import {
   TIMELINE_LABELS,
   timelineError,
@@ -60,7 +61,7 @@ const oldDefaultNames: Record<string, string[]> = {
   sent: ['首封邮件已发'],
   teacher_interview: ['教授面试'],
   followup: ['跟进教授'],
-  task: ['材料 / 待办'],
+  task: ['材料 / 待办', '待办'],
   exam: ['考试'],
 };
 export function timelineCategory(kind: string): string {

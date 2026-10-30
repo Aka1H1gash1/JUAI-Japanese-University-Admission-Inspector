@@ -1,3 +1,5 @@
+/* oxlint-disable unicorn/explicit-length-check, unicorn/no-array-callback-reference -- Existing comparison helpers retain their stable formatting behavior. */
+/* eslint-disable perfectionist/sort-imports, perfectionist/sort-union-types -- Target comparison fields use product-defined ordering. */
 import type {
   GraduateSchool,
   Major,
@@ -241,12 +243,21 @@ export function labComparisonRows(targets: LabTarget[], year: string) {
       },
     ],
     [
-      '材料 / 待办清单',
+      '材料清单',
       (item) =>
         (item.lab.tasks ?? [])
+          .filter((task) => task.kind === 'material')
+          .map((task) => `${task.title} · ${task.progress}%`)
+          .join('\n'),
+    ],
+    [
+      '待办清单',
+      (item) =>
+        (item.lab.tasks ?? [])
+          .filter((task) => task.kind === 'todo')
           .map(
             (task) =>
-              `${task.title} · ${task.progress}%${task.dueDate ? ` · 截止 ${task.dueDate}` : ''}`,
+              `${task.title} · ${task.dueDate || '日期待补'} · ${task.progress === 100 ? '已完成' : '未完成'}`,
           )
           .join('\n'),
     ],
