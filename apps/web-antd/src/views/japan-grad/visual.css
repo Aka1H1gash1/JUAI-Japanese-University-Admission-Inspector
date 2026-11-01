@@ -36,98 +36,6 @@
   margin-left: auto;
 }
 
-:root {
-  --jg-heading-bg: #e5eafb;
-  --jg-heading-line: #d0d9f4;
-  --jg-sidebar-bg: #e9edf7;
-  --jg-card-header: #f2f5fc;
-}
-
-:root[data-japangrad-theme='dark'] {
-  --jg-heading-bg: #273351;
-  --jg-heading-line: #40547e;
-  --jg-sidebar-bg: #1b2234;
-  --jg-card-header: #242e44;
-}
-
-.workspace-sidebar {
-  padding-top: 30px;
-  background: var(--jg-sidebar-bg);
-}
-
-.explorer-brand {
-  gap: 12px;
-}
-
-.brand-mark {
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-}
-
-.explorer-brand strong {
-  letter-spacing: -0.6px;
-}
-
-.workspace-primary-nav {
-  display: grid;
-  gap: 6px;
-  margin-top: 36px;
-}
-
-.workspace-nav-link {
-  min-height: 46px;
-  padding-inline: 14px;
-}
-
-.workspace-nav-link.is-active {
-  color: var(--jg-accent-text);
-  background: var(--jg-surface);
-  box-shadow:
-    inset 3px 0 var(--jg-accent),
-    0 3px 10px #283b7609;
-}
-
-.workspace-nav-link.is-active small {
-  padding: 1px 7px;
-  color: var(--jg-accent-text);
-  background: var(--jg-accent-soft);
-  border-radius: var(--jg-tag-radius);
-}
-
-.workspace-navigation h2 {
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.workspace-location {
-  background: var(--jg-surface);
-  border: 1px solid var(--jg-line);
-}
-
-.workspace-counts dd {
-  font-size: 21px;
-  color: var(--jg-accent-text);
-}
-
-.explorer-topbar {
-  background: var(--jg-bg);
-}
-
-.workspace-context-label {
-  font-weight: 600;
-  color: var(--jg-text);
-}
-
-.local-state {
-  padding: 5px 9px;
-  background: var(--jg-surface);
-  border-radius: var(--jg-tag-radius);
-}
-
-.explorer-main {
-  padding-top: 30px;
-}
 
 .page-heading h1 {
   font-weight: 700;
@@ -217,12 +125,6 @@
   line-height: 1.35;
 }
 
-.list-toolbar {
-  padding: 12px;
-  border-radius: var(--jg-radius);
-  box-shadow: 0 2px 6px #283b7605;
-}
-
 .explorer-search {
   max-width: 640px;
 }
@@ -247,7 +149,7 @@
 .school-card,
 .research-lab-card {
   border-radius: var(--jg-radius);
-  box-shadow: 0 2px 6px #283b7606;
+  box-shadow: var(--jg-shadow);
 }
 
 .university-card {
@@ -338,7 +240,7 @@
 }
 
 .university-card:hover .university-card-arrow {
-  color: #fdfdff;
+  color: var(--jg-on-accent);
   background: var(--jg-accent);
 }
 
@@ -441,11 +343,8 @@
   color: var(--jg-accent-text);
 }
 
-.journey-workspace-tabs > .ant-tabs-nav {
-  padding: 0 12px;
-  background: var(--jg-surface);
-  border: 1px solid var(--jg-line);
-  border-radius: var(--jg-control-radius);
+.journey-workspace-tabs > .ant-tabs-nav::before {
+  border-color: var(--jg-line);
 }
 
 .contact-board-column {
@@ -477,7 +376,7 @@
 .contact-board-card {
   padding: 18px;
   border-radius: 12px;
-  box-shadow: 0 2px 6px #283b7608;
+  box-shadow: var(--jg-shadow);
 }
 
 .contact-board-card h3 {
@@ -490,7 +389,7 @@
 }
 
 .archive-dropzone {
-  background: var(--jg-card-header);
+  background: transparent;
   border-radius: var(--jg-radius);
 }
 
@@ -499,7 +398,7 @@
 }
 
 .collection-empty {
-  background: var(--jg-card-header);
+  background: transparent;
   border-radius: var(--jg-radius);
 }
 
@@ -528,7 +427,7 @@ html[data-japangrad-theme] .ant-btn {
 }
 
 html[data-japangrad-theme] .ant-btn-primary:not(:disabled) {
-  box-shadow: 0 3px 8px #283b7620;
+  box-shadow: var(--jg-shadow);
 }
 
 html[data-japangrad-theme] .ant-table-thead > tr > th {
@@ -643,75 +542,9 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
     gap: 6px;
     padding: 12px;
   }
-
-  .local-state {
-    padding: 0;
-    background: none;
-  }
-}
-
-/* The assistant shares the workspace palette and overlay layers. */
-.assistant-launch-button.ant-btn {
-  height: 32px;
-  font-size: 12px;
-  color: var(--jg-accent-text);
-  background: var(--jg-accent-soft);
-  border-color: var(--jg-accent-line);
-}
-
-.assistant-drawer .ant-drawer-body {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 20px;
-}
-
-.assistant-drawer .assistant-shell {
-  flex: 1;
-}
-
-@media (max-width: 767px) {
-  .assistant-launch-button.ant-btn {
-    width: 32px;
-    padding: 7px;
-  }
-
-  .assistant-launch-button > span {
-    display: none;
-  }
-
-  .assistant-drawer .ant-drawer-body {
-    padding: 14px;
-  }
-
-  .topbar-inner {
-    gap: 8px;
-  }
-}
-
-@media (max-width: 359px) {
-  .topbar-inner .mobile-brand {
-    display: none;
-  }
-}
+}/* The assistant shares the workspace palette and overlay layers. */
 
 /* A docked assistant shares the screen with the document; it never covers it. */
-.workspace-body {
-  display: flex;
-  flex: 1;
-  align-items: flex-start;
-  min-width: 0;
-}
-
-.workspace-document {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  min-width: 0;
-  min-height: calc(100dvh - 64px);
-  container-name: workspace-document;
-  container-type: inline-size;
-}
 
 @container workspace-document (max-width:1050px) {
   .journey-planning-layout {
@@ -754,10 +587,6 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
     font-size: 28px;
   }
 
-  .explorer-main {
-    padding: 26px 24px 36px;
-  }
-
   .list-toolbar .explorer-search {
     flex-basis: 100%;
     max-width: none;
@@ -773,9 +602,6 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
 }
 
 @container workspace-document (max-width:520px) {
-  .explorer-main {
-    padding: 22px 18px 32px;
-  }
 
   .workspace-page-heading {
     padding: 20px;
@@ -791,15 +617,5 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
 
   .university-facts {
     grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 900px) {
-  .workspace-body.has-assistant .workspace-document {
-    display: none;
-  }
-
-  .workspace-body.has-assistant {
-    min-height: calc(100dvh - 64px);
   }
 }

@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router';
 
 import { App, Button, Input, InputNumber, Tabs } from 'ant-design-vue';
 
+import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
 interface Profile {
   displayName: string;
@@ -32,12 +33,14 @@ interface BrowserRuntime {
   workspace: string;
 }
 const route = useRoute();
+const workspace = useExplorerStore();
 const { message } = App.useApp();
 const busy = ref(false);
 const errorMessage = ref('');
 const loading = ref(false);
 const tab = ref(
-  route.query.tab === 'browser' || route.query.tab === 'mobile'
+  typeof route.query.tab === 'string' &&
+    ['browser', 'mobile', 'runtime'].includes(route.query.tab)
     ? route.query.tab
     : 'profile',
 );
@@ -45,6 +48,12 @@ const browser = ref<CollectionStatus['browser']>();
 const runtime = ref<BrowserRuntime>();
 const runtimeBusy = ref(false);
 const runtimeMessage = ref('');
+const backupBusy = ref(false);
+const backupMessage = ref('');
+const backupRoot = ref('');
+const lastBackup = ref('');
+const USER_GUIDE_URL =
+  'https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector/blob/main/local-server/USER_GUIDE.md';
 const connectingBrowser = ref(false);
 const browserLabel = computed(() => {
   if (connectingBrowser.value)
@@ -151,6 +160,40 @@ async function copyMobileUrl(url: string) {
     runtimeMessage.value = '复制失败，请长按或选中链接手动复制。';
   }
 }
+async function loadBackupRoot() {
+  try {
+    const info = await localApi<{ root: string }>('/workspace/backup');
+    backupRoot.value = info.root;
+  } catch {
+    backupRoot.value = '';
+  }
+}
+void loadBackupRoot();
+async function createBackup() {
+  backupBusy.value = true;
+  backupMessage.value = '';
+  try {
+    const result = await localApi<{ path: string }>(
+      '/workspace/backup',
+      jsonOptions('POST', {}),
+    );
+    lastBackup.value = result.path;
+    backupMessage.value = '备份已完成。';
+  } catch (error) {
+    backupMessage.value =
+      error instanceof Error ? error.message : '备份失败，请检查磁盘空间。';
+  } finally {
+    backupBusy.value = false;
+  }
+}
+async function copyText(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    message.success('已复制。');
+  } catch {
+    message.error('复制失败，请选中文字手动复制。');
+  }
+}
 async function shutdownRuntime() {
   runtimeBusy.value = true;
   try {
@@ -170,7 +213,6 @@ async function shutdownRuntime() {
   <section class="workspace-settings">
     <header>
       <div>
-        <p>WORKSPACE SETTINGS / 设置</p>
         <h1>设置</h1>
       </div>
       <RouterLink to="/japan-grad/ai">AI 接入与 API 配置 ↗</RouterLink>
@@ -251,8 +293,11 @@ async function shutdownRuntime() {
         <section class="settings-panel">
           <h2>连接你的 Chrome / Edge</h2>
           <p>
-            网址查询可直接读取公开页面；动态网页或需要已有登录状态的页面，可使用已授权的
-            Chrome / Edge。
+            这一步是可选的。网址解析默认直接读取公开网页，大多数学校官网不需要连接浏览器。只有页面需要登录，或内容由脚本动态加载时，才需要让
+            JUAI 借用你已打开的 Chrome / Edge。
+          </p>
+          <p>
+            开启远程调试后，本机程序可以操作这个浏览器，包括其中已登录的网站。用完后可在同一页面关闭远程调试，或直接重启浏览器。
           </p>
           <div class="settings-browser-state">
             <i :class="{ ready: browser?.available }"></i>{{ browserLabel }}
@@ -262,9 +307,14 @@ async function shutdownRuntime() {
           </p>
           <ol>
             <li>
-              在 Chrome 打开
-              <code>chrome://inspect/#remote-debugging</code>；Edge 使用
-              <code>edge://inspect/#remote-debugging</code>。
+              浏览器不允许网页直接打开这个地址。请复制后粘贴到浏览器地址栏：
+              <span class="settings-copy-row"><code>chrome://inspect/#remote-debugging</code><Button
+                  size="small"
+                  @click="copyText('chrome://inspect/#remote-debugging')"
+                  >复制 Chrome 地址</Button></span><span class="settings-copy-row"><code>edge://inspect/#remote-debugging</code><Button
+                  size="small"
+                  @click="copyText('edge://inspect/#remote-debugging')"
+                  >复制 Edge 地址</Button></span>
             </li>
             <li>开启页面中的远程调试选项，保持浏览器打开。</li>
             <li>点击下方按钮，切换到浏览器，在弹出的连接请求中选择“允许”。</li>
@@ -337,9 +387,6 @@ async function shutdownRuntime() {
               >
                 关闭手机访问
               </Button>
-              <Button :disabled="runtimeBusy" @click="shutdownRuntime">
-                完全退出 JUAI
-              </Button>
             </div>
             <p v-else>
               运行管理只能在电脑上操作。需要关闭手机访问或退出 JUAI
@@ -353,7 +400,83 @@ async function shutdownRuntime() {
             </div>
             <p>该功能将随 JUAI v1.2 本地浏览器版提供。</p>
           </template>
-          <p v-if="runtimeMessage" role="status">{{ runtimeMessage }}</p>
+          <p v-if="runtimeMessage && tab === 'mobile'" role="status">
+            {{ runtimeMessage }}
+          </p>
+        </section>
+      </Tabs.TabPane>
+      <Tabs.TabPane key="runtime" tab="本地工作区">
+        <section class="settings-panel">
+          <h2>工作区位置</h2>
+          <div class="settings-copy-row">
+            <Input
+              :value="workspace.workspacePath"
+              readonly
+              aria-label="本地工作区路径"
+            />
+            <Button
+              :disabled="!workspace.workspacePath"
+              @click="copyText(workspace.workspacePath)"
+              >
+复制路径
+</Button>
+          </div>
+        </section>
+        <section class="settings-panel">
+          <h2>备份资料</h2>
+          <p>
+            删除大学、研究科、专攻或老师会同时删除下属记录和邮件，界面里无法撤销。
+            重要修改或删除前，先在这里备份一次。
+          </p>
+          <div class="runtime-actions">
+            <Button type="primary" :loading="backupBusy" @click="createBackup">
+              立即备份
+            </Button>
+          </div>
+          <p v-if="backupMessage" role="status">{{ backupMessage }}</p>
+          <div v-if="lastBackup" class="mobile-access-links">
+            <p>本次备份位置：</p>
+            <div>
+              <Input :value="lastBackup" readonly />
+              <Button @click="copyText(lastBackup)">复制路径</Button>
+            </div>
+          </div>
+          <p v-if="backupRoot">
+            所有备份都在 {{ backupRoot }}
+            。恢复时先退出 JUAI，把整个备份文件夹改名为
+            JapanGradWorkspace，替换原来的工作区文件夹。
+          </p>
+        </section>
+        <section class="settings-panel">
+          <h2>退出 JUAI</h2>
+          <p>
+            关闭浏览器标签页不会停止 JUAI，数据服务仍在后台运行。 再次双击 JUAI
+            会重新打开页面。需要彻底停止时，点击下方按钮。
+          </p>
+          <div v-if="runtime && !runtime.remote" class="runtime-actions">
+            <Button :disabled="runtimeBusy" @click="shutdownRuntime">
+              完全退出 JUAI
+            </Button>
+          </div>
+          <p v-else-if="runtime?.remote">退出操作只能在电脑上进行。</p>
+          <p v-else>
+            当前为开发服务器或旧桌面版，请在启动它的终端或程序菜单中退出。
+          </p>
+          <p v-if="runtimeMessage && tab === 'runtime'" role="status">
+            {{ runtimeMessage }}
+          </p>
+        </section>
+        <section class="settings-panel">
+          <h2>使用说明</h2>
+          <p>
+            完整的功能说明和常见问题在线上使用说明中。软件包里也附带一份「使用说明.md」。
+          </p>
+          <div class="runtime-actions">
+            <a :href="USER_GUIDE_URL" target="_blank" rel="noopener noreferrer">
+              <Button>打开使用说明 ↗</Button>
+            </a>
+          </div>
+          <p v-if="runtime">JUAI {{ runtime.version }}</p>
         </section>
       </Tabs.TabPane>
     </Tabs>
@@ -397,6 +520,18 @@ async function shutdownRuntime() {
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: 12px;
+}
+
+.settings-copy-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 6px 0;
+}
+
+.settings-panel + .settings-panel {
+  margin-top: 18px;
 }
 
 .settings-panel h2 {

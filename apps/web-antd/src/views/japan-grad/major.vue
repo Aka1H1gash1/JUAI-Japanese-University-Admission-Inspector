@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button } from 'ant-design-vue';
 
+import AnalysisHistory from './components/analysis-history.vue';
 import CollectedAdmissions from './components/collected-admissions.vue';
 import DocumentArchive from './components/document-archive.vue';
 import EntityEditor from './components/entity-editor.vue';
@@ -44,7 +45,7 @@ function deleteMajor() {
   const universityId = school.value.universityId;
   modal.confirm({
     title: `删除「${major.value.name}」？`,
-    content: `该专攻中的 ${store.labsFor(id).length} 个研究室和 ${allProfessors.value.length} 位老师的记录、文件索引和邮件也会一起删除；原文件保留在工作区。`,
+    content: `该专攻中的 ${store.labsFor(id).length} 个研究室和 ${allProfessors.value.length} 位老师的记录、文件索引和邮件也会一起删除；原文件保留在工作区。删除后无法在界面撤销，可先到「设置 → 本地工作区」备份。`,
     okText: '确认删除',
     cancelText: '取消',
     okButtonProps: { danger: true },
@@ -106,6 +107,11 @@ function deleteMajor() {
     <CollectedAdmissions kind="major" :id="major.id" />
     <MajorAdmissions :key="`admissions-${major.id}`" :major-id="major.id" />
     <ExamHistory :key="`exams-${major.id}`" :major-id="major.id" />
+    <AnalysisHistory
+      v-if="major.analysisHistory && major.analysisHistory.length > 0"
+      :history="major.analysisHistory"
+      :major-id="major.id"
+    />
     <DocumentArchive :key="major.id" owner-type="major" :owner-id="major.id" />
     <ResearchLabCollection :key="major.id" :major-id="major.id" />
     <EntityEditor

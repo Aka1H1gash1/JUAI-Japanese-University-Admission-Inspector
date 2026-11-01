@@ -1,7 +1,7 @@
 import type { PlannerEvent } from './application-calendar';
 import type { LabTarget } from './lab-targets';
 
-import { dateFromText, dayNumber } from './application-planning';
+import { dateFromText, dayNumber, japanToday } from './application-planning';
 import {
   labLanguageRequirements,
   labPath,
@@ -35,6 +35,22 @@ export function upcomingEvents(
     );
 }
 
+/**
+ * The timeline uses each major's latest recorded exam year. When every dated
+ * entry of that year has passed, the plan is showing last cycle's schedule.
+ */
+export function outdatedExamYear(target: LabTarget, today = japanToday()) {
+  const exams = targetExams(target);
+  const days = exams.flatMap((exam) =>
+    [exam.writtenDate, exam.interviewDate, exam.resultDate, exam.examDate]
+      .map((value) => dateFromText(value.split(/[~～〜至到]/)[0] ?? ''))
+      .filter(Boolean),
+  );
+  return days.length > 0 && days.every((day) => day < today)
+    ? (exams[0]?.year ?? '')
+    : '';
+}
+
 export interface InformationGap {
   id: string;
   name: string;
@@ -44,7 +60,7 @@ export interface InformationGap {
   editor?: { kind: 'lab' | 'university'; id: string; parentId?: string };
 }
 
-export function informationGaps(targets: LabTarget[]) {
+export function informationGaps(targets: LabTarget[], today = japanToday()) {
   const gaps: InformationGap[] = [];
   const universities = new Set<string>();
   const majors = new Set<string>();
@@ -73,6 +89,9 @@ export function informationGaps(targets: LabTarget[]) {
         fields.push('完整出愿日期');
       if (!major.applicationMaterials.trim()) fields.push('出愿材料');
       const exams = targetExams(target);
+      const outdated = outdatedExamYear(target, today);
+      if (outdated)
+        fields.push(`新一年考试记录（最新为 ${outdated} 年，日期已过）`);
       if (exams.length === 0) fields.push('考试记录');
       else {
         if (exams.some((exam) => !exam.subjects.trim()))

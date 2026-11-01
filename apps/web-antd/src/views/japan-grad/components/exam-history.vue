@@ -2,6 +2,7 @@
 import type { ExamHistoryRecord } from '../exam-history';
 
 import { computed, ref } from 'vue';
+
 import { App, Button, Input, Modal } from 'ant-design-vue';
 
 import {
@@ -184,7 +185,7 @@ async function saveBatch() {
 </script>
 
 <template>
-  <section class="exam-history" aria-label="历年考试信息">
+  <section id="exam-history" class="exam-history" aria-label="历年考试信息">
     <header class="collection-heading exam-history-heading">
       <div>
         <h2>
@@ -193,11 +194,11 @@ async function saveBatch() {
         <p>按年份对比考试科目、笔试、面试与结果发布时间。</p>
       </div>
       <div class="exam-history-toolbar">
-        <Button class="icon-button" @click="openBatch"
-          ><ExplorerIcon name="plus" />批量录入</Button
-        ><Button type="primary" class="icon-button" @click="edit()"
-          ><ExplorerIcon name="plus" />新增考试记录</Button
-        >
+        <Button class="icon-button" @click="openBatch">
+          <ExplorerIcon name="plus" />批量录入
+</Button><Button type="primary" class="icon-button" @click="edit()">
+          <ExplorerIcon name="plus" />新增考试记录
+        </Button>
       </div>
     </header>
     <p class="exam-scroll-hint">左右滑动表格，查看全部考试时间。</p>
@@ -237,8 +238,7 @@ async function saveBatch() {
             class="exam-history-row"
           >
             <th scope="row" class="exam-history-year">
-              <strong>{{ record.year }}</strong
-              ><span v-if="record.session">{{ record.session }}</span>
+              <strong>{{ record.year }}</strong><span v-if="record.session">{{ record.session }}</span>
             </th>
             <td>
               <p :class="{ 'not-filled': !record.subjects }">
@@ -262,8 +262,7 @@ async function saveBatch() {
                 :href="websiteUrl(record.sourceUrl)"
                 target="_blank"
                 rel="noopener noreferrer"
-                >查看官方来源<ExplorerIcon name="link"
-              /></a>
+                >查看官方来源<ExplorerIcon name="link" /></a>
               <details
                 v-if="record.examDate"
                 class="exam-history-context"
@@ -279,14 +278,16 @@ async function saveBatch() {
                   type="text"
                   :aria-label="`编辑考试记录：${record.year}${record.session ? ` ${record.session}` : ''}`"
                   @click="edit(record)"
-                  ><ExplorerIcon name="edit" /></Button
-                ><Button
+                >
+                  <ExplorerIcon name="edit" />
+</Button><Button
                   type="text"
                   danger
                   :aria-label="`删除考试记录：${record.year}${record.session ? ` ${record.session}` : ''}`"
                   @click="remove(record)"
-                  ><ExplorerIcon name="trash"
-                /></Button>
+                >
+                  <ExplorerIcon name="trash" />
+                </Button>
               </div>
             </td>
           </tr>
@@ -316,8 +317,7 @@ async function saveBatch() {
         </p>
         <div class="form-fields">
           <div class="field">
-            <label for="exam-history-year">考试年份 <span>*</span></label
-            ><Input
+            <label for="exam-history-year">考试年份 <span>*</span></label><Input
               id="exam-history-year"
               v-model:value="form.year"
               inputmode="numeric"
@@ -327,8 +327,7 @@ async function saveBatch() {
             />
           </div>
           <div class="field">
-            <label for="exam-history-session">入试批次 / 类别</label
-            ><Input
+            <label for="exam-history-session">入试批次 / 类别</label><Input
               id="exam-history-session"
               v-model:value="form.session"
               :maxlength="120"
@@ -337,8 +336,7 @@ async function saveBatch() {
             />
           </div>
           <div class="field full">
-            <label for="exam-history-subjects">考试科目</label
-            ><Input.TextArea
+            <label for="exam-history-subjects">考试科目</label><Input.TextArea
               id="exam-history-subjects"
               v-model:value="form.subjects"
               :rows="2"
@@ -353,8 +351,7 @@ async function saveBatch() {
             class="field"
             :class="{ full: column.key === 'resultDate' }"
           >
-            <label :for="`exam-history-${column.key}`">{{ column.label }}</label
-            ><Input.TextArea
+            <label :for="`exam-history-${column.key}`">{{ column.label }}</label><Input.TextArea
               :id="`exam-history-${column.key}`"
               v-model:value="form[column.key]"
               :rows="2"
@@ -364,8 +361,7 @@ async function saveBatch() {
             />
           </div>
           <div v-if="hasLegacyTime" class="field full exam-legacy-editor">
-            <label for="exam-history-date">原考试时间</label
-            ><Input.TextArea
+            <label for="exam-history-date">原考试时间</label><Input.TextArea
               id="exam-history-date"
               v-model:value="form.examDate"
               :rows="2"
@@ -374,8 +370,7 @@ async function saveBatch() {
             /><small>可参考原内容填写上方时间栏，整理完成后可清空此项。</small>
           </div>
           <div class="field full">
-            <label for="exam-history-source">来源链接</label
-            ><Input
+            <label for="exam-history-source">来源链接</label><Input
               id="exam-history-source"
               v-model:value="form.sourceUrl"
               :maxlength="2048"
@@ -384,8 +379,7 @@ async function saveBatch() {
             />
           </div>
           <div class="field full">
-            <label for="exam-history-notes">备注 / 当年特殊变更</label
-            ><Input.TextArea
+            <label for="exam-history-notes">备注 / 当年特殊变更</label><Input.TextArea
               id="exam-history-notes"
               v-model:value="form.notes"
               :rows="2"
@@ -397,11 +391,9 @@ async function saveBatch() {
         </div>
         <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
         <div class="form-footer">
-          <span>仅考试年份必填，其余可稍后补充</span
-          ><Button :disabled="store.saving" @click="open = false">取消</Button
-          ><Button type="primary" html-type="submit" :loading="store.saving"
-            >保存考试记录</Button
-          >
+          <span>仅考试年份必填，其余可稍后补充</span><Button :disabled="store.saving" @click="open = false">取消</Button><Button type="primary" html-type="submit" :loading="store.saving">
+            保存考试记录
+          </Button>
         </div>
       </form>
     </Modal>
@@ -423,25 +415,21 @@ async function saveBatch() {
           {{ MAX_EXAM_BATCH_ROWS }} 行。
         </p>
         <fieldset class="exam-batch-controls" :disabled="store.saving">
-          <label for="exam-range-start">生成年份</label
-          ><Input
+          <label for="exam-range-start">生成年份</label><Input
             id="exam-range-start"
             v-model:value="rangeStart"
             inputmode="numeric"
             :maxlength="4"
             aria-label="开始年份"
-          /><span>至</span
-          ><Input
+          /><span>至</span><Input
             id="exam-range-end"
             v-model:value="rangeEnd"
             inputmode="numeric"
             :maxlength="4"
             aria-label="结束年份"
-          /><Button :disabled="store.saving" @click="generateYears"
-            >生成年份</Button
-          ><span class="exam-batch-controls-hint"
-            >已有相同年份且未分批次的记录会跳过。</span
-          >
+          /><Button :disabled="store.saving" @click="generateYears">
+            生成年份
+</Button><span class="exam-batch-controls-hint">已有相同年份且未分批次的记录会跳过。</span>
         </fieldset>
         <details class="exam-batch-paste">
           <summary>粘贴多行数据（可从表格复制）</summary>
@@ -454,9 +442,9 @@ async function saveBatch() {
             :rows="3"
             placeholder="2024&#9;数学、英语&#9;2024-08-20&#9;2024-08-21&#9;2024-09-01"
             :disabled="store.saving"
-          /><Button :disabled="store.saving" @click="appendPaste"
-            >追加到表格</Button
-          >
+          /><Button :disabled="store.saving" @click="appendPaste">
+            追加到表格
+          </Button>
         </details>
         <p v-if="batchNotice" class="exam-batch-notice" role="status">
           {{ batchNotice }}
@@ -486,9 +474,7 @@ async function saveBatch() {
                 class="exam-batch-row"
               >
                 <td>
-                  <span class="exam-batch-row-number"
-                    >第 {{ index + 1 }} 行</span
-                  ><Input
+                  <span class="exam-batch-row-number">第 {{ index + 1 }} 行</span><Input
                     v-model:value="row.year"
                     inputmode="numeric"
                     :maxlength="4"
@@ -540,8 +526,9 @@ async function saveBatch() {
                     :aria-label="`移除第${index + 1}行`"
                     :disabled="store.saving"
                     @click="batchRows.splice(index, 1)"
-                    ><ExplorerIcon name="close"
-                  /></Button>
+                  >
+                    <ExplorerIcon name="close" />
+                  </Button>
                 </td>
               </tr>
               <tr v-if="!batchRows.length">
@@ -556,22 +543,23 @@ async function saveBatch() {
           class="icon-button exam-batch-add"
           :disabled="store.saving || batchRows.length >= MAX_EXAM_BATCH_ROWS"
           @click="addRow"
-          ><ExplorerIcon name="plus" />添加一行</Button
         >
+          <ExplorerIcon name="plus" />添加一行
+        </Button>
         <p v-if="batchFeedback" class="form-error" role="alert">
           {{ batchFeedback }}
         </p>
         <div class="form-footer">
-          <span>已填写 {{ batchCount }} 行 · 空白行会自动忽略</span
-          ><Button :disabled="store.saving" @click="batchOpen = false"
-            >取消</Button
-          ><Button
+          <span>已填写 {{ batchCount }} 行 · 空白行会自动忽略</span><Button :disabled="store.saving" @click="batchOpen = false">
+            取消
+</Button><Button
             type="primary"
             html-type="submit"
             :loading="store.saving"
             :disabled="!batchCount"
-            >保存 {{ batchCount }} 条记录</Button
           >
+            保存 {{ batchCount }} 条记录
+          </Button>
         </div>
       </form>
     </Modal>

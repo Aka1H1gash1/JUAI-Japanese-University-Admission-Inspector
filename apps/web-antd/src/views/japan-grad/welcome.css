@@ -1,5 +1,5 @@
-/* Standalone entry surface: existing JapanGrad indigo, media radius 18px,
-   pill controls. Layer 0 is imagery; layer 1 is the overlapping detail. */
+/* Standalone entry page. It sits outside the workspace layout, so its colours
+   copy the glacier-blue, mint and indigo values in palette.ts. */
 @font-face {
   font-family: 'JapanGrad Manrope';
   font-weight: 200 800;
@@ -9,13 +9,15 @@
 }
 
 .welcome-page {
-  --welcome-bg: #f5f7fc;
-  --welcome-ink: #202941;
-  --welcome-muted: #53617a;
-  --welcome-accent: #4355b9;
-  --welcome-accent-hover: #344497;
-  --welcome-line: #d5dcec;
-  --welcome-image-base: #dce3eb;
+  --welcome-bg: #f1f7fb;
+  --welcome-ink: #526790;
+  --welcome-muted: #465d7b;
+  --welcome-accent: #526790;
+  --welcome-accent-hover: #405579;
+  --welcome-on-accent: #fff;
+  --welcome-seal: #526790;
+  --welcome-line: #dce5ee;
+  --welcome-image-base: #eaf2f6;
   --scene-x: 0px;
   --scene-y: 0px;
 
@@ -65,9 +67,9 @@
   place-items: center;
   width: 38px;
   height: 38px;
-  color: #fdfdff;
-  background: var(--welcome-accent);
-  border-radius: 11px;
+  color: #203252;
+  background: #dceee7;
+  border-radius: 10px;
 }
 
 .welcome-brand-mark :deep(svg) {
@@ -133,15 +135,18 @@
 
 .welcome-copy h1 {
   margin: 0;
+  font-family:
+    'Songti SC', STSong, 'Noto Serif CJK SC', 'Source Han Serif SC',
+    'Hiragino Mincho ProN', SimSun, serif;
   font-size: clamp(37px, 4.1vw, 66px);
-  font-weight: 550;
+  font-weight: 700;
   line-height: 1.3;
-  letter-spacing: -0.065em;
+  letter-spacing: 0.01em;
 }
 
 .welcome-copy h1 > span {
   display: block;
-  color: var(--welcome-accent);
+  color: var(--welcome-seal);
   white-space: nowrap;
 }
 
@@ -168,7 +173,7 @@
   padding: 15px 22px 15px 26px;
   font-size: 14px;
   font-weight: 600;
-  color: #fdfdff;
+  color: var(--welcome-on-accent);
   white-space: nowrap;
   text-decoration: none;
   background: var(--welcome-accent);
@@ -180,7 +185,7 @@
 }
 
 .welcome-enter:hover {
-  color: #fdfdff;
+  color: var(--welcome-on-accent);
   background: var(--welcome-accent-hover);
 }
 
@@ -206,7 +211,7 @@
   margin-top: 18px;
   font-size: 12px;
   line-height: 1.8;
-  color: #a23536;
+  color: #a8322a;
 }
 
 .welcome-scene {
@@ -237,7 +242,7 @@
   width: 47%;
   aspect-ratio: 3 / 2;
   border: 7px solid var(--welcome-bg);
-  box-shadow: 0 20px 50px #283b7614;
+  box-shadow: 0 20px 50px #52679018;
   transform: translate3d(
     calc(var(--scene-x) * -0.65),
     calc(var(--scene-y) * -0.65),
@@ -341,25 +346,17 @@
 
 @media (prefers-color-scheme: dark) {
   .welcome-page {
-    --welcome-bg: #171d2c;
-    --welcome-ink: #edf1fb;
-    --welcome-muted: #b4c0d7;
-    --welcome-accent: #a5b6fa;
-    --welcome-accent-hover: #bdc9ff;
-    --welcome-line: #3f4c64;
-    --welcome-image-base: #28354a;
+    --welcome-bg: #111e35;
+    --welcome-ink: #edf6ff;
+    --welcome-muted: #c2d4eb;
+    --welcome-accent: #b5c1de;
+    --welcome-accent-hover: #c8d2e7;
+    --welcome-on-accent: #142748;
+    --welcome-seal: #b5c1de;
+    --welcome-line: #35506f;
+    --welcome-image-base: #223855;
 
     color-scheme: dark;
-  }
-
-  .welcome-brand-mark {
-    color: #fdfdff;
-    background: #4355b9;
-  }
-
-  .welcome-enter,
-  .welcome-enter:hover {
-    color: #1a2446;
   }
 
   .welcome-photo img {
@@ -367,7 +364,7 @@
   }
 
   .welcome-error {
-    color: #f2aaa9;
+    color: #ffaaa0;
   }
 }
 

@@ -57,6 +57,8 @@ logo 从已读官网返回的 images 候选里挑选对应大学校徽或官方�
 documents 只引用本任务实际下载且与目标相关的 PDF。有专攻时 kind=guidelines 可归档到专攻，有老师时 paper 可归档到老师；仅大学/研究科任务的原件保留在收集来源，不为归档强建专攻。year 为原文明确的资料年度/发表年，未明确留空交用户确认。除这次给定的工具外不使用其他工具。遇到读取失败说明缺项，不能声称获取了未读内容。所有结果待用户核对后才入库，不声称已保存到正式档案。`;
 
 export function createCollectionService({
+  writeWorkspace,
+  saveDocument,
   db,
   snapshot,
   transaction,
@@ -95,11 +97,11 @@ export function createCollectionService({
       ).run(job.id, job.createdAt, JSON.stringify(job));
   };
   const job = (id) => {
-    if (!identify(id)) fail('收集任务 ID 不合法。');
+    if (!identify(id)) fail('解析任务 ID 不合法。');
     const row = db
       .prepare('SELECT data FROM collection_jobs WHERE id=?')
       .get(id);
-    if (!row) fail('收集任务不存在。', 404);
+    if (!row) fail('解析任务不存在。', 404);
     return JSON.parse(row.data);
   };
   const sources = (id) =>
@@ -1614,16 +1616,8 @@ export function createCollectionService({
       if (snapshot().revision !== current.revision)
         fail('入库期间工作区有更新，请刷新后重试。', 409);
       transaction(() => {
-        db.prepare(
-          'UPDATE workspace_data SET data=?,revision=revision+1 WHERE id=1',
-        ).run(JSON.stringify(data));
-        for (const d of documentRecords)
-          db.prepare('INSERT INTO documents VALUES (?,?,?,?)').run(
-            d.id,
-            d.ownerType,
-            d.ownerId,
-            JSON.stringify(d),
-          );
+        writeWorkspace(data, current.revision, current.data);
+        for (const d of documentRecords) saveDocument(d);
         j.status = 'applied';
         j.appliedKind = targetKind;
         j.savedAdmissions = {
@@ -1736,7 +1730,7 @@ export function createCollectionService({
         );
       if (endpoint === '/jobs' && req.method === 'POST') {
         const input = await jsonBody(req);
-        if (active.size >= 2) fail('已有两个收集任务在运行，请稍后。', 409);
+        if (active.size >= 2) fail('已有两个解析任务在运行，请稍后。', 409);
         if (
           !['auto', 'browser', 'http'].includes(input.browserMode) ||
           !Number.isInteger(input.admissionYear) ||

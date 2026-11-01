@@ -1,14 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+
 import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
+
 import { useExplorerStore } from '../explorer';
 import { geographySearchTerms } from '../japan-geography';
 import { labContext } from '../lab-targets';
 import { vAccessibleSelect } from '../select-accessibility';
 import ExplorerIcon from './explorer-icon.vue';
 
-const open = defineModel<boolean>('open', { default: false });
 const emit = defineEmits<{ added: [count: number] }>();
+const open = defineModel<boolean>('open', { default: false });
 const store = useExplorerStore();
 const { message } = App.useApp();
 const query = ref('');
@@ -101,7 +103,7 @@ function toggleAll() {
     : [...new Set([...selected.value, ...ids])];
 }
 async function add() {
-  if (saving.value || !selected.value.length) return;
+  if (saving.value || selected.value.length === 0) return;
   saving.value = true;
   feedback.value = '';
   try {
@@ -123,7 +125,7 @@ async function add() {
 <template>
   <Modal
     v-model:open="open"
-    title="新增研究室到修考之路"
+    title="选择想考的研究室"
     :width="820"
     :footer="null"
     :mask-closable="!saving"
@@ -141,8 +143,9 @@ async function add() {
         :disabled="saving"
         placeholder="搜索研究室、研究方向、专攻或老师"
         aria-label="搜索可添加的研究室"
-        ><template #prefix><ExplorerIcon name="search" /></template
-      ></Input>
+      >
+        <template #prefix><ExplorerIcon name="search" /></template>
+      </Input>
       <Select
         v-accessible-select
         :value="universityId || undefined"
@@ -160,10 +163,9 @@ async function add() {
         :indeterminate="selectedVisible > 0 && !allSelected"
         :disabled="saving || !available.length"
         @change="toggleAll"
-        >全选当前结果</Checkbox
-      ><span
-        >{{ visible.length }} 个研究室 · {{ available.length }} 个可新增</span
       >
+        全选当前结果
+</Checkbox><span>{{ visible.length }} 个研究室 · {{ available.length }} 个可新增</span>
     </div>
     <div
       v-if="visible.length"
@@ -183,26 +185,15 @@ async function add() {
         :aria-label="`${target.lab.name}，${target.university.name}，${target.major.name}${target.lab.wantApply ? '，已在修考之路' : ''}`"
         @change="toggle(target.lab.id)"
       >
-        <span class="journey-picker-identity"
-          ><span class="journey-picker-name"
-            ><strong>{{ target.lab.name }}</strong
-            ><span v-if="target.lab.wantApply" class="journey-picker-added"
-              >已在修考之路</span
-            ></span
-          ><span class="journey-picker-affiliation"
-            >{{ target.university.name }} / {{ target.school.name }} /
-            {{ target.major.name }}</span
-          ><span class="journey-picker-research">{{
+        <span class="journey-picker-identity"><span class="journey-picker-name"><strong>{{ target.lab.name }}</strong><span v-if="target.lab.wantApply" class="journey-picker-added">已在修考之路</span></span><span class="journey-picker-affiliation">{{ target.university.name }} / {{ target.school.name }} /
+            {{ target.major.name }}</span><span class="journey-picker-research">{{
             target.lab.research || '研究方向待补充'
-          }}</span
-          ><span
+          }}</span><span
             v-if="target.professors.length"
             class="journey-picker-affiliation"
             >老师：{{
               target.professors.map((item) => item.name).join('、')
-            }}</span
-          ></span
-        >
+            }}</span></span>
       </Checkbox>
     </div>
     <div v-else class="journey-picker-empty">
@@ -214,31 +205,36 @@ async function add() {
         {{
           targets.length
             ? '试试其他关键词，或切换大学筛选。'
-            : '先建立研究室资料，之后就能在这里统一选择。'
+            : '这里只能从已整理的研究室里挑选。先在大学清单里建立大学、研究科、专攻和研究室。'
         }}
       </p>
+      <RouterLink
+        v-if="!targets.length"
+        to="/japan-grad/universities"
+        @click="open = false"
+      >
+        前往大学清单建立研究室 →
+      </RouterLink>
       <Button
         v-if="targets.length"
         @click="
           query = '';
           universityId = '';
         "
-        >清除筛选</Button
       >
+        清除筛选
+      </Button>
     </div>
     <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
     <div class="journey-picker-footer">
-      <span aria-live="polite">已选 {{ selected.length }} 个研究室</span
-      ><Button :disabled="saving" @click="open = false">取消</Button
-      ><Button
+      <span aria-live="polite">已选 {{ selected.length }} 个研究室</span><Button :disabled="saving" @click="open = false">取消</Button><Button
         type="primary"
         :disabled="!selected.length"
         :loading="saving"
         @click="add"
-        >加入修考之路{{
-          selected.length ? `（${selected.length}）` : ''
-        }}</Button
       >
+        加入修考之路{{ selected.length ? `（${selected.length}）` : '' }}
+      </Button>
     </div>
   </Modal>
 </template>

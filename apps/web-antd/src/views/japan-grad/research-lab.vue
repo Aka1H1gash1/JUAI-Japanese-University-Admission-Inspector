@@ -2,7 +2,7 @@
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { App, Button, Tabs } from 'ant-design-vue';
+import { App, Button, Divider, Switch, Tabs } from 'ant-design-vue';
 
 import CollectedAdmissions from './components/collected-admissions.vue';
 import EntityEditor from './components/entity-editor.vue';
@@ -53,20 +53,67 @@ const todoCount = computed(
   () =>
     target.value?.lab.tasks?.filter((item) => item.kind === 'todo').length ?? 0,
 );
+const toggling = ref(false);
 async function toggle() {
-  if (!target.value) return;
+  if (!target.value || toggling.value) return;
+  toggling.value = true;
   try {
     await store.toggleWantApply(target.value.lab.id);
   } catch (error) {
     message.error(error instanceof Error ? error.message : '保存失败。');
+  } finally {
+    toggling.value = false;
   }
 }
+
+async function toggleAutoSync() {
+  if (!target.value) return;
+
+  // 使用和其他保存方法相同的模式
+  const labId = target.value.lab.id;
+  const currentValue = target.value.lab.timeline?.autoSyncExams ?? true;
+
+  try {
+    // 找到研究室并更新
+    const lab = store.labs.find((l) => l.id === labId);
+    if (!lab) throw new Error('研究室已不存在。');
+
+    // 确保timeline存在
+    if (!lab.timeline) {
+      lab.timeline = {
+        events: [],
+        hiddenSources: [],
+        version: 0,
+        autoSyncExams: true,
+      };
+    }
+
+    // 切换开关
+    lab.timeline.autoSyncExams = !currentValue;
+
+    // 保存（这会触发mutate）
+    // 由于直接修改了store中的对象，我们只需要触发一次保存
+    // 用toggleWantApply两次来模拟保存操作
+    const wantApply = lab.wantApply;
+    lab.wantApply = !wantApply;
+    await store.toggleWantApply(labId);
+    lab.wantApply = wantApply;
+    await store.toggleWantApply(labId);
+
+    message.success(
+      lab.timeline.autoSyncExams ? '已开启考试时间同步' : '已关闭考试时间同步',
+    );
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '保存失败。');
+  }
+}
+
 function remove() {
   const value = target.value;
   if (!value) return;
   modal.confirm({
     title: `删除「${value.lab.name}」？`,
-    content: `研究室与 ${value.professors.length} 位老师的资料、联络草稿、材料待办、论文索引和邮件将一并删除，也会移出修考之路；原文件保留在工作区。`,
+    content: `研究室与 ${value.professors.length} 位老师的资料、联络草稿、材料待办、论文索引和邮件将一并删除，也会移出修考之路；原文件保留在工作区。删除后无法在界面撤销，可先到「设置 → 本地工作区」备份。`,
     okText: '确认删除',
     cancelText: '取消',
     okButtonProps: { danger: true },
@@ -111,10 +158,10 @@ function remove() {
           class="icon-button lab-intent-button"
           :class="{ 'is-wanted': target.lab.wantApply }"
           :aria-pressed="target.lab.wantApply"
-          :loading="store.saving"
+          :loading="toggling"
           @click="toggle"
         >
-          <ExplorerIcon :name="target.lab.wantApply ? 'check' : 'plus'" />{{
+          <ExplorerIcon name="heart" />{{
             target.lab.wantApply ? '已标记想考' : '标记为想考'
           }} </Button
         ><Button class="icon-button" @click="editorOpen = true">
@@ -192,6 +239,25 @@ function remove() {
               </div>
             </dl>
             <Button @click="editorOpen = true">编辑特殊说明</Button>
+
+            <Divider />
+
+            <div class="lab-timeline-settings">
+              <h3>日程设置</h3>
+              <div class="setting-item">
+                <div class="setting-label">
+                  <strong>同步考试时间到日程</strong>
+                  <p class="setting-description">
+                    修改专攻考试时间时，自动更新此研究室的日程
+                  </p>
+                </div>
+                <Switch
+                  :checked="target.lab.timeline?.autoSyncExams ?? true"
+                  :loading="store.saving"
+                  @change="toggleAutoSync"
+                />
+              </div>
+            </div>
           </section>
           <MajorAdmissions
             :key="`admissions-${target.major.id}`"

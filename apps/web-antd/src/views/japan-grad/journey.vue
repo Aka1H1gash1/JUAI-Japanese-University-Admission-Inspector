@@ -8,9 +8,9 @@ import ExplorerIcon from './components/explorer-icon.vue';
 import JourneyContactBoard from './components/journey-contact-board.vue';
 import JourneyContactDialog from './components/journey-contact-dialog.vue';
 import JourneyExportDialog from './components/journey-export-dialog.vue';
+import JourneyLabEntry from './components/journey-lab-entry.vue';
 import JourneyLabPicker from './components/journey-lab-picker.vue';
 import JourneyTimeline from './components/journey-timeline.vue';
-import ResearchLabCard from './components/research-lab-card.vue';
 import { useExplorerStore } from './explorer';
 import { geographySearchTerms } from './japan-geography';
 import { labComparisonRows, labContext, labPath } from './lab-targets';
@@ -108,14 +108,14 @@ function openExport() {
 }
 </script>
 <template>
-  <section class="explorer-page journey-page">
+  <section class="explorer-page journey-page directory-page">
     <header class="page-heading workspace-page-heading">
       <div>
-        <h1>修考之路<span class="heading-dot">。</span></h1>
+        <h1 class="workspace-title">修考之路</h1>
       </div>
       <div class="detail-actions">
         <Button type="primary" class="icon-button" @click="pickerOpen = true">
-          <ExplorerIcon name="plus" />新增研究室
+          <ExplorerIcon name="plus" />选择想考研究室
         </Button>
         <Button
           class="icon-button"
@@ -149,20 +149,23 @@ function openExport() {
                 selectedTargets.length ? `（${selectedTargets.length}）` : ''
               }}
             </Button>
+            <label class="journey-toolbar-year">考试年份<Select
+                v-accessible-select
+                v-model:value="year"
+                aria-label="对比与时间线使用的考试年份"
+                :options="yearOptions"
+            /></label>
           </div>
-          <p class="journey-export-note">导出时可自选研究室、属性与考试年份</p>
           <div v-if="selected.length" class="journey-selection">
             <span>已选 {{ selected.length }} 个研究室</span><Button @click="openExport">导出所选</Button><Button type="text" @click="selected = []">清空选择</Button>
           </div>
           <Tabs v-model:active-key="view" class="journey-workspace-tabs">
             <Tabs.TabPane key="targets" tab="研究室清单">
-              <div v-if="visible.length" class="research-lab-grid">
-                <ResearchLabCard
+              <div v-if="visible.length" class="journey-directory">
+                <JourneyLabEntry
                   v-for="item in visible"
                   :key="item.lab.id"
-                  :lab-id="item.lab.id"
-                  show-affiliation
-                  selectable
+                  :target="item"
                   :selected="selected.includes(item.lab.id)"
                   @select="select"
                   @contact="manageContact"
@@ -195,7 +198,7 @@ function openExport() {
       <h2>从一个想考的研究室开始</h2>
       <p>直接选择已整理的研究室，建立想考清单，再比较方向、考试和费用。</p>
       <Button type="primary" class="icon-button" @click="pickerOpen = true">
-        <ExplorerIcon name="plus" />新增研究室
+        <ExplorerIcon name="plus" />选择想考研究室
       </Button>
     </section>
     <JourneyExportDialog
@@ -279,6 +282,19 @@ function openExport() {
   font-size: 12px;
   color: var(--jg-muted);
   text-align: right;
+}
+
+.journey-toolbar-year {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--jg-secondary);
+  white-space: nowrap;
+}
+
+.journey-toolbar-year .ant-select {
+  min-width: 170px;
 }
 
 .journey-comparison-year {

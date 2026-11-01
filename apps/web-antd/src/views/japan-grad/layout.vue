@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import {
+  computed,
+  h,
+  onBeforeUnmount,
+  onMounted,
+  onUnmounted,
+  ref,
+  watch,
+} from 'vue';
+import { RouterLink, useRoute, useRouter } from 'vue-router';
 
 import {
   useEventListener,
@@ -9,22 +17,54 @@ import {
   usePreferredReducedMotion,
   useStorage,
 } from '@vueuse/core';
-import {
-  theme as antdTheme,
-  App,
-  Button,
-  ConfigProvider,
-  Drawer,
-  Modal,
-} from 'ant-design-vue';
+import { App, ConfigProvider, Drawer } from 'ant-design-vue';
 
+import { useCollectionJobsStore } from './collection-jobs';
 import BrandMark from './components/brand-mark.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import WorkspaceNavigation from './components/workspace-navigation.vue';
 import { useExplorerStore } from './explorer';
+import { antdThemeConfig, cssVariables, DARK, LIGHT } from './palette';
 
+// Order matters: page styles, the older refresh layer, then shell and the paper theme.
 import './style.css';
 import './visual.css';
+import './shell.css';
+import './paper.css';
+import './directory.css';
+
+const jobs = useCollectionJobsStore();
+const { message } = App.useApp();
+onMounted(() => jobs.start());
+onBeforeUnmount(() => jobs.stop());
+watch(
+  () => jobs.completed,
+  () => {
+    message.success({
+      content: () =>
+        h(
+          RouterLink,
+          { to: '/japan-grad/collection' },
+          () => '解析任务已完成，点此查看结果',
+        ),
+      duration: 6,
+    });
+  },
+);
+watch(
+  () => jobs.ended,
+  () => {
+    message.info({
+      content: () =>
+        h(
+          RouterLink,
+          { to: '/japan-grad/collection' },
+          () => '解析任务已结束，点此查看状态',
+        ),
+      duration: 6,
+    });
+  },
+);
 
 const store = useExplorerStore();
 void store.load();
@@ -113,13 +153,18 @@ const parentNavigation = computed(() => {
     return { path: '/japan-grad/universities', label: '大学清单' };
   return undefined;
 });
+// Top-level pages are reachable from the masthead, and entity pages render their
+// own breadcrumb, so the back row only appears on the remaining nested pages.
+const showCrumbs = computed(() => {
+  if (!parentNavigation.value) return false;
+  if (parentNavigation.value.label === '之前的页面') return true;
+  if (route.params.analysisMajorId || route.params.programId) return true;
+  return false;
+});
 function goToParent() {
   if (parentNavigation.value) void router.push(parentNavigation.value.path);
 }
 const navOpen = ref(false);
-const workspaceOpen = ref(false);
-const pathCopied = ref(false);
-const copyError = ref('');
 const preferredDark = usePreferredDark();
 const preferredMotion = usePreferredReducedMotion();
 const appearance = useStorage<'dark' | 'light' | 'system'>(
@@ -150,32 +195,31 @@ watch(
     navOpen.value = false;
   },
 );
-const theme = computed(() => ({
-  inherit: false,
-  algorithm: isDark.value
-    ? antdTheme.darkAlgorithm
-    : antdTheme.defaultAlgorithm,
-  token: {
-    colorPrimary: isDark.value ? '#5368cc' : '#4355b9',
-    colorInfo: isDark.value ? '#5368cc' : '#4355b9',
-    colorBgContainer: isDark.value ? '#1e2536' : '#fdfdff',
-    colorBgElevated: isDark.value ? '#283147' : '#fdfdff',
-    colorText: isDark.value ? '#edf1fb' : '#222b45',
-    colorTextLightSolid: '#fdfdff',
-    colorTextSecondary: isDark.value ? '#a9b7cf' : '#4d5972',
-    colorTextPlaceholder: isDark.value ? '#a5b2cb' : '#68748b',
-    colorBorder: isDark.value ? '#6d7e9e' : '#8996b0',
-    colorBorderSecondary: isDark.value ? '#35425b' : '#dce2ef',
-    colorFillAlter: isDark.value ? '#283147' : '#e9edf6',
-    colorError: isDark.value ? '#ffaaa0' : '#b73832',
-    borderRadius: 8,
-    controlHeight: 36,
-    fontSize: 14,
-    motion: preferredMotion.value !== 'reduce',
-    fontFamily:
-      '"Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif',
+const palette = computed(() => (isDark.value ? DARK : LIGHT));
+const theme = computed(() =>
+  antdThemeConfig(
+    palette.value,
+    isDark.value,
+    preferredMotion.value !== 'reduce',
+  ),
+);
+// Variables live on <html> so teleported overlays (modals, drawers) share them.
+const appliedVariables = new Set<string>();
+watch(
+  palette,
+  (value) => {
+    const style = document.documentElement.style;
+    for (const [name, color] of Object.entries(cssVariables(value))) {
+      style.setProperty(name, color);
+      appliedVariables.add(name);
+    }
   },
-}));
+  { immediate: true },
+);
+onUnmounted(() => {
+  for (const name of appliedVariables)
+    document.documentElement.style.removeProperty(name);
+});
 const saveLabel = computed(() => {
   if (store.storageError) {
     return '本地服务异常';
@@ -202,7 +246,7 @@ const contextLabel = computed(() => {
     return 'AI 管理';
   }
   if (route.path === '/japan-grad/collection') {
-    return '网址解析结果';
+    return '网址解析';
   }
   if (route.params.analysisMajorId) {
     return '募集要项分析';
@@ -227,21 +271,6 @@ const contextLabel = computed(() => {
   }
   return '大学清单';
 });
-async function copyWorkspace() {
-  copyError.value = '';
-  try {
-    if (store.workspacePath) {
-      await navigator.clipboard.writeText(store.workspacePath);
-      pathCopied.value = true;
-    }
-  } catch {
-    copyError.value = '复制未完成，可以在上方选择并复制文件夹路径。';
-  }
-}
-watch(workspaceOpen, () => {
-  pathCopied.value = false;
-  copyError.value = '';
-});
 </script>
 
 <template>
@@ -253,52 +282,35 @@ watch(workspaceOpen, () => {
         :data-theme="isDark ? 'dark' : 'light'"
       >
         <a class="skip-to-content" href="#japangrad-main">跳转到主要内容</a>
-        <aside class="workspace-sidebar">
-          <WorkspaceNavigation />
-        </aside>
-        <div class="workspace-content">
-          <header class="explorer-topbar">
-            <div class="topbar-inner">
-              <button
-                class="workspace-menu-button"
-                aria-label="打开工作区导航"
-                @click="navOpen = true"
-              >
-                <ExplorerIcon name="menu" />
-              </button>
-              <RouterLink
-                to="/japan-grad/overview"
-                class="explorer-brand mobile-brand"
-                aria-label="JapanGrad 申请总览首页"
-              >
-                <span class="brand-mark"><BrandMark /></span><strong>JapanGrad</strong>
-              </RouterLink>
-              <Button
-                class="icon-button workspace-back-button"
-                :disabled="!parentNavigation"
-                :title="
-                  parentNavigation
-                    ? `返回${parentNavigation.label}`
-                    : '当前已是大学清单'
-                "
-                :aria-label="
-                  parentNavigation
-                    ? `返回上一级：${parentNavigation.label}`
-                    : '当前已是大学清单，无上一级'
-                "
-                @click="goToParent"
-              >
-                <ExplorerIcon name="back" />返回上一级
-              </Button>
-              <span class="workspace-context-label">{{ contextLabel }}</span>
-              <span class="local-state" role="status"><i
-                  :class="{
-                    error: store.storageError,
-                    pending: store.loading || store.saving,
-                  }"
-                ></i><span>{{ saveLabel }}</span></span>
-            </div>
-          </header>
+        <header class="jg-masthead explorer-topbar">
+          <div class="jg-masthead-inner">
+            <button
+              class="jg-menu-button"
+              aria-label="打开工作区导航"
+              @click="navOpen = true"
+            >
+              <ExplorerIcon name="menu" />
+            </button>
+            <RouterLink
+              to="/japan-grad/overview"
+              class="jg-brand"
+              aria-label="JUAI 申请总览首页"
+            >
+              <span class="jg-brand-seal"><BrandMark /></span><strong>JUAI<span>择校笔记</span></strong>
+            </RouterLink>
+            <WorkspaceNavigation class="jg-masthead-nav" />
+            <span
+              class="jg-save-state"
+              :class="{
+                'is-error': store.storageError,
+                'is-pending': store.loading || store.saving,
+              }"
+              role="status"
+              :title="saveLabel"
+              ><i></i><span>{{ saveLabel }}</span></span>
+          </div>
+        </header>
+        <div class="jg-page">
           <div v-if="store.storageError" class="storage-alert" role="alert">
             {{ store.storageError
             }}<button
@@ -309,40 +321,48 @@ watch(workspaceOpen, () => {
               重试连接
             </button>
           </div>
-          <div class="workspace-body">
-            <div class="workspace-document">
-              <main id="japangrad-main" class="explorer-main" tabindex="-1">
-                <p v-if="store.migrationNotice" class="workspace-notice">
-                  {{ store.migrationNotice }}
-                </p>
-                <RouterView v-if="store.loaded" />
-                <section
-                  v-else-if="store.loading"
-                  class="workspace-skeleton"
-                  aria-busy="true"
-                  aria-label="正在打开本地工作区"
-                >
-                  <span class="skeleton-title"></span><span class="skeleton-description"></span><span class="skeleton-toolbar"></span>
-                  <div>
-                    <span
-                      v-for="index in 4"
-                      :key="index"
-                      class="skeleton-card"
-                    ></span>
-                  </div>
-                </section>
-                <section v-else class="collection-empty">
-                  <span class="empty-symbol"><ExplorerIcon name="drive" /></span>
-                  <h2>等待本地服务连接</h2>
-                  <p>请通过 JapanGrad 启动入口打开工作台。</p>
-                </section>
-              </main>
-              <footer class="explorer-footer">
-                <span>大学 → 研究科 → 专攻 → 研究室 → 老师</span><button class="text-button" @click="workspaceOpen = true">
-                  <ExplorerIcon name="drive" />本地工作区
-                </button>
-              </footer>
-            </div>
+          <div class="jg-sheet workspace-document">
+            <nav
+              v-if="showCrumbs && parentNavigation"
+              class="jg-crumbs"
+              aria-label="返回上一级"
+            >
+              <button type="button" class="jg-back" @click="goToParent">
+                <ExplorerIcon name="back" /><span>返回{{ parentNavigation.label }}</span>
+              </button>
+              <span aria-hidden="true">·</span>
+              <span class="jg-crumbs-here">{{ contextLabel }}</span>
+            </nav>
+            <main
+              id="japangrad-main"
+              class="jg-main explorer-main"
+              tabindex="-1"
+            >
+              <p v-if="store.migrationNotice" class="workspace-notice">
+                {{ store.migrationNotice }}
+              </p>
+              <RouterView v-if="store.loaded" />
+              <section
+                v-else-if="store.loading"
+                class="workspace-skeleton"
+                aria-busy="true"
+                aria-label="正在打开本地工作区"
+              >
+                <span class="skeleton-title"></span><span class="skeleton-description"></span><span class="skeleton-toolbar"></span>
+                <div>
+                  <span
+                    v-for="index in 4"
+                    :key="index"
+                    class="skeleton-card"
+                  ></span>
+                </div>
+              </section>
+              <section v-else class="collection-empty">
+                <span class="empty-symbol"><ExplorerIcon name="drive" /></span>
+                <h2>等待本地服务连接</h2>
+                <p>请双击 JUAI 打开工作台。</p>
+              </section>
+            </main>
           </div>
         </div>
         <Drawer
@@ -350,35 +370,10 @@ watch(workspaceOpen, () => {
           title="工作区导航"
           placement="left"
           :width="280"
-          class="workspace-nav-drawer"
+          class="jg-nav-drawer"
         >
-          <WorkspaceNavigation
-            :show-brand="false"
-            @navigate="navOpen = false"
-          />
+          <WorkspaceNavigation variant="drawer" @navigate="navOpen = false" />
         </Drawer>
-        <Modal
-          v-model:open="workspaceOpen"
-          title="本地工作区"
-          :footer="null"
-          :width="580"
-        >
-          <div class="workspace-info">
-            <p>大学记录、上传文件、论文和邮件保存在此文件夹。</p>
-            <code>{{ store.workspacePath || '正在连接…' }}</code><Button
-              class="icon-button"
-              :disabled="!store.workspacePath"
-              @click="copyWorkspace"
-            >
-              <ExplorerIcon name="copy" />{{
-                pathCopied ? '已复制' : '复制文件夹路径'
-              }}
-            </Button>
-            <p v-if="copyError" class="form-error" role="alert">
-              {{ copyError }}
-            </p>
-          </div>
-        </Modal>
       </div>
     </App>
   </ConfigProvider>

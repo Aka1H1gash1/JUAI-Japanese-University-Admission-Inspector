@@ -1,17 +1,21 @@
-import type { ContactRecord } from '../../../../../local-server/planning-fields.mjs';
+import type {
+  ContactRecord,
+  TaskOrigin,
+} from '../../../../../local-server/planning-fields.mjs';
+import type { LabTarget } from './lab-targets';
+
 import {
-  CONTACT_STATUSES,
   CONTACT_EDITABLE_FIELDS,
   CONTACT_RESULTS,
+  CONTACT_STATUSES,
   emptyContactRecord,
   validPlannerDay,
   validPlannerMinute,
 } from '../../../../../local-server/planning-fields.mjs';
-import type { LabTarget } from './lab-targets';
 export {
-  CONTACT_STATUSES,
   CONTACT_EDITABLE_FIELDS,
   CONTACT_RESULTS,
+  CONTACT_STATUSES,
   validPlannerDay,
   validPlannerMinute,
 };
@@ -24,7 +28,12 @@ export interface ApplicationTask {
   progress: number;
   dueDate: string;
   notes: string;
+  /** Guideline field a smart import created this task from. */
+  importedFrom?: TaskOrigin;
+  /** A material's progress before it was ticked done; restored when unticked. */
+  progressBeforeDone?: number;
 }
+export type { TaskOrigin };
 export const CONTACT_LABELS: Record<ContactStatus, string> = {
   not_contacted: '未联系',
   first_sent: '已发首封',
@@ -70,10 +79,10 @@ export function japanToday(now = new Date()) {
   return `${value('year')}-${value('month')}-${value('day')}`;
 }
 export function dayNumber(day: string) {
-  return Date.parse(`${day}T00:00:00Z`) / 86400000;
+  return Date.parse(`${day}T00:00:00Z`) / 86_400_000;
 }
 export function addDays(day: string, count: number) {
-  return new Date((dayNumber(day) + count) * 86400000)
+  return new Date((dayNumber(day) + count) * 86_400_000)
     .toISOString()
     .slice(0, 10);
 }
@@ -115,12 +124,13 @@ export function materialProgress(tasks: ApplicationTask[] = []) {
   return {
     count: materials.length,
     done: materials.filter((item) => item.progress === 100).length,
-    percent: materials.length
-      ? Math.round(
-          materials.reduce((sum, item) => sum + item.progress, 0) /
-            materials.length,
-        )
-      : 0,
+    percent:
+      materials.length > 0
+        ? Math.round(
+            materials.reduce((sum, item) => sum + item.progress, 0) /
+              materials.length,
+          )
+        : 0,
   };
 }
 export const MATERIAL_TEMPLATES = [

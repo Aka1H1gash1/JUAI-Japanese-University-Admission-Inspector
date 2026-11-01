@@ -35,8 +35,9 @@ const props = defineProps<{
 const emit = defineEmits<{ saved: [id: string] }>();
 const open = defineModel<boolean>('open', { default: false });
 const store = useExplorerStore();
-const { message } = App.useApp();
+const { message, modal } = App.useApp();
 const form = ref<EditorFields>({});
+let initialForm = '';
 const feedback = ref('');
 const uploadingLogo = ref(false);
 let logoUploadToken = 0;
@@ -231,7 +232,27 @@ watch(open, (value) => {
         Object.assign(form.value, universityGeography(university));
     }
   }
+  initialForm = JSON.stringify(form.value);
 });
+
+// Closing by the X, Esc, the mask or 取消 used to discard a half-filled form silently.
+function requestClose() {
+  if (store.saving) return;
+  if (JSON.stringify(form.value) === initialForm) {
+    open.value = false;
+    return;
+  }
+  modal.confirm({
+    title: '放弃未保存的修改？',
+    content: `这个${kindLabel.value}表单里有还没保存的内容，关闭后会丢失。`,
+    okText: '放弃修改',
+    cancelText: '继续编辑',
+    okButtonProps: { danger: true },
+    onOk() {
+      open.value = false;
+    },
+  });
+}
 
 async function save() {
   if (store.saving || uploadingLogo.value) return;
@@ -334,12 +355,14 @@ async function save() {
 
 <template>
   <Modal
-    v-model:open="open"
+    :open="open"
     :title="dialogTitle"
     :footer="null"
     :width="kind === 'university' ? 720 : 620"
     :body-style="{ maxHeight: '75vh', overflowY: 'auto' }"
     :destroy-on-close="true"
+    :mask-closable="false"
+    @cancel="requestClose"
   >
     <form class="explorer-form" @submit.prevent="save">
       <p class="form-context">
@@ -740,7 +763,7 @@ async function save() {
       </div>
       <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
       <div class="form-footer">
-        <span>仅名称必填，其余可以稍后补充</span><Button @click="open = false">取消</Button><Button
+        <span>仅名称必填，其余可以稍后补充</span><Button @click="requestClose">取消</Button><Button
           type="primary"
           html-type="submit"
           :loading="store.saving"

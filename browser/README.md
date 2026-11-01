@@ -1,6 +1,6 @@
 # JUAI Browser Launcher
 
-JUAI v1.2 的主启动方式。启动器不携带 Electron / Chromium，而是运行内置 Node.js 本地服务，再用用户现有 Chrome、Edge 或系统默认浏览器打开。
+JUAI v1.3 的主启动方式。启动器不携带 Electron / Chromium，而是运行内置 Node.js 本地服务，再用用户现有 Chrome、Edge 或系统默认浏览器打开。
 
 ## 运行结构
 
@@ -8,7 +8,7 @@ JUAI v1.2 的主启动方式。启动器不携带 Electron / Chromium，而是�
 JUAI.exe / JUAI.app
   └─ runtime/node
       └─ app/launcher.mjs
-          ├─ 127.0.0.1:随机端口（浏览器入口与运行管理）
+          ├─ 127.0.0.1:5680（浏览器入口与运行管理，占用时改用临时端口）
           └─ 127.0.0.1:随机端口（内部数据服务）
 ```
 

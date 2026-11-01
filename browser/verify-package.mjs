@@ -49,7 +49,7 @@ try {
   if (!runtimeResponse.ok)
     throw new Error(`Runtime endpoint returned ${runtimeResponse.status}.`);
   const runtime = await runtimeResponse.json();
-  if (!runtime.browserMode || runtime.version !== '1.2.0')
+  if (!runtime.browserMode || runtime.version !== '1.3.0')
     throw new Error(`Unexpected runtime status: ${JSON.stringify(runtime)}`);
   const workspaceResponse = await fetch(
     `${state.origin}/api/japangrad/workspace`,

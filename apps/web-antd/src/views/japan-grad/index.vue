@@ -8,7 +8,7 @@ import ExplorerIcon from './components/explorer-icon.vue';
 import UniversityComparison from './components/university-comparison.vue';
 import UniversityLogo from './components/university-logo.vue';
 import { useExplorerStore } from './explorer';
-import { geographySearchTerms } from './japan-geography';
+import { geographySearchTerms, universityLocation } from './japan-geography';
 import { vAccessibleSelect } from './select-accessibility';
 
 const store = useExplorerStore();
@@ -68,10 +68,10 @@ function toggleCompare(id: string) {
 </script>
 
 <template>
-  <section class="explorer-page university-collection-page">
+  <section class="explorer-page university-collection-page directory-page">
     <header class="page-heading workspace-page-heading">
       <div>
-        <h1>大学清单</h1>
+        <h1 class="workspace-title">大学清单</h1>
       </div>
       <Button
         type="primary"
@@ -115,24 +115,27 @@ function toggleCompare(id: string) {
         </Button>
       </div>
 
-      <div v-if="visibleUniversities.length" class="university-grid">
+      <div v-if="visibleUniversities.length" class="university-directory">
+        <div class="university-directory-head" aria-hidden="true">
+          <span>大学</span><span>所在地 / 类型</span><span>QS 世界排名</span><span>日本排名</span><span>已整理资料</span><span>对比</span>
+        </div>
         <article
           v-for="university in visibleUniversities"
           :key="university.id"
-          class="university-card"
+          class="university-directory-entry"
           :class="{ 'is-selected': selectedIds.includes(university.id) }"
         >
           <RouterLink
             :to="`/japan-grad/universities/${university.id}`"
-            class="university-card-link"
+            class="directory-entry-link"
             :aria-label="`查看${university.name}详情`"
           />
-          <div class="university-card-header">
+          <div class="directory-identity">
             <UniversityLogo
               :logo-id="university.logoId"
               :name="university.name"
             />
-            <div class="university-card-identity">
+            <div>
               <h2>{{ university.name }}</h2>
               <p
                 v-if="
@@ -143,35 +146,46 @@ function toggleCompare(id: string) {
                 {{ university.japaneseName }}
               </p>
             </div>
-            <Checkbox
-              class="university-card-compare"
-              :checked="selectedIds.includes(university.id)"
-              :aria-label="`加入对比：${university.name}`"
-              @change="toggleCompare(university.id)"
-            >
-              对比
-            </Checkbox>
           </div>
-          <span class="compact-university-type" :title="university.category">{{
-            ['国立', '公立', '国公立'].includes(university.category)
-              ? '国公立'
-              : university.category || '类型待补充'
-          }}</span>
-          <div class="compact-university-ranks">
-            <div>
-              <span>QS 世界排名</span><strong>{{ university.qsRank || '—' }}</strong><small>{{ university.qsYear || '年份待补充' }}</small>
-            </div>
-            <div
-              :title="university.japanRankSource || '日本排名需注明榜单来源'"
-            >
-              <span>日本排名</span><strong>{{ university.japanRank || '—' }}</strong><small>{{
-                [university.japanRankSource, university.japanRankYear]
-                  .filter(Boolean)
-                  .join(' · ') || '来源待补充'
-              }}</small>
-            </div>
+          <div class="directory-field">
+            <span class="directory-mobile-label">所在地 / 类型</span><strong>{{
+              universityLocation(university) || '所在地待补充'
+            }}</strong><small>{{
+              ['国立', '公立', '国公立'].includes(university.category)
+                ? '国公立'
+                : university.category || '类型待补充'
+            }}</small>
           </div>
+          <div class="directory-field">
+            <span class="directory-mobile-label">QS 世界排名</span><strong>{{ university.qsRank || '—' }}</strong><small>{{ university.qsYear || '年份待补充' }}</small>
+          </div>
+          <div
+            class="directory-field"
+            :title="university.japanRankSource || '日本排名需注明榜单来源'"
+          >
+            <span class="directory-mobile-label">日本排名</span><strong>{{ university.japanRank || '—' }}</strong><small>{{
+              [university.japanRankSource, university.japanRankYear]
+                .filter(Boolean)
+                .join(' · ') || '来源待补充'
+            }}</small>
+          </div>
+          <div class="directory-field directory-profile-count">
+            <strong>{{ store.schoolsFor(university.id).length }} 个研究科</strong><small>{{ store.universityLabs(university.id).length }} 个研究室 ·
+              {{ store.universityProfessors(university.id).length }}
+              位老师</small>
+          </div>
+          <Checkbox
+            class="directory-compare"
+            :checked="selectedIds.includes(university.id)"
+            :aria-label="`加入对比：${university.name}`"
+            @change="toggleCompare(university.id)"
+          />
         </article>
+        <p class="directory-list-count">
+          {{ visibleUniversities.length }} 所大学{{
+            query ? ` · 共 ${store.universities.length} 所` : ''
+          }}
+        </p>
       </div>
       <div v-else class="search-empty">
         <ExplorerIcon name="search" />
@@ -210,11 +224,10 @@ function toggleCompare(id: string) {
         添加你感兴趣的大学，再为它整理研究科、专攻与研究室。<br />你的择校清单，由你自己建立。
       </p>
       <div class="empty-journey">
-        <span><ExplorerIcon name="building" />大学</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="book" />研究科</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="book" />专攻</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="user" />心仪老师</span>
+        <span><ExplorerIcon name="building" />大学</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="book" />研究科</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="book" />专攻</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="folder" />研究室</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="user" />老师</span>
       </div>
     </section>
     <EntityCreateFlow v-model:open="editorOpen" kind="university" />
     <UniversityComparison v-model:open="comparisonOpen" :ids="selectedIds" />
   </section>
 </template>
-<style scoped src="./university-list-compact.css"></style>

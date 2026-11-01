@@ -108,6 +108,7 @@ export {
   MapPin,
   Monitor,
   Pencil,
+  Star,
   Trash2,
   Upload,
   UserRound,

@@ -1,16 +1,15 @@
 import { randomUUID } from 'node:crypto';
+
 import {
   CONTACT_EDITABLE_FIELDS,
-  CONTACT_STATUSES,
   emptyContactRecord,
   validPlannerDay,
-  validPlannerMinute,
 } from './planning-fields.mjs';
 const now = () => new Date().toISOString();
 const validId = (value) =>
   typeof value === 'string' && /^[\w-]{1,100}$/.test(value);
-const early = (status) =>
-  ['not_contacted', 'first_sent', 'replied'].includes(status);
+const EARLY_RANK = { not_contacted: 0, first_sent: 1, replied: 2 };
+const early = (status) => status in EARLY_RANK;
 const cases = (person) =>
   [person.contact, ...(person.contactHistory ?? [])].filter(Boolean);
 const editableSignature = (value) =>
@@ -18,6 +17,8 @@ const editableSignature = (value) =>
     Object.fromEntries(CONTACT_EDITABLE_FIELDS.map((key) => [key, value[key]])),
   );
 export function createExperienceService({
+  writeWorkspace,
+  saveMessage,
   db,
   snapshot,
   transaction,
@@ -34,9 +35,7 @@ export function createExperienceService({
   const updateWorkspace = (data, previous) => {
     if (JSON.stringify(data) === JSON.stringify(previous.data)) return;
     validateExplorer(data);
-    db.prepare(
-      'UPDATE workspace_data SET data = ?, revision = revision + 1 WHERE id = 1',
-    ).run(JSON.stringify(data));
+    writeWorkspace(data, previous.revision, previous.data);
   };
   function normalize(value, previous) {
     const contact = { ...emptyContactRecord(), ...previous, ...value };
@@ -55,7 +54,7 @@ export function createExperienceService({
     origin,
     checkVersions,
   ) {
-    let contact = normalize(value, previous);
+    const contact = normalize(value, previous);
     if (
       checkVersions &&
       previous &&
@@ -95,14 +94,20 @@ export function createExperienceService({
       contact.followUpDate = validPlannerDay(followDay) ? followDay : '';
     contact.mailFollowUpDate = validPlannerDay(followDay) ? followDay : '';
     let inferred = false;
-    if (early(contact.status) && (rows.length || contact.mailManaged)) {
-      const status = rows.some((m) => m.direction === 'received')
-        ? 'replied'
-        : sent
-          ? 'first_sent'
-          : 'not_contacted';
-      inferred = contact.status !== status;
-      contact.status = status;
+    if (early(contact.status) && (rows.length > 0 || contact.mailManaged)) {
+      let status = sent ? 'first_sent' : 'not_contacted';
+      if (rows.some((m) => m.direction === 'received')) status = 'replied';
+      // Mail can move an early stage forward. A stage the user picked by hand
+      // (for example a reply received outside email) is not pulled back by mail.
+      const chosenByUser =
+        origin !== 'mail' && contact.status !== (previous?.status ?? '')
+          ? true
+          : previous?.stageHistory?.at(-1)?.via === 'manual' &&
+            previous.stageHistory.at(-1).status === contact.status;
+      if (!chosenByUser || EARLY_RANK[status] > EARLY_RANK[contact.status]) {
+        inferred = contact.status !== status;
+        contact.status = status;
+      }
       contact.mailManaged = true;
     }
     for (const [key, dateField, marker] of [
@@ -142,7 +147,12 @@ export function createExperienceService({
     if (changed) {
       contact.version = (previous?.version ?? 0) + 1;
       contact.updatedAt = now();
-      if (!previous || previous.status !== contact.status)
+      if (!previous || previous.status !== contact.status) {
+        let description = '建立考学经历';
+        if (previous)
+          description = inferred
+            ? '根据本段经历的收发邮件更新阶段'
+            : '更新考学阶段';
         contact.stageHistory = [
           ...(previous?.stageHistory ?? []),
           {
@@ -150,13 +160,10 @@ export function createExperienceService({
             status: contact.status,
             at: now(),
             via: inferred || origin === 'mail' ? 'mail' : 'manual',
-            description: !previous
-              ? '建立考学经历'
-              : inferred
-                ? '根据本段经历的收发邮件更新阶段'
-                : '更新考学阶段',
+            description,
           },
         ].slice(-100);
+      }
     } else {
       contact.version = previous.version;
       contact.updatedAt = previous.updatedAt;
@@ -222,8 +229,8 @@ export function createExperienceService({
     !db.prepare('SELECT version FROM schema_migrations WHERE version = 5').get()
   )
     transaction(() => {
-      const current = snapshot(),
-        data = structuredClone(current.data);
+      const current = snapshot();
+      const data = structuredClone(current.data);
       for (const person of data.professors) {
         person.contact = normalize({
           ...person.contact,
@@ -233,8 +240,8 @@ export function createExperienceService({
         person.contactHistory ??= [];
       }
       for (const row of db.prepare('SELECT id, data FROM messages').all()) {
-        const mail = JSON.parse(row.data),
-          person = data.professors.find((p) => p.id === mail.professorId);
+        const mail = JSON.parse(row.data);
+        const person = data.professors.find((p) => p.id === mail.professorId);
         if (person && !mail.experienceId) {
           mail.experienceId = person.contact.experienceId;
           db.prepare('UPDATE messages SET data = ? WHERE id = ?').run(
@@ -248,8 +255,8 @@ export function createExperienceService({
           "SELECT id, owner_id, data FROM documents WHERE owner_type = 'professor'",
         )
         .all()) {
-        const doc = JSON.parse(row.data),
-          person = data.professors.find((p) => p.id === row.owner_id);
+        const doc = JSON.parse(row.data);
+        const person = data.professors.find((p) => p.id === row.owner_id);
         if (doc.kind === 'consent' && person && !doc.experienceId) {
           doc.experienceId = person.contact.experienceId;
           db.prepare('UPDATE documents SET data = ? WHERE id = ?').run(
@@ -270,8 +277,8 @@ export function createExperienceService({
             'consent',
             'outcome',
           ]) {
-            const oldSource = `${person.id}-${suffix}`,
-              next = `${person.id}-${person.contact.experienceId}-${suffix}`;
+            const next = `${person.id}-${person.contact.experienceId}-${suffix}`;
+            const oldSource = `${person.id}-${suffix}`;
             for (const entry of lab.timeline?.events ?? [])
               if (entry.replaces === oldSource) entry.replaces = next;
             if (lab.timeline)
@@ -304,9 +311,9 @@ export function createExperienceService({
     }
   }
   function writeMessage(record, requestedExperienceId, previousMail) {
-    const current = snapshot(),
-      data = structuredClone(current.data),
-      person = data.professors.find((p) => p.id === record.professorId);
+    const current = snapshot();
+    const data = structuredClone(current.data);
+    const person = data.professors.find((p) => p.id === record.professorId);
     if (!person) fail('老师已不存在。', 404);
     record.experienceId =
       requestedExperienceId ||
@@ -321,9 +328,7 @@ export function createExperienceService({
       )
         for (const contact of cases(person))
           preserveReference(contact, previousMail);
-      db.prepare(
-        'INSERT INTO messages VALUES (?, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data',
-      ).run(record.id, record.professorId, JSON.stringify(record));
+      saveMessage(record);
       prepare(data, current.data, { origin: 'mail', checkVersions: false });
       updateWorkspace(data, current);
     });
@@ -332,9 +337,9 @@ export function createExperienceService({
   function removeMessage(id) {
     const row = db.prepare('SELECT data FROM messages WHERE id = ?').get(id);
     if (!row) fail('邮件记录不存在。', 404);
-    const mail = JSON.parse(row.data),
-      current = snapshot(),
-      data = structuredClone(current.data);
+    const current = snapshot();
+    const data = structuredClone(current.data);
+    const mail = JSON.parse(row.data);
     transaction(() => {
       for (const person of data.professors)
         for (const contact of cases(person)) preserveReference(contact, mail);
@@ -362,15 +367,19 @@ export function createExperienceService({
   }
   async function handle(req, res, route) {
     if (route === '/api/japangrad/experience-library' && req.method === 'GET') {
-      const url = new URL(req.url, 'http://127.0.0.1'),
-        ids = [
-          ...new Set(
-            (url.searchParams.get('professorIds') || '')
-              .split(',')
-              .filter(Boolean),
-          ),
-        ];
-      if (!ids.length || ids.length > 100 || ids.some((id) => !validId(id)))
+      const url = new URL(req.url, 'http://127.0.0.1');
+      const ids = [
+        ...new Set(
+          (url.searchParams.get('professorIds') || '')
+            .split(',')
+            .filter(Boolean),
+        ),
+      ];
+      if (
+        ids.length === 0 ||
+        ids.length > 100 ||
+        ids.some((id) => !validId(id))
+      )
         fail('每次最多读取 100 位老师的关联资料。');
       const owners = new Set(
         snapshot()
@@ -406,10 +415,12 @@ export function createExperienceService({
       /^\/api\/japangrad\/professors\/([\w-]+)\/experiences(?:\/([\w-]+))?$/,
     );
     if (!match) return false;
-    const input = await jsonBody(req),
-      current = snapshot(),
-      data = structuredClone(current.data),
-      person = data.professors.find((p) => p.id === match[1]);
+    // Finish reading the request before taking a snapshot; another save may
+    // complete while the body is arriving. Everything after this is synchronous.
+    const input = await jsonBody(req);
+    const current = snapshot();
+    const data = structuredClone(current.data);
+    const person = data.professors.find((p) => p.id === match[1]);
     if (!person) fail('老师不存在。', 404);
     if (!match[2] && req.method === 'POST') {
       if (

@@ -4,6 +4,7 @@
 import type { LabTarget } from '../lab-targets';
 import type { JourneyExportFieldId } from '../journey-export-fields';
 import { computed, ref, watch } from 'vue';
+import { useStorage } from '@vueuse/core';
 import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
 import {
   DEFAULT_EXPORT_FIELDS,
@@ -32,6 +33,15 @@ const taskDetails = ref(false);
 const includeNotes = ref(false);
 const exporting = ref(false);
 const feedback = ref('');
+// Remembers the last export choices; rooms still follow the current selection.
+const remembered = useStorage<{
+  fieldIds?: string[];
+  examDetails?: boolean;
+  taskDetails?: boolean;
+  includeNotes?: boolean;
+  year?: string;
+  rooms?: string[];
+}>('juai-journey-export', {});
 const selectedTargets = computed(() =>
   props.targets.filter((t) => roomIds.value.includes(t.lab.id)),
 );
@@ -106,16 +116,33 @@ const sheetCount = computed(
 );
 watch(open, (value) => {
   if (!value) return;
-  roomIds.value = props.initialIds.filter((id) =>
+  const last = remembered.value;
+  const knownFields = new Set<string>(JOURNEY_EXPORT_FIELDS.map((f) => f.id));
+  const lastRooms = (last.rooms ?? []).filter((id) =>
     props.targets.some((t) => t.lab.id === id),
   );
-  fieldIds.value = [...DEFAULT_EXPORT_FIELDS];
-  year.value = yearOptions.value.some((o) => o.value === props.initialYear)
-    ? props.initialYear
+  roomIds.value = props.initialIds.length
+    ? props.initialIds.filter((id) =>
+        props.targets.some((t) => t.lab.id === id),
+      )
+    : lastRooms;
+  const lastFields = (last.fieldIds ?? []).filter((id) =>
+    knownFields.has(id),
+  ) as JourneyExportFieldId[];
+  fieldIds.value = lastFields.length ? lastFields : [...DEFAULT_EXPORT_FIELDS];
+  // A year picked on the journey page wins over the remembered one.
+  const preferredYear =
+    props.initialYear === 'latest'
+      ? (last.year ?? 'latest')
+      : props.initialYear;
+  year.value = yearOptions.value.some((o) => o.value === preferredYear)
+    ? preferredYear
     : 'latest';
   query.value = '';
   universityId.value = '';
-  examDetails.value = taskDetails.value = includeNotes.value = false;
+  examDetails.value = !!last.examDetails;
+  taskDetails.value = !!last.taskDetails;
+  includeNotes.value = !!last.includeNotes;
   feedback.value = '';
 });
 watch(
@@ -173,6 +200,11 @@ async function download() {
   try {
     const { downloadJourneyWorkbook } = await import('../journey-export');
     downloadJourneyWorkbook(targets, exportYear, options);
+    remembered.value = {
+      ...options,
+      year: exportYear,
+      rooms: targets.map((t) => t.lab.id),
+    };
     open.value = false;
     message.success(
       `已导出 ${targets.length} 个研究室、${options.fieldIds.length} 个所选属性。`,
@@ -199,7 +231,7 @@ async function download() {
     class="journey-export-dialog"
   >
     <p class="export-intro">
-      选择要带走的研究室与属性。大学、研究室名称固定保留，用于识别每一行。
+      选择要带走的研究室与属性。大学、研究室名称固定保留，用于识别每一行。上次导出时选的属性和附加工作表会自动带入。
     </p>
     <fieldset class="export-content" :disabled="exporting">
       <div class="export-config-grid">

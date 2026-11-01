@@ -41,6 +41,7 @@ export function guidelineTodoCandidates(
     entries.push({
       title,
       dueDate,
+      importedFrom: key,
       notes: `智能导入自募集要项 · ${source}`,
     });
   };
@@ -55,6 +56,7 @@ export function guidelineTodoCandidates(
   return entries;
 }
 export function createAnalysisService({
+  writeWorkspace,
   db,
   snapshot,
   document,
@@ -991,6 +993,7 @@ export function createAnalysisService({
             kind: 'material',
             progress: 0,
             dueDate: '',
+            importedFrom: 'applicationMaterials',
             notes: '智能导入自募集要项 · 出愿材料',
           });
           names.add(normalizeQuote(line));
@@ -1018,19 +1021,70 @@ export function createAnalysisService({
             kind: 'todo',
             progress: 0,
             dueDate: candidate.dueDate,
+            importedFrom: candidate.importedFrom,
             notes: candidate.notes,
           });
           existing.add(key);
         }
       }
       validateExplorer(data);
+
+      // 记录分析历史到专攻
+      major.analysisHistory ??= [];
+      const sourceDoc = targetJob.sources?.[0];
+      const analysisRecord = {
+        id: randomUUID(),
+        documentId: sourceDoc?.documentId || '',
+        documentTitle: sourceDoc?.title || '未知文档',
+        analyzedAt: targetJob.createdAt,
+        adopter: 'user',
+        adoptedAt: now(),
+        fields: {},
+      };
+
+      // 记录采纳的字段及其来源页码
+      for (const [key, raw] of Object.entries(input.fields)) {
+        const evidence = proposal.fields[key]?.evidence || [];
+        const pages = [...new Set(evidence.map((e) => e.page).filter(Boolean))];
+
+        if (examKeys.includes(key)) {
+          // 考试相关字段记录到 examRecords
+          analysisRecord.fields.examRecords ??= [];
+          let examRecord = analysisRecord.fields.examRecords.find(
+            (e) => e.recordId === (existingExam?.id || ''),
+          );
+          if (!examRecord) {
+            examRecord = {
+              recordId:
+                existingExam?.id ||
+                (hasExam
+                  ? major.examHistory[major.examHistory.length - 1].id
+                  : ''),
+              year: input.examYear || '',
+              pages,
+            };
+            analysisRecord.fields.examRecords.push(examRecord);
+          }
+        } else {
+          // 通用字段直接记录
+          analysisRecord.fields[key] = {
+            value: raw.trim(),
+            pages,
+          };
+        }
+      }
+
+      // 保留最近10条分析历史
+      major.analysisHistory.push(analysisRecord);
+      if (major.analysisHistory.length > 10) {
+        major.analysisHistory = major.analysisHistory.slice(-10);
+      }
+
       proposal.status = 'applied';
       proposal.appliedAt = now();
       proposal.appliedFields = Object.keys(input.fields);
       transaction(() => {
-        db.prepare(
-          'UPDATE workspace_data SET data = ?, revision = revision + 1 WHERE id = 1',
-        ).run(JSON.stringify(data));
+        writeWorkspace(data, current.revision, current.data);
         db.prepare(
           'INSERT INTO analysis_requirements VALUES (?, ?) ON CONFLICT(major_id) DO UPDATE SET data = excluded.data',
         ).run(major.id, JSON.stringify(after));

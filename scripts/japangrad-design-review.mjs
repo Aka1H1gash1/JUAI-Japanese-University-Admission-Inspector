@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { mkdir, mkdtemp, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+
 import { chromium } from 'playwright';
+
 import { createLocalApp } from '../local-server/server.mjs';
 import { sampleData } from '../local-server/test-fixtures.mjs';
 
@@ -15,7 +17,10 @@ await mkdir(artifacts, { recursive: true });
 const workspace = await mkdtemp('/private/tmp/japangrad-design-');
 const server = await createLocalApp({
   workspace,
-  staticDir: path.resolve('apps/web-antd/dist'),
+  // A separate build folder keeps the running app's dist untouched.
+  staticDir: path.resolve(
+    process.env.DESIGN_REVIEW_DIST || 'apps/web-antd/dist',
+  ),
 });
 server.listen(0, '127.0.0.1');
 await once(server, 'listening');
@@ -116,11 +121,67 @@ data.professors.push({
   laboratory: '智能计算研究室',
   favorite: false,
 });
-await fetch(`${base}/api/japangrad/workspace`, {
-  method: 'PUT',
-  headers: { 'X-JapanGrad-Client': '1', 'Content-Type': 'application/json' },
-  body: JSON.stringify({ data, revision: 0 }),
-});
+const api = (route, method = 'GET', body) =>
+  fetch(`${base}/api/japangrad${route}`, {
+    method,
+    headers: { 'X-JapanGrad-Client': '1', 'Content-Type': 'application/json' },
+    ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+  }).then((response) => response.json());
+await api('/workspace', 'PUT', { data, revision: 0 });
+// Mark one lab as a target so the overview and journey pages show real content.
+{
+  const current = await api('/workspace');
+  const next = structuredClone(current.data);
+  const soon = (days) =>
+    new Date(Date.now() + days * 86_400_000).toISOString().slice(0, 10);
+  const [first, second] = next.labs;
+  Object.assign(first, {
+    wantApply: true,
+    research: '对话系统、多模态学习、人机交互',
+    languageRequirements: 'TOEFL iBT 80 以上',
+    tasks: [
+      {
+        id: 'task-plan',
+        title: '研究计划书',
+        kind: 'material',
+        progress: 60,
+        dueDate: '',
+        notes: '',
+      },
+      {
+        id: 'task-rec',
+        title: '推荐信',
+        kind: 'material',
+        progress: 20,
+        dueDate: '',
+        notes: '',
+      },
+      {
+        id: 'task-toefl',
+        title: '提交 TOEFL 成绩',
+        kind: 'todo',
+        progress: 0,
+        dueDate: soon(6),
+        notes: '',
+      },
+      {
+        id: 'task-mail',
+        title: '给林老师发首封邮件',
+        kind: 'todo',
+        progress: 0,
+        dueDate: soon(2),
+        notes: '',
+      },
+    ],
+  });
+  if (second)
+    Object.assign(second, { wantApply: true, research: '机器学习、知识表示' });
+  Object.assign(next.majors[0], {
+    applicationStart: soon(18),
+    applicationEnd: soon(30),
+  });
+  await api('/workspace', 'PUT', { data: next, revision: current.revision });
+}
 const browser = await chromium.launch({
   headless: true,
   executablePath:
@@ -187,7 +248,14 @@ try {
     const errors = [];
     page.on('pageerror', (error) => errors.push(error.message));
     const pages = [
-      ['universities', '/japan-grad'],
+      ['overview', '/japan-grad/overview'],
+      ['ai', '/japan-grad/ai'],
+      ['collection', '/japan-grad/collection'],
+      ['programs', '/japan-grad/special-programs'],
+      ['analysis', '/japan-grad/analysis/m1'],
+      ['journey', '/japan-grad/journey'],
+      ['settings', '/japan-grad/settings'],
+      ['universities', '/japan-grad/universities'],
       ['university', '/japan-grad/universities/u1'],
       ['school', '/japan-grad/universities/u1/schools/s1'],
       ['major', '/japan-grad/universities/u1/schools/s1/majors/m1'],
@@ -198,7 +266,7 @@ try {
     ];
     for (const [name, route] of pages) {
       await page.goto(`${base}${route}`);
-      await page.locator('.explorer-page').waitFor();
+      await page.locator('#japangrad-main > *').first().waitFor();
       await page.locator('#__app-loading__').waitFor({ state: 'hidden' });
       await page.screenshot({
         path: path.join(artifacts, `${name}-${mode}-desktop.png`),
@@ -269,8 +337,15 @@ try {
       }
     }
     if (phase === 'after') {
-      await page.goto(`${base}/japan-grad`);
+      await page.goto(`${base}/welcome`);
+      await page.locator('.welcome-enter').waitFor();
+      await page.screenshot({
+        path: path.join(artifacts, `welcome-${mode}-desktop.png`),
+        animations: 'disabled',
+      });
+      await page.goto(`${base}/japan-grad/universities`);
       await page.getByRole('button', { name: '新增大学', exact: true }).click();
+      await page.getByRole('button', { name: /手动新增/ }).click();
       await page
         .locator('.ant-modal-content:visible')
         .getByRole('button', { name: /取\s*消/ })
@@ -300,33 +375,7 @@ try {
         .locator('.ant-modal-content:visible')
         .getByRole('button', { name: /取\s*消/ })
         .click();
-      const opposite = mode === 'light' ? 'dark' : 'light';
-      await page.getByRole('button', { name: /^界面主题：/ }).click();
-      await page
-        .getByRole('menuitem', {
-          name: opposite === 'dark' ? '深色模式' : '浅色模式',
-          exact: true,
-        })
-        .click();
-      assert.equal(
-        await page.locator('html').getAttribute('data-japangrad-theme'),
-        opposite,
-      );
-      await page.reload();
-      await page.locator('.university-card').first().waitFor();
-      assert.equal(
-        await page.locator('html').getAttribute('data-japangrad-theme'),
-        opposite,
-      );
-      await page.getByRole('button', { name: /^界面主题：/ }).click();
-      await page
-        .getByRole('menuitem', { name: '跟随系统', exact: true })
-        .click();
-      assert.equal(
-        await page.locator('html').getAttribute('data-japangrad-theme'),
-        mode,
-      );
-      await page.locator('.workspace-location').click();
+      await page.locator('.jg-footer .text-button').click();
       await page.locator('.workspace-info code').waitFor();
       assert.equal(
         await page.locator('.workspace-info code').innerText(),
@@ -340,22 +389,19 @@ try {
       await page
         .getByRole('button', { name: '打开工作区导航', exact: true })
         .click();
-      await page
-        .locator('.workspace-nav-drawer .workspace-university-link')
-        .first()
-        .waitFor();
+      await page.locator('.jg-nav-drawer .jg-nav-link').first().waitFor();
       await page.screenshot({
         path: path.join(artifacts, `navigation-${mode}-mobile.png`),
         animations: 'disabled',
       });
       await page
-        .locator('.workspace-nav-drawer .workspace-university-link')
-        .first()
+        .locator('.jg-nav-drawer .jg-nav-link', { hasText: '修考之路' })
         .click();
-      await page.locator('.university-dashboard').waitFor();
+      await page.locator('.journey-page').waitFor();
       await page
-        .locator('.workspace-nav-drawer .ant-drawer-body')
+        .locator('.jg-nav-drawer .ant-drawer-body')
         .waitFor({ state: 'hidden' });
+      await page.setViewportSize({ width: 1440, height: 1080 });
       assert.equal(
         await page.evaluate(
           () => document.documentElement.scrollWidth > innerWidth,
@@ -370,7 +416,7 @@ try {
           body: JSON.stringify({ error: '测试：本地服务暂时不可用。' }),
         }),
       );
-      await failedPage.goto(`${base}/japan-grad`);
+      await failedPage.goto(`${base}/japan-grad/universities`);
       await failedPage.locator('.storage-alert').waitFor();
       await failedPage.screenshot({
         path: path.join(artifacts, `connection-error-${mode}.png`),
@@ -392,7 +438,7 @@ try {
         await route.continue();
       });
       try {
-        await loadingPage.goto(`${base}/japan-grad`, {
+        await loadingPage.goto(`${base}/japan-grad/universities`, {
           waitUntil: 'domcontentloaded',
         });
         await loadingPage.locator('.workspace-skeleton').waitFor();

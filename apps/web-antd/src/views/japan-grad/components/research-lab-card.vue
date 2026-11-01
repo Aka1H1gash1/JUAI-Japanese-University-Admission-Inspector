@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /* eslint-disable perfectionist/sort-imports, perfectionist/sort-named-imports -- Existing card imports retain their component grouping. */
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { App, Button, Checkbox, Progress } from 'ant-design-vue';
 import { useExplorerStore } from '../explorer';
 import { annualBudgetText, labContext, labPath } from '../lab-targets';
@@ -23,13 +23,19 @@ const emit = defineEmits<{
 const store = useExplorerStore();
 const { message } = App.useApp();
 const target = computed(() => labContext(store, props.labId));
+// Only this card shows a spinner; other cards stay idle while it saves.
+const toggling = ref(false);
 async function toggle() {
+  if (toggling.value) return;
+  toggling.value = true;
   try {
     await store.toggleWantApply(props.labId);
   } catch (error) {
     message.error(
       error instanceof Error ? error.message : '保存失败，请重试。',
     );
+  } finally {
+    toggling.value = false;
   }
 }
 </script>
@@ -52,9 +58,9 @@ async function toggle() {
         class="icon-button lab-intent-button"
         :class="{ 'is-wanted': target.lab.wantApply }"
         :aria-pressed="target.lab.wantApply"
-        :loading="store.saving"
+        :loading="toggling"
         @click="toggle"
-        ><ExplorerIcon :name="target.lab.wantApply ? 'check' : 'plus'" />{{
+        ><ExplorerIcon name="heart" />{{
           target.lab.wantApply ? '已标记想考' : '想考'
         }}</Button
       >

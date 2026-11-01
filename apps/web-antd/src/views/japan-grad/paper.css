@@ -1,0 +1,338 @@
+/*
+ * 冰川主题：保留现有页面结构，以冰川蓝、银绿和靛蓝建立明亮层次。
+ * 所有颜色来自 palette.ts，同时覆盖数据页面和浮层。
+ */
+
+/* ---------- 标题 ---------- */
+
+.university-explorer
+  :is(h1, .page-heading h1, .detail-heading h1, .overview-heading h1),
+.ant-modal .ant-modal-title,
+.ant-drawer .ant-drawer-title {
+  font-family: var(--jg-font-serif);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.university-explorer h1 {
+  color: var(--jg-heading);
+}
+
+.page-heading h1,
+.workspace-page-heading h1,
+.overview-heading h1 {
+  font-size: clamp(28px, 2.6vw, 36px);
+  line-height: 1.3;
+  letter-spacing: 0.02em;
+}
+
+.detail-heading h1 {
+  font-size: clamp(26px, 2.3vw, 32px);
+}
+
+/* 页面上的 h2 是分区标题：衬线、带一条细下划线 */
+.university-explorer
+  .explorer-page
+  :is(
+    .collection-heading,
+    .collection-section-heading,
+    .overview-section-heading
+  )
+  h2,
+.university-explorer .explorer-page > section > header h2 {
+  font-family: var(--jg-font-serif);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.heading-dot {
+  color: var(--jg-mint-text);
+}
+
+.page-description {
+  font-size: 14px;
+  color: var(--jg-secondary);
+}
+
+/* 标题留白与靛蓝细线，让内容仍然是页面的重点。 */
+.workspace-page-heading {
+  padding: 0 0 22px;
+  margin-bottom: 26px;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--jg-line);
+  border-radius: 0;
+}
+
+/* ---------- 卡片 ---------- */
+
+.university-explorer
+  :is(
+    .university-card,
+    .school-card,
+    .research-lab-card,
+    .professor-card,
+    .program-card,
+    .settings-panel,
+    .entity-overview,
+    .admission-period,
+    .admission-materials,
+    .admission-language,
+    .exam-history-table-wrap,
+    .journey-task-panel,
+    .contact-board-column,
+    .archive-selection-card,
+    .collection-entity,
+    .ai-simple-card
+  ) {
+  background: var(--jg-surface);
+  border: 1px solid var(--jg-line);
+  border-radius: var(--jg-radius);
+  box-shadow: var(--jg-shadow);
+}
+
+/* 可点击的卡片：悬停时只加深边线，不浮起 */
+.university-explorer
+  :is(
+    a.university-card,
+    a.school-card,
+    .university-card,
+    .research-lab-card,
+    .professor-card,
+    .program-card
+  ):hover {
+  border-color: var(--jg-border);
+  box-shadow: none;
+  transform: none;
+}
+
+/* 冰川蓝卡头与银绿图标。 */
+.university-card-header,
+.contact-board-column > header {
+  background: var(--jg-ice);
+}
+
+.entity-symbol,
+.empty-symbol,
+.collection-stat-icon {
+  color: var(--jg-mint-text);
+  background: var(--jg-mint-soft);
+  border: 0;
+  border-radius: var(--jg-control-radius);
+}
+
+/* ---------- 空状态 ---------- */
+
+.collection-empty,
+.search-empty,
+.archive-dropzone,
+.checklist-empty,
+.overview-onboarding {
+  background: var(--jg-ice);
+  border: 1px dashed var(--jg-accent-line);
+  border-radius: var(--jg-radius);
+}
+
+.collection-empty h2,
+.collection-empty h3,
+.overview-onboarding h2,
+.search-empty h2 {
+  font-family: var(--jg-font-serif);
+  font-weight: 700;
+}
+
+/* ---------- 表格 ---------- */
+
+.university-explorer :is(table, .ant-table) th {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--jg-muted);
+  letter-spacing: 0.04em;
+  background: var(--jg-card-header);
+}
+
+.university-explorer table td {
+  border-color: var(--jg-line);
+}
+
+/* ---------- 按钮与控件 ---------- */
+
+.university-explorer .ant-btn,
+.explorer-form .ant-btn,
+.ant-modal .ant-btn {
+  border-radius: var(--jg-control-radius);
+  box-shadow: none;
+}
+
+.university-explorer .ant-btn-default,
+.ant-modal .ant-btn-default {
+  background: transparent;
+}
+
+.university-explorer .ant-btn-default:not(:disabled):hover,
+.ant-modal .ant-btn-default:not(:disabled):hover {
+  color: var(--jg-text);
+  background: var(--jg-subtle);
+  border-color: var(--jg-border);
+}
+
+html[data-japangrad-theme]
+  .ant-btn:not(.ant-btn-primary):not(.ant-btn-dangerous):not(:disabled):hover {
+  color: var(--jg-text);
+  border-color: var(--jg-border);
+}
+
+.university-explorer
+  :is(
+    .ant-input,
+    .ant-input-affix-wrapper,
+    .ant-select-selector,
+    .ant-input-number
+  ) {
+  border-radius: var(--jg-control-radius);
+}
+
+.text-button {
+  color: var(--jg-accent-text);
+}
+
+/* 想考用银绿衬靛蓝；心仪老师用暖珊瑚，区分两种收藏。 */
+.university-explorer .lab-intent-button.is-wanted {
+  color: var(--jg-mint-ink);
+  background: var(--jg-mint);
+  border-color: transparent;
+}
+
+.favorite-count,
+.heart-toggle.is-favorite,
+.favorite-button.is-favorite {
+  color: var(--jg-coral);
+}
+
+.heart-toggle.is-favorite,
+.favorite-button.is-favorite {
+  background: var(--jg-coral-soft);
+  border-color: transparent;
+}
+
+/* ---------- 页签 ---------- */
+
+.university-explorer .ant-tabs-tab-active .ant-tabs-tab-btn {
+  font-weight: 600;
+}
+
+/* ---------- 标签与徽记 ---------- */
+
+.university-explorer .ant-tag {
+  border-radius: var(--jg-tag-radius);
+}
+
+/* ---------- 弹窗 ---------- */
+
+.ant-modal .ant-modal-content {
+  border-radius: 12px;
+}
+
+.ant-modal .ant-modal-header {
+  background: transparent;
+}
+
+.ant-modal .ant-modal-title {
+  font-size: 19px;
+}
+
+/* ---------- 申请总览细节 ---------- */
+
+.overview-event-date strong {
+  font-family: var(--jg-font-serif);
+  color: var(--jg-accent-text);
+}
+
+.overview-event-date {
+  background: var(--jg-ice);
+  border: 1px solid var(--jg-line);
+}
+
+.university-logo,
+.entity-symbol {
+  border-color: transparent;
+  border-radius: var(--jg-control-radius);
+}
+
+.university-explorer .ant-segmented {
+  background: var(--jg-subtle);
+}
+
+.university-explorer .ant-segmented-item-selected {
+  box-shadow: var(--jg-shadow);
+}
+
+/* 辅助色按用途分配，帮助快速找到不同工作区块。 */
+.overview-section-heading > h2,
+.collection-heading > h2,
+.collection-section-heading > h2 {
+  color: var(--jg-heading);
+}
+
+.contact-board-column > h2 {
+  background: var(--jg-lavender-soft);
+}
+
+.contact-board-column:nth-child(2n) > h2 {
+  background: var(--jg-mint-soft);
+}
+
+.contact-board-column:nth-child(3n) > h2 {
+  background: var(--jg-sunshine-soft);
+}
+
+.overview-onboarding .overview-label {
+  color: var(--jg-mint-text);
+}
+
+.gantt-event:is(
+  .event-written,
+  .event-interview,
+  .event-exam,
+  [class~='event-teacher_interview']
+) {
+  color: var(--jg-lavender);
+  background: var(--jg-lavender-soft);
+  border-color: var(--jg-lavender);
+}
+
+.gantt-event.event-consent {
+  color: var(--jg-mint-text);
+  background: var(--jg-mint-soft);
+  border-color: var(--jg-success);
+}
+
+.gantt-event.event-result {
+  color: var(--jg-sunshine);
+  background: var(--jg-sunshine-soft);
+  border-color: var(--jg-warning);
+}
+
+.university-logo:not(.has-logo) {
+  color: var(--jg-mint-ink);
+  background: var(--jg-mint);
+  border-color: transparent;
+}
+
+/* Main workspace pages share one title rule, including asynchronously loaded pages. */
+.university-explorer .explorer-main h1.workspace-title {
+  margin: 0;
+  font-family: var(--jg-font);
+  font-size: 30px;
+  font-weight: 650;
+  line-height: 1.3;
+  color: var(--jg-heading);
+  letter-spacing: -0.02em;
+}
+
+@media (max-width: 640px) {
+  .university-explorer .explorer-main h1.workspace-title {
+    font-size: 26px;
+  }
+}

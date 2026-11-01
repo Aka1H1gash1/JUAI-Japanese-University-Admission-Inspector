@@ -65,6 +65,7 @@ await cp(
 );
 for (const name of [
   'analysis-service.mjs',
+  'data-migrations.mjs',
   'document-reader-service.mjs',
   'experience-service.mjs',
   'information-service.mjs',
@@ -83,6 +84,11 @@ for (const name of [
   'collection-fields.mjs',
   'special-program-service.mjs',
   'workspace-settings-service.mjs',
+  'workspace-backup.mjs',
+  'workspace-schema.mjs',
+  'workspace-repository.mjs',
+  'workspace-records.mjs',
+  'DATABASE.md',
   'admission-ocr.mjs',
   'ocr-vision.swift',
   'admission-fields.json',
@@ -95,6 +101,10 @@ for (const name of [
     path.join(root, 'local-server', name),
     path.join(target, 'local-server', name),
   );
+await cp(
+  path.join(root, 'local-server/DATABASE.md'),
+  path.join(target, 'DATABASE.md'),
+);
 await mkdir(path.join(target, 'local-server/bin'), { recursive: true });
 execFileSync('swiftc', [
   '-O',

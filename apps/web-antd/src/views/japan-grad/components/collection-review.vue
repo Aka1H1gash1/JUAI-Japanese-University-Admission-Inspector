@@ -585,20 +585,19 @@ async function apply() {
   <section class="collection-review">
     <header class="collection-section-heading">
       <div>
-        <h2>资料已填好，生成你的学校档案</h2>
-        <p>按主链接对象建立本层档案，并补齐真实上级；已有上级可直接关联。</p>
+        <h2>核对 AI 草稿，再生成档案</h2>
+        <p>
+          下面的内容由 AI
+          从官网整理，可能有错漏。请逐项对照来源，取消不对的字段，确认后再在页面底部生成档案。
+        </p>
       </div>
       <Button :disabled="busy" @click="emit('refresh')">刷新已有资料</Button>
     </header>
     <section class="collection-generation-preview" aria-label="将生成的档案">
       <div class="collection-generation-heading">
         <div>
-          <span>READY TO CREATE / 自动建档</span>
-          <h3>一份资料，填入完整档案。</h3>
+          <h3>这次会建立或更新以下档案</h3>
         </div>
-        <Button type="primary" :disabled="busy" @click="openGeneration">
-          确认并生成档案
-        </Button>
       </div>
       <label class="collection-target-kind">主链接对应<Select
           v-accessible-select
@@ -713,7 +712,7 @@ async function apply() {
       >
         {{
           detail.job.draft.admissions.status === 'not_found'
-            ? '募集要项内容尚未取得，请补充官方招生链接后继续收集；已有基本信息仍可单独建档。'
+            ? '募集要项内容尚未取得，请补充官方招生链接后继续解析；已有基本信息仍可单独建档。'
             : '资料的归属或适用范围尚不明确，请先查看原文；不同选拔类别的时间请分别核对。'
         }}
       </p>
@@ -1087,7 +1086,7 @@ async function apply() {
   height: 100px;
   padding: 12px;
   font-size: 11px;
-  color: #59667d;
+  color: #5f646c;
   background: white;
   border: 1px solid var(--jg-line);
   border-radius: 10px;

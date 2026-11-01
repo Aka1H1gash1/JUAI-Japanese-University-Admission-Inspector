@@ -1,3 +1,13 @@
+export class LocalApiError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = 'LocalApiError';
+  }
+}
+
 export async function localApi<T>(
   route: string,
   options: RequestInit = {},
@@ -8,8 +18,9 @@ export async function localApi<T>(
   });
   const data = await response.json().catch(() => null);
   if (!response.ok || data === null) {
-    throw new Error(
+    throw new LocalApiError(
       data?.error || '无法连接本地服务，请从 JapanGrad 启动入口打开工作台。',
+      response.status,
     );
   }
   return data as T;

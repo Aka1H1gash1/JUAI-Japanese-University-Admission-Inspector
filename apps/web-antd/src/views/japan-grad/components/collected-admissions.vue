@@ -46,7 +46,6 @@ onBeforeUnmount(() => {
   <section v-if="records.length || errorMessage" class="collected-admissions">
     <header>
       <div>
-        <span>ADMISSIONS / 官网收集</span>
         <h2>对应募集要项</h2>
       </div>
       <RouterLink
@@ -89,7 +88,7 @@ onBeforeUnmount(() => {
           "
           class="admissions-scope"
         >
-          尚未采纳摘要内容，可在原收集任务中查看资料。
+          尚未采纳摘要内容，可在原解析任务中查看资料。
         </p>
         <div class="admissions-summary-grid">
           <section v-for="field in record.admissions.fields" :key="field.field">

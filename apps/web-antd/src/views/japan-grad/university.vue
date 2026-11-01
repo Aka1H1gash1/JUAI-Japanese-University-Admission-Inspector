@@ -83,7 +83,7 @@ function deleteUniversity() {
   const name = university.value.name;
   modal.confirm({
     title: `删除「${name}」？`,
-    content: `该大学下的 ${store.schoolsFor(id).length} 个研究科、${store.universityMajors(id).length} 个专攻、${store.universityLabs(id).length} 个研究室和 ${store.universityProfessors(id).length} 位老师的记录、文件索引和邮件也会一起删除；原文件保留在工作区。`,
+    content: `该大学下的 ${store.schoolsFor(id).length} 个研究科、${store.universityMajors(id).length} 个专攻、${store.universityLabs(id).length} 个研究室和 ${store.universityProfessors(id).length} 位老师的记录、文件索引和邮件也会一起删除；原文件保留在工作区。删除后无法在界面撤销，可先到「设置 → 本地工作区」备份。`,
     okText: '确认删除',
     cancelText: '取消',
     okButtonProps: { danger: true },

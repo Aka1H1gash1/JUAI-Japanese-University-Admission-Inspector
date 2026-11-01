@@ -41,7 +41,7 @@ const coreRoutes: RouteRecordRaw[] = [
     name: 'JapanGradWelcome',
     path: '/welcome',
     component: () => import('#/views/japan-grad/welcome.vue'),
-    meta: { title: 'JapanGrad', ignoreAccess: true, hideInMenu: true },
+    meta: { title: 'JUAI 择校笔记', ignoreAccess: true, hideInMenu: true },
   },
   {
     path: '/japan-grad',
@@ -77,7 +77,7 @@ const coreRoutes: RouteRecordRaw[] = [
         name: 'InformationCollection',
         path: 'collection',
         component: () => import('#/views/japan-grad/collection.vue'),
-        meta: { title: '网址解析结果' },
+        meta: { title: '网址解析' },
       },
       {
         name: 'AiManagement',
@@ -147,6 +147,7 @@ const coreRoutes: RouteRecordRaw[] = [
       },
       {
         name: 'ProfessorDetails',
+        // 遗留书签兼容入口；新链接统一使用 labs/:labId/professors/:professorId。
         path: 'universities/:universityId/schools/:schoolId/majors/:majorId/professors/:professorId',
         component: () => import('#/views/japan-grad/professor.vue'),
         meta: { title: '老师 · 资料与研究' },

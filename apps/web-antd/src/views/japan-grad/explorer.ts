@@ -18,7 +18,7 @@ import {
   validExamHistory,
 } from './exam-history';
 import { geographyError } from './japan-geography';
-import { jsonOptions, localApi } from './local-api';
+import { jsonOptions, localApi, LocalApiError } from './local-api';
 import { admissionRangeError, validAdmissionFields } from './major-admissions';
 import { emptyTimeline, timelineError } from './timeline';
 import {
@@ -93,6 +93,29 @@ export interface Major extends MajorAdmissionFields {
   website: string;
   notes: string;
   examHistory: ExamHistoryRecord[];
+  examHistoryVersion?: number; // 新增：考试历史版本号
+  analysisHistory?: AnalysisRecord[]; // 新增：分析历史记录
+}
+
+// 新增：分析历史记录类型
+export interface AnalysisRecord {
+  id: string;
+  documentId: string;
+  documentTitle: string;
+  analyzedAt: string;
+  adopter: string;
+  adoptedAt: string;
+  fields: {
+    applicationStart?: { value: string; pages: number[] };
+    applicationEnd?: { value: string; pages: number[] };
+    applicationMaterials?: { value: string; pages: number[] };
+    languageRequirements?: { value: string; pages: number[] };
+    examRecords?: Array<{
+      recordId: string;
+      year: string;
+      pages: number[];
+    }>;
+  };
 }
 
 export interface ResearchLab {
@@ -100,6 +123,7 @@ export interface ResearchLab {
   languageRequirements?: string;
   mainProfessorId?: string;
   tasks?: ApplicationTask[];
+  tasksVersion?: number; // 新增：材料待办版本号
   id: string;
   majorId: string;
   name: string;
@@ -419,6 +443,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
   const workspacePath = ref('');
   const migrationNotice = ref('');
   let revision = 0;
+  let labRevisions: Record<string, number> = {};
   let pending: Promise<unknown> = Promise.resolve();
   let loadPromise: Promise<void> | undefined;
 
@@ -427,6 +452,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     revision: number;
     data: ExplorerData;
     workspace: string;
+    entityRevisions?: { labs: Record<string, number> };
   }
   function snapshot(): ExplorerData {
     return JSON.parse(
@@ -521,6 +547,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
         }
         apply(result.data);
         revision = result.revision;
+        labRevisions = result.entityRevisions?.labs ?? {};
         workspacePath.value = result.workspace;
         loaded.value = true;
       } catch (error) {
@@ -533,26 +560,61 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     })();
     return loadPromise;
   }
-  function mutate<T>(work: () => T): Promise<T> {
-    const task = pending.then(async () => {
+  function mutate<T>(
+    work: () => T,
+    labPatch?: { id: string; fields: ('tasks' | 'wantApply')[] },
+  ): Promise<T> {
+    const attempt = async (retriesLeft: number): Promise<T> => {
       if (!loaded.value)
         throw new Error('本地工作区尚未加载，请先连接本地服务。');
       const before = snapshot();
-      saving.value = true;
       try {
         const value = work();
         const changed = snapshot();
-        apply(before);
+        const rowRevision = labPatch ? labRevisions[labPatch.id] : undefined;
+        const lab = labPatch
+          ? changed.labs?.find((item) => item.id === labPatch.id)
+          : undefined;
+        const usePatch = rowRevision !== undefined && labPatch && lab;
         const result = await localApi<WorkspaceSnapshot>(
-          '/workspace',
-          jsonOptions('PUT', { data: changed, revision }),
+          usePatch ? `/workspace/labs/${labPatch.id}` : '/workspace',
+          usePatch
+            ? jsonOptions('PATCH', {
+                revision: rowRevision,
+                patch: Object.fromEntries(
+                  labPatch.fields.map((key) => [key, lab[key]]),
+                ),
+              })
+            : jsonOptions('PUT', { data: changed, revision }),
         );
         apply(result.data);
         revision = result.revision;
+        labRevisions = result.entityRevisions?.labs ?? {};
         storageError.value = '';
         return value;
       } catch (error) {
         apply(before);
+        if (
+          error instanceof LocalApiError &&
+          error.status === 409 &&
+          retriesLeft > 0
+        ) {
+          const latest = await localApi<WorkspaceSnapshot>('/workspace');
+          if (!isExplorerData(latest.data))
+            throw new Error('工作区数据格式错误。', { cause: error });
+          apply(latest.data);
+          revision = latest.revision;
+          labRevisions = latest.entityRevisions?.labs ?? {};
+          return attempt(retriesLeft - 1);
+        }
+        throw error;
+      }
+    };
+    const task = pending.then(async () => {
+      saving.value = true;
+      try {
+        return await attempt(1);
+      } catch (error) {
         storageError.value =
           error instanceof Error ? error.message : '本地保存失败。';
         throw error;
@@ -590,11 +652,14 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     return labs.value.filter((item) => majorIds.has(item.majorId));
   }
   function toggleWantApply(id: string) {
-    return mutate(() => {
-      const lab = labs.value.find((item) => item.id === id);
-      if (!lab) throw new Error('研究室已不存在。');
-      lab.wantApply = !lab.wantApply;
-    });
+    return mutate(
+      () => {
+        const lab = labs.value.find((item) => item.id === id);
+        if (!lab) throw new Error('研究室已不存在。');
+        lab.wantApply = !lab.wantApply;
+      },
+      { id, fields: ['wantApply'] },
+    );
   }
   function addJourneyLabs(ids: string[]) {
     return mutate(() => {
@@ -728,6 +793,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
               : get('languageRequirements'),
           wantApply: previous?.wantApply ?? false,
           mainProfessorId: previous?.mainProfessorId ?? '',
+          tasksVersion: previous?.tasksVersion,
           tasks: previous?.tasks ?? [],
           timeline: previous?.timeline ?? emptyTimeline(),
         };
@@ -914,6 +980,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
         person.contact = contact;
       }
       const timeline = {
+        ...current,
         events: [
           ...current.events.filter(
             (item) =>
@@ -939,6 +1006,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
       const previous = current.events.find((item) => item.id === entryId);
       const hiddenSource = previous?.replaces || source;
       const next = {
+        ...current,
         events: current.events.filter((item) => item.id !== entryId),
         hiddenSources: [
           ...new Set([
@@ -1018,6 +1086,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           throw new Error('工作区数据格式错误。');
         apply(latest.data);
         revision = latest.revision;
+        labRevisions = latest.entityRevisions?.labs ?? {};
         return result;
       } finally {
         saving.value = false;
@@ -1039,6 +1108,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     if (!isExplorerData(result.data)) throw new Error('工作区数据格式错误。');
     apply(result.data);
     revision = result.revision;
+    labRevisions = result.entityRevisions?.labs ?? {};
   }
   function saveLabTasks(labId: string, tasks: ApplicationTask[]) {
     return mutate(() => {
@@ -1058,35 +1128,41 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     });
   }
   function saveLabTask(labId: string, task: ApplicationTask) {
-    return mutate(() => {
-      const lab = labs.value.find((item) => item.id === labId);
-      if (!lab) throw new Error('研究室已不存在。');
-      if (task.kind === 'todo' && !task.dueDate)
-        throw new Error('请为待办选择日期。');
-      const tasks = [...(lab.tasks ?? [])];
-      const index = tasks.findIndex((item) => item.id === task.id);
-      const value = {
-        ...task,
-        id: task.id || crypto.randomUUID(),
-        title: task.title.trim(),
-        notes: task.notes.trim(),
-      };
-      if (index === -1) tasks.push(value);
-      else tasks[index] = value;
-      const error = planningError({
-        labs: [{ ...lab, tasks }],
-        professors: professors.value,
-      });
-      if (error) throw new Error(error);
-      lab.tasks = tasks;
-    });
+    return mutate(
+      () => {
+        const lab = labs.value.find((item) => item.id === labId);
+        if (!lab) throw new Error('研究室已不存在。');
+        if (task.kind === 'todo' && !task.dueDate)
+          throw new Error('请为待办选择日期。');
+        const tasks = [...(lab.tasks ?? [])];
+        const index = tasks.findIndex((item) => item.id === task.id);
+        const value = {
+          ...task,
+          id: task.id || crypto.randomUUID(),
+          title: task.title.trim(),
+          notes: task.notes.trim(),
+        };
+        if (index === -1) tasks.push(value);
+        else tasks[index] = value;
+        const error = planningError({
+          labs: [{ ...lab, tasks }],
+          professors: professors.value,
+        });
+        if (error) throw new Error(error);
+        lab.tasks = tasks;
+      },
+      { id: labId, fields: ['tasks'] },
+    );
   }
   function removeLabTask(labId: string, id: string) {
-    return mutate(() => {
-      const lab = labs.value.find((item) => item.id === labId);
-      if (!lab) throw new Error('研究室已不存在。');
-      lab.tasks = (lab.tasks ?? []).filter((item) => item.id !== id);
-    });
+    return mutate(
+      () => {
+        const lab = labs.value.find((item) => item.id === labId);
+        if (!lab) throw new Error('研究室已不存在。');
+        lab.tasks = (lab.tasks ?? []).filter((item) => item.id !== id);
+      },
+      { id: labId, fields: ['tasks'] },
+    );
   }
   function saveExamRecord(
     majorId: string,

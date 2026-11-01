@@ -102,6 +102,53 @@ export function emptyContactRecord() {
     mailFollowUpDate: '',
   };
 }
+/**
+ * Which guideline field a smart-imported task came from. Stored on the task so
+ * the timeline can recognise it even after the user edits its title or notes.
+ */
+export const TASK_ORIGINS = [
+  'applicationStart',
+  'applicationEnd',
+  'applicationMaterials',
+  'writtenDate',
+  'interviewDate',
+  'resultDate',
+];
+const LEGACY_ORIGIN_NOTES = {
+  出愿开始日: 'applicationStart',
+  出愿截止日: 'applicationEnd',
+  出愿材料: 'applicationMaterials',
+  笔试日期: 'writtenDate',
+  面试日期: 'interviewDate',
+  结果发布日: 'resultDate',
+};
+const LEGACY_NOTE_PREFIX = '智能导入自募集要项 · ';
+
+/**
+ * Tasks imported before importedFrom existed only carry the origin in their
+ * notes. Tag them once; tasks that already have the field are left alone.
+ * Returns true when anything changed.
+ */
+export function tagImportedTasks(data) {
+  let changed = false;
+  for (const lab of data.labs ?? [])
+    for (const task of lab.tasks ?? []) {
+      if (task.importedFrom !== undefined || typeof task.notes !== 'string')
+        continue;
+      const at = task.notes.lastIndexOf(LEGACY_NOTE_PREFIX);
+      if (at === -1) continue;
+      const label = task.notes
+        .slice(at + LEGACY_NOTE_PREFIX.length)
+        .split(/\r?\n/)[0]
+        .trim();
+      const origin = LEGACY_ORIGIN_NOTES[label];
+      if (!origin) continue;
+      task.importedFrom = origin;
+      changed = true;
+    }
+  return changed;
+}
+
 export function planningError(data) {
   const text = (value, max) =>
     value === undefined || (typeof value === 'string' && value.length <= max);
@@ -166,15 +213,15 @@ export function planningError(data) {
       for (const [key, max] of Object.entries({
         experienceTitle: 160,
         draftSubject: 240,
-        draftBody: 20000,
+        draftBody: 20_000,
         replySummary: 8000,
         notes: 4000,
         requirements: 8000,
-        interviewPreparation: 12000,
+        interviewPreparation: 12_000,
         interviewNotes: 8000,
-        consentOriginal: 100000,
+        consentOriginal: 100_000,
         consentSourceNote: 500,
-        resultOriginal: 100000,
+        resultOriginal: 100_000,
         resultSourceNote: 500,
       }))
         if (!text(contact[key], max))
@@ -255,6 +302,12 @@ export function planningError(data) {
     if (lab.tasks === undefined) continue;
     if (!Array.isArray(lab.tasks) || lab.tasks.length > 200)
       return '每个研究室最多记录 200 条材料或待办。';
+    // 新增：验证版本号字段
+    if (
+      lab.tasksVersion !== undefined &&
+      (!Number.isSafeInteger(lab.tasksVersion) || lab.tasksVersion < 0)
+    )
+      return '材料待办版本号格式错误。';
     const ids = new Set();
     for (const task of lab.tasks) {
       if (
@@ -272,7 +325,13 @@ export function planningError(data) {
         typeof task.notes !== 'string' ||
         task.notes.length > 4000 ||
         typeof task.dueDate !== 'string' ||
-        (task.dueDate && !validPlannerDay(task.dueDate))
+        (task.dueDate && !validPlannerDay(task.dueDate)) ||
+        (task.importedFrom !== undefined &&
+          !TASK_ORIGINS.includes(task.importedFrom)) ||
+        (task.progressBeforeDone !== undefined &&
+          (!Number.isInteger(task.progressBeforeDone) ||
+            task.progressBeforeDone < 0 ||
+            task.progressBeforeDone > 99))
       )
         return '材料 / 待办的名称、进度或截止日期不合法。';
       ids.add(task.id);

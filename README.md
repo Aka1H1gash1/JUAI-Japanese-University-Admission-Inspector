@@ -6,13 +6,15 @@ JUAI 面向准备报考日本修士、博士的学生，把大学、研究科、
 
 当前版本为本地 MVP，支持手动维护、修考日程、文档阅读与笔记，以及募集要项 AI 提取后核对填表。可复用已接入助手、选择本机可用 Luna，或单独配置模型 API；扫描件支持本机 OCR / 图片模型。资料以你确认的内容为准。
 
-## v1.2 本地浏览器版
+## v1.3 本地浏览器版
+
+v1.3 重新设计了界面，新增一键备份，并修复了材料进度、待办重复和联络阶段等问题，详见 [v1.3 发布说明](browser/RELEASE_NOTES.md)。
 
 在 [GitHub Releases](https://github.com/Aka1H1gash1/JUAI-Japanese-University-Admission-Inspector/releases) 下载 Windows x64、macOS Apple Silicon 或 macOS Intel 便携 ZIP。解压后双击 JUAI，软件会启动内置的本地 Node.js 数据服务，并优先用你现有的 Google Chrome 打开工作台。不需要安装 Node.js、pnpm、Electron 或数据库。
 
 资料继续保存在用户文档目录下的 `JapanGradWorkspace`，浏览器只是操作界面。再次点击 JUAI 会重新打开页面，不会启动第二个数据库进程。
 
-在「设置 → 手机访问」可以临时开启局域网入口。手机与电脑需连接同一 Wi-Fi；链接带本次启动的随机密钥，默认不开放，退出 JUAI 后立即失效。详见 [v1.2 发布说明](browser/RELEASE_NOTES.md)。
+在「设置 → 手机访问」可以临时开启局域网入口。手机与电脑需连接同一 Wi-Fi；链接带本次启动的随机密钥，默认不开放，退出 JUAI 后立即失效。
 
 Electron 0.1.x 安装版仍保留作为历史兼容方案，但 v1.2 起不再作为主发行物。
 
@@ -66,7 +68,7 @@ Electron 0.1.x 安装版仍保留作为历史兼容方案，但 v1.2 起不再�
 - **首年总费用** = 一次性入学金 + 年度开销。
 - **两年总费用** = 一次性入学金 + 2 × 年度开销。
 
-费用未填写完整时会标出缺项；Excel 中缺少必要输入的合计留空。完整备份和迁移方法见[使用说明](local-server/USER_GUIDE.md)。
+费用未填写完整时会标出缺项；Excel 中缺少必要输入的合计留空。在「设置 → 本地工作区」可一键备份完整工作区；恢复和迁移方法见[使用说明](local-server/USER_GUIDE.md)。
 
 ## 源码运行
 
@@ -98,7 +100,7 @@ pnpm --filter @vben/web-antd dev --host 127.0.0.1 --port 5666
 
 打开 `http://127.0.0.1:5666/japan-grad/overview`。
 
-要以 v1.2 的本地浏览器模式运行已构建页面：
+要以本地浏览器模式运行已构建页面：
 
 ```sh
 pnpm build:japangrad
@@ -118,7 +120,7 @@ pnpm start:japangrad
 
 ```text
 apps/web-antd/          前端应用与 JUAI 页面
-browser/                v1.2 浏览器启动器、便携包与发布验证
+browser/                浏览器启动器、便携包与发布验证
 local-server/          本地 API、SQLite 和文件存储
 packages/              共享组件与框架能力
 internal/              构建、TypeScript 和代码规范工具
@@ -164,6 +166,8 @@ LICENSES/              第三方许可声明
 在专攻详情或募集要项文件详情进入分析页，选择资料与分析对象，读取后选择助手、本机模型或独立 API 生成 AI 草稿。可按页选择范围，扫描件支持 OCR / 图片识别；日期与引用需核对，确认后才更新专攻要求、考试记录或研究室清单。仍支持外部 Agent 的 ZIP 任务包与本地 STDIO MCP。详见[使用说明](local-server/USER_GUIDE.md#募集要项分析与-agent-接入)和 [Agent 接入说明](local-server/AGENT_INTEGRATION_DESIGN.md)。
 
 Agent 支持按专攻授权的本地 MCP 信息文件读写：创建并下载配置，选择可编辑的资料类型，保存后同步界面并保留可对照、可撤销的修改记录。配置说明见[使用说明](local-server/USER_GUIDE.md#本地-agent-信息文件接入)。
+
+> 注：全局「AI 助手」侧栏已从页头移除，对话入口目前在阅读页右侧的「AI」面板；以下说明保留作参考。
 
 网页右上角提供「AI 助手」，配置自己的 Responses / OpenAI 兼容 API 后即可查询授权资料、生成修改建议并在对话中确认保存，支持历史对话、流式回答与停止。API 密钥仅保留在本地服务内存，重启后重填。
 

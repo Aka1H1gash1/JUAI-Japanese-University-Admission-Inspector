@@ -96,6 +96,7 @@ const summaryKeys = [
 ];
 
 export function createSpecialProgramService({
+  saveProgram,
   db,
   snapshot,
   transaction,
@@ -203,10 +204,7 @@ export function createSpecialProgramService({
         status: 'researching',
         favorite: false,
       });
-      db.prepare('INSERT INTO special_admission_programs VALUES (?,?)').run(
-        record.id,
-        JSON.stringify(record),
-      );
+      saveProgram(record);
       return record;
     },
     async handle(req, res, route) {
@@ -233,10 +231,7 @@ export function createSpecialProgramService({
           )
             fail('特殊入学项目已达到 2000 条，请先整理不需要的记录。');
           const record = normalize(input);
-          db.prepare('INSERT INTO special_admission_programs VALUES (?,?)').run(
-            record.id,
-            JSON.stringify(record),
-          );
+          saveProgram(record);
           json(res, record, 201);
           return true;
         }
@@ -261,9 +256,7 @@ export function createSpecialProgramService({
             return true;
           }
           const record = normalize(input, latest);
-          db.prepare(
-            'UPDATE special_admission_programs SET data=? WHERE id=?',
-          ).run(JSON.stringify(record), id);
+          saveProgram(record);
           json(res, record);
           return true;
         }

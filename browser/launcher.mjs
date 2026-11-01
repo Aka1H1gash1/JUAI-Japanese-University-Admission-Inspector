@@ -1,5 +1,5 @@
 import { Buffer } from 'node:buffer';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import {
@@ -222,7 +222,7 @@ async function applicationVersion() {
       if (value.version) return value.version;
     } catch {}
   }
-  return '1.2.0';
+  return '1.3.0';
 }
 
 function staticDirectory() {
@@ -248,6 +248,8 @@ async function startJuaiBrowser({
   workspace = process.env.JAPANGRAD_WORKSPACE ||
     path.join(homedir(), 'Documents', 'JapanGradWorkspace'),
   launchBrowser = true,
+  // A stable origin keeps browser-stored drafts and layout settings across restarts.
+  preferredPort = Number(process.env.JUAI_PORT || 5680),
 } = {}) {
   await mkdir(workspace, { recursive: true });
   const stateFile = path.join(workspace, '.juai-browser-instance.json');
@@ -411,7 +413,12 @@ async function startJuaiBrowser({
       sendJson(res, { error: error.message || '运行管理请求失败。' }, 400);
     }
   });
-  localPort = await listen(local, '127.0.0.1');
+  try {
+    localPort = await listen(local, '127.0.0.1', preferredPort);
+  } catch (error) {
+    if (error.code !== 'EADDRINUSE' || !preferredPort) throw error;
+    localPort = await listen(local, '127.0.0.1');
+  }
   localOrigin = `http://127.0.0.1:${localPort}`;
 
   async function shutdown() {
@@ -466,6 +473,45 @@ async function startJuaiBrowser({
   };
 }
 
+// The packaged app has no console window, so startup failures need a native dialog.
+function showStartupError(error, logFile) {
+  if (process.env.JUAI_NO_DIALOG === '1') return Promise.resolve();
+  const text = `JUAI 启动失败：${error.message || error}\n\n详细日志：${logFile}`;
+  return new Promise((resolve) => {
+    const done = () => resolve();
+    if (process.platform === 'darwin')
+      execFile(
+        'osascript',
+        [
+          '-e',
+          'on run argv',
+          '-e',
+          'display dialog (item 1 of argv) with title "JUAI" buttons {"好"} default button 1 with icon stop',
+          '-e',
+          'end run',
+          text,
+        ],
+        done,
+      );
+    else if (process.platform === 'win32')
+      execFile(
+        'powershell.exe',
+        [
+          '-NoProfile',
+          '-NonInteractive',
+          '-Command',
+          'Add-Type -AssemblyName PresentationFramework; [System.Windows.MessageBox]::Show($env:JUAI_STARTUP_ERROR, "JUAI", "OK", "Error") | Out-Null',
+        ],
+        {
+          env: { ...process.env, JUAI_STARTUP_ERROR: text },
+          windowsHide: true,
+        },
+        done,
+      );
+    else resolve();
+  });
+}
+
 if (
   process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)
@@ -478,12 +524,15 @@ if (
     const workspace =
       process.env.JAPANGRAD_WORKSPACE ||
       path.join(homedir(), 'Documents', 'JapanGradWorkspace');
+    const logFile = path.join(workspace, 'logs/juai-browser.log');
     mkdir(path.join(workspace, 'logs'), { recursive: true })
       .then(() =>
         import('node:fs/promises').then(({ appendFile }) =>
-          appendFile(path.join(workspace, 'logs/juai-browser.log'), message),
+          appendFile(logFile, message),
         ),
       )
+      .catch(() => {})
+      .then(() => showStartupError(error, logFile))
       .finally(() => {
         process.exitCode = 1;
       });

@@ -264,7 +264,7 @@ function goToMajor() {
         </p>
       </div>
       <div class="detail-actions">
-        <Button :disabled="busy || loading" @click="load">刷新任务</Button><Button @click="agentOpen = true">连接我的 Agent</Button>
+        <Button :disabled="busy || loading" @click="load">刷新任务</Button>
       </div>
     </header>
     <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
@@ -326,8 +326,10 @@ function goToMajor() {
           读取资料，准备分析
         </Button>
       </div>
-      <small>先读取 PDF、DOCX、MD、TXT，随后选择助手、本机 Luna 或独立 API 提取。
-        扫描 PDF 支持本机 OCR 或图片模型；旧 DOC 请先转为 PDF 或 DOCX。</small>
+      <small>分两步：先在本机读取所选文件的文字，这一步不会发送任何内容；读取完成后，再用「AI
+        管理」里设置的模型提取为草稿。 支持 PDF、DOCX、MD、TXT；扫描 PDF
+        会先在本机 OCR，或交给支持图片的模型。旧 DOC 请先转为 PDF 或
+        DOCX。</small>
     </div>
     <section v-if="jobs.length" class="analysis-jobs">
       <h3>分析任务</h3>
@@ -365,7 +367,14 @@ function goToMajor() {
           @review="reviewAi"
         />
         <details v-if="canRead" class="analysis-agent-actions">
-          <summary>其他方式：外部 Agent / 导入分析结果</summary>
+          <summary>其他方式：外部 Agent / 导入分析结果（高级）</summary>
+          <p>
+            适合已经在用 Codex、Claude Code 等本地 Agent
+            的用户。一般情况下直接使用上方的「AI 提取为草稿」即可。
+          </p>
+          <Button :disabled="busy" @click="agentOpen = true">
+            连接我的 Agent（MCP）
+          </Button>
           <a
             class="analysis-package-link"
             :href="`/api/japangrad/analysis/jobs/${selectedJob.id}/package`"

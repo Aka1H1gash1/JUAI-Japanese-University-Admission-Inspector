@@ -15,7 +15,7 @@ import { backup, DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 
 // Bump when adding a local-server schema migration; older desktop apps must refuse newer schemas.
-export const SUPPORTED_SCHEMA_VERSION = 13;
+export const SUPPORTED_SCHEMA_VERSION = 14;
 const MARKER = '.juai-desktop-version.json';
 
 async function readMarker(workspace) {

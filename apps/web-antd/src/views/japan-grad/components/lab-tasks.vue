@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ApplicationTask } from '../application-planning';
+import type { ApplicationTask, TaskOrigin } from '../application-planning';
 
 import { computed, ref } from 'vue';
 
@@ -20,6 +20,7 @@ import {
   materialProgress,
 } from '../application-planning';
 import { useExplorerStore } from '../explorer';
+import { labContext, majorPath } from '../lab-targets';
 import ExplorerIcon from './explorer-icon.vue';
 
 type ChecklistKind = ApplicationTask['kind'];
@@ -70,6 +71,7 @@ function addTodoSuggestion(
   title: string,
   rawDate: string,
   source: string,
+  importedFrom: TaskOrigin,
 ) {
   const dueDate = dateFromText(rawDate);
   if (!dueDate) return;
@@ -80,6 +82,7 @@ function addTodoSuggestion(
     kind: 'todo',
     progress: 0,
     dueDate,
+    importedFrom,
     notes: `智能导入自募集要项 · ${source}`,
     source,
   });
@@ -103,6 +106,7 @@ const smartSuggestions = computed<SmartSuggestion[]>(() => {
         kind: 'material',
         progress: 0,
         dueDate: '',
+        importedFrom: 'applicationMaterials',
         notes:
           raw.length > 160
             ? `${raw.slice(0, 3900)}\n智能导入自募集要项 · 出愿材料`
@@ -116,12 +120,14 @@ const smartSuggestions = computed<SmartSuggestion[]>(() => {
       '开始出愿手续',
       value.applicationStart,
       '出愿开始日',
+      'applicationStart',
     );
     addTodoSuggestion(
       suggestions,
       '完成出愿提交',
       value.applicationEnd,
       '出愿截止日',
+      'applicationEnd',
     );
     for (const record of value.examHistory ?? []) {
       const context = `${record.year} 年${record.session ? ` · ${record.session}` : ''}`;
@@ -130,28 +136,58 @@ const smartSuggestions = computed<SmartSuggestion[]>(() => {
         `${context} · 参加笔试`,
         record.writtenDate,
         '笔试日期',
+        'writtenDate',
       );
       addTodoSuggestion(
         suggestions,
         `${context} · 参加面试`,
         record.interviewDate,
         '面试日期',
+        'interviewDate',
       );
       addTodoSuggestion(
         suggestions,
         `${context} · 确认合格结果`,
         record.resultDate,
         '结果发布日',
+        'resultDate',
       );
     }
   }
   const existing = new Set(allTasks.value.map(normalizedKey));
   const unique = new Map<string, SmartSuggestion>();
-  for (const suggestion of suggestions) {
+  // Past dates (for example last year's exams) would only arrive as overdue items.
+  const today = japanToday();
+  for (const suggestion of suggestions.filter(
+    (item) => !item.dueDate || item.dueDate >= today,
+  )) {
     const key = normalizedKey(suggestion);
     if (!existing.has(key) && !unique.has(key)) unique.set(key, suggestion);
   }
   return [...unique.values()];
+});
+
+const skippedPastDates = computed(() => {
+  const value = major.value;
+  if (props.kind !== 'todo' || !value) return 0;
+  const today = japanToday();
+  return [
+    value.applicationStart,
+    value.applicationEnd,
+    ...(value.examHistory ?? []).flatMap((record) => [
+      record.writtenDate,
+      record.interviewDate,
+      record.resultDate,
+    ]),
+  ].filter((raw) => {
+    const day = dateFromText(raw);
+    return day && day < today;
+  }).length;
+});
+
+const admissionsPath = computed(() => {
+  const target = labContext(store, props.labId);
+  return target ? `${majorPath(target)}#major-admissions` : '';
 });
 
 const analysisPath = computed(() => ({
@@ -190,9 +226,18 @@ async function save() {
   }
   saving.value = true;
   feedback.value = '';
+  // Editing the progress by hand replaces whatever was remembered before ticking.
+  const { progressBeforeDone, ...edited } = draft.value;
+  const original = allTasks.value.find((item) => item.id === draft.value.id);
+  const keep =
+    props.kind === 'material' &&
+    edited.progress === 100 &&
+    original?.progress === 100 &&
+    progressBeforeDone !== undefined;
   try {
     await store.saveLabTask(props.labId, {
-      ...draft.value,
+      ...edited,
+      ...(keep ? { progressBeforeDone } : {}),
       kind: props.kind,
       dueDate: props.kind === 'todo' ? draft.value.dueDate : '',
     });
@@ -205,12 +250,26 @@ async function save() {
   }
 }
 
+// Ticking a material remembers its progress in the workspace, so unticking restores it.
+function toggled(task: ApplicationTask): ApplicationTask {
+  const { progressBeforeDone, ...rest } = task;
+  if (task.progress !== 100)
+    return task.kind === 'material' && task.progress > 0
+      ? { ...rest, progress: 100, progressBeforeDone: task.progress }
+      : { ...rest, progress: 100 };
+  return {
+    ...rest,
+    progress: task.kind === 'material' ? (progressBeforeDone ?? 0) : 0,
+  };
+}
+
 async function toggle(task: ApplicationTask) {
+  const next = toggled(task);
+  const { progress } = next;
   try {
-    await store.saveLabTask(props.labId, {
-      ...task,
-      progress: task.progress === 100 ? 0 : 100,
-    });
+    await store.saveLabTask(props.labId, next);
+    if (task.kind === 'material' && task.progress === 100)
+      message.info(`已恢复为 ${progress}%，可点编辑调整准备进度。`);
   } catch (error) {
     message.error(error instanceof Error ? error.message : '更新失败。');
   }
@@ -277,9 +336,6 @@ async function importTemplates() {
   <section v-if="lab" class="lab-tasks-section checklist-section">
     <header class="collection-heading checklist-heading">
       <div>
-        <p class="checklist-eyebrow">
-          {{ kind === 'material' ? 'APPLICATION MATERIALS' : 'DATED ACTIONS' }}
-        </p>
         <h2>
           {{ label }}<span>{{ tasks.length }}</span>
         </h2>
@@ -402,13 +458,13 @@ async function importTemplates() {
         <header>
           <span><ExplorerIcon name="notebook" /></span>
           <div>
-            <h3>从募集要项核对结果生成</h3>
+            <h3>从专攻的出愿信息生成</h3>
             <p>
               {{ major?.name }} ·
               {{
                 kind === 'material'
-                  ? '已确认的出愿材料'
-                  : '已确认的出愿与考试日期'
+                  ? '「出愿信息」里的所需材料'
+                  : '「出愿信息」和历年考试表里的具体日期'
               }}
             </p>
           </div>
@@ -433,20 +489,32 @@ async function importTemplates() {
           </label>
         </div>
         <div v-else class="smart-import-missing">
-          <h3>募集要项中还没有可导入的{{ label }}</h3>
+          <h3>专攻里还没有可导入的{{ label }}</h3>
           <p>
             {{
               kind === 'material'
-                ? '请先读取募集要项并核对「出愿材料」。'
-                : '请先核对完整的出愿、笔试、面试或放榜日期。'
+                ? '在专攻的「出愿信息」里逐行填写所需材料，或让 AI 从募集要项提取。'
+                : '在专攻的「出愿信息」或历年考试表里填写 2027-06-01 这样的具体日期，或让 AI 从募集要项提取。'
             }}
           </p>
+          <RouterLink
+            v-if="admissionsPath"
+            :to="admissionsPath"
+            @click="smartOpen = false"
+          >
+            手动填写出愿信息 →
+          </RouterLink>
           <RouterLink :to="analysisPath" @click="smartOpen = false">
-            前往募集要项智能分析 →
+            用 AI 分析募集要项 →
           </RouterLink>
         </div>
+        <p v-if="skippedPastDates" class="smart-import-skipped">
+          已跳过 {{ skippedPastDates }} 个已经过去的日期，例如往年的考试。
+        </p>
         <footer>
-          <span>只导入勾选项，已有同名内容不会重复。</span>
+          <span
+            >只导入勾选项，已有同名内容不会重复。导入的待办和时间线上的考试节点是同一天时，时间线只显示一次。</span
+          >
           <Button @click="smartOpen = false">取消</Button>
           <Button
             v-if="smartSuggestions.length"
@@ -604,7 +672,7 @@ async function importTemplates() {
   place-items: center;
   width: 38px;
   height: 38px;
-  color: #fff;
+  color: var(--jg-on-accent);
   background: var(--jg-accent);
   border-radius: 9px;
 }
@@ -671,8 +739,14 @@ async function importTemplates() {
 
 .smart-import-missing a {
   display: inline-block;
-  margin-top: 14px;
+  margin: 14px 10px 0;
   color: var(--jg-accent-text);
+}
+
+.smart-import-skipped {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--jg-muted);
 }
 
 .smart-import-panel > footer {

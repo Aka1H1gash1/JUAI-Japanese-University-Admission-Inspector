@@ -181,7 +181,7 @@ const hint = computed(() => {
 }
 
 .current .collection-stage-marker {
-  color: #fff;
+  color: var(--jg-on-accent);
   background: var(--jg-accent);
   border-color: var(--jg-accent);
 }

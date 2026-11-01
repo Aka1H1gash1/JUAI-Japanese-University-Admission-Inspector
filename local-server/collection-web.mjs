@@ -60,13 +60,13 @@ export function collectionUrl(raw, base) {
       ),
     )
   )
-    throw new Error('收集任务不打开退出、删除、提交等操作链接。');
+    throw new Error('网址解析不打开退出、删除、提交等操作链接。');
   return url.toString();
 }
 async function publicAddresses(url) {
   const host = new URL(url).hostname.replaceAll(/^\[|\]$/g, '');
   if (/^(?:localhost|.*\.localhost|.*\.local|.*\.internal)$/i.test(host))
-    throw new Error('收集任务只读取公开网页。');
+    throw new Error('网址解析只读取公开网页。');
   const addresses = isIP(host)
     ? [{ address: host, family: isIP(host) }]
     : await Promise.race([
@@ -327,7 +327,7 @@ export function createCollectionBrowser({
       )
         throw new Error('浏览器端口格式错误。');
       if (pages.size > 0 || connecting)
-        throw new Error('收集任务正在使用浏览器，请完成后再切换连接。');
+        throw new Error('网址解析正在使用浏览器，请完成后再切换连接。');
       if (configuredPort === (port || 0) && browser?.isConnected())
         return this.status();
       configuredPort = port || 0;

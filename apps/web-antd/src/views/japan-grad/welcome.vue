@@ -95,8 +95,8 @@ async function enter(event: MouseEvent) {
 <template>
   <div class="welcome-page" :class="{ 'is-still': !motion }">
     <header class="welcome-nav">
-      <div class="welcome-brand" aria-label="JapanGrad 择校笔记">
-        <span class="welcome-brand-mark"><BrandMark /></span><span>JapanGrad</span>
+      <div class="welcome-brand" aria-label="JUAI 择校笔记">
+        <span class="welcome-brand-mark"><BrandMark /></span><span>JUAI</span>
       </div>
       <button
         class="welcome-motion-control"

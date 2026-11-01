@@ -33,7 +33,7 @@ const runtime = JSON.parse(
   ),
 );
 if (!runtime.version.startsWith('v24.'))
-  throw new Error('JUAI v1.2 便携包必须内置 Node.js 24 LTS。');
+  throw new Error('JUAI 便携包必须内置 Node.js 24 LTS。');
 if (!['darwin', 'win32'].includes(runtime.platform))
   throw new Error('当前便携包支持 macOS 和 Windows。');
 
@@ -109,6 +109,14 @@ await cp(
         path.basename(source),
       ),
   },
+);
+await cp(
+  path.join(root, 'local-server/DATABASE.md'),
+  path.join(target, 'local-server/DATABASE.md'),
+);
+await cp(
+  path.join(root, 'local-server/DATABASE.md'),
+  path.join(target, 'DATABASE.md'),
 );
 await cp(path.join(root, 'apps/web-antd/dist'), path.join(target, 'web'), {
   recursive: true,

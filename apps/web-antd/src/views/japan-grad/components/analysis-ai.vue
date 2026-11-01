@@ -2,11 +2,20 @@
 import type { AnalysisJob } from '../analysis-types';
 
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { Button, Input, Select } from 'ant-design-vue';
 
 import { jsonOptions, localApi } from '../local-api';
 import { vAccessibleSelect } from '../select-accessibility';
+
+const props = defineProps<{ job: AnalysisJob }>();
+const emit = defineEmits<{ updated: []; review: [id: string] }>();
+const route = useRoute();
+const aiSetupPath = computed(
+  () =>
+    `/japan-grad/ai?advanced=1&returnTo=${encodeURIComponent(route.fullPath)}`,
+);
 interface Settings {
   ocr: { available: boolean; name: string };
   managed: {
@@ -52,8 +61,6 @@ interface Run {
   createdAt: string;
 }
 
-const props = defineProps<{ job: AnalysisJob }>();
-const emit = defineEmits<{ updated: []; review: [id: string] }>();
 const preview = ref<Preview>();
 const runs = ref<Run[]>([]);
 const settings = ref<Settings>();
@@ -222,7 +229,7 @@ async function stop() {
             "
             >远程 API 需要先在 AI 管理填写密钥；本地接口可不填。</small>
         </div>
-        <RouterLink to="/japan-grad/ai?tab=features">前往 AI 管理 ↗</RouterLink>
+        <RouterLink :to="aiSetupPath">前往 AI 管理 ↗</RouterLink>
       </div>
       <details class="ai-reading-options">
         <summary>
@@ -280,7 +287,7 @@ async function stop() {
               : modelLabel
                 ? `使用 ${modelLabel}`
                 : '选好模型后开始'
-          }}</strong><small>点击后将所选内容交给模型处理；生成草稿后由你确认填表。</small>
+          }}</strong><small>点击后，所选页的文字或页面图片会发送给这个模型服务处理，费用按服务商规则计算。生成草稿后由你逐项确认，才会写入资料。</small>
         </div>
         <Button v-if="running" :loading="busy" @click="stop">停止提取</Button><Button
           v-else

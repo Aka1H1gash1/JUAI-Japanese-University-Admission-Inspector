@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import { createHash, randomUUID } from 'node:crypto';
 
 import geography from './japan-geography.json' with { type: 'json' };
+import { TASK_ORIGINS } from './planning-fields.mjs';
 
 const fields = {
   university: [
@@ -87,9 +88,16 @@ const recordFields = {
   ],
   tasks: ['id', 'title', 'kind', 'progress', 'dueDate', 'notes'],
 };
+const INTERNAL_TASK_FIELDS = ['importedFrom', 'progressBeforeDone'];
 const textSchema = (maxLength = 4000) => ({ type: 'string', maxLength });
 const idSchema = { type: 'string', pattern: '^[\\w-]{1,100}$' };
 function fieldSchema(key) {
+  if (key === 'laboratory')
+    return {
+      ...textSchema(),
+      readOnly: true,
+      description: '派生自所属研究室；请编辑研究室档案。',
+    };
   if (['favorite', 'wantApply'].includes(key)) return { type: 'boolean' };
   if (
     [
@@ -169,6 +177,18 @@ function fieldSchema(key) {
           progress: { type: 'integer', minimum: 0, maximum: 100 },
           dueDate: { type: 'string', description: 'YYYY-MM-DD 或空字符串' },
           notes: textSchema(),
+          importedFrom: {
+            enum: TASK_ORIGINS,
+            description:
+              'JUAI 内部字段：智能导入来源。只读，可省略，省略时保留原值。',
+          },
+          progressBeforeDone: {
+            type: 'integer',
+            minimum: 0,
+            maximum: 99,
+            description:
+              'JUAI 内部字段：材料勾选完成前的进度。只读，可省略，省略时保留原值。',
+          },
         },
       },
     };
@@ -234,6 +254,7 @@ const object = (value) =>
 const id = (value) => typeof value === 'string' && /^[\w-]{1,100}$/.test(value);
 
 export function createInformationService({
+  writeWorkspace,
   db,
   snapshot,
   transaction,
@@ -362,9 +383,7 @@ export function createInformationService({
   function persist(record, data) {
     validateExplorer(data);
     transaction(() => {
-      db.prepare(
-        'UPDATE workspace_data SET data = ?, revision = revision + 1 WHERE id = 1',
-      ).run(JSON.stringify(data));
+      writeWorkspace(data, record.revision - 1);
       db.prepare(
         'INSERT INTO agent_information_history VALUES (?, ?, ?, ?, ?)',
       ).run(
@@ -480,7 +499,29 @@ export function createInformationService({
     const entity = data[collections[entry.kind]].find(
       (e) => e.id === entry.entity.id,
     );
+    const previousTasks = new Map(
+      (entity.tasks ?? []).map((task) => [task.id, task]),
+    );
+    if (
+      entry.kind === 'professor' &&
+      value.data.laboratory !== undefined &&
+      value.data.laboratory !== entity.laboratory
+    )
+      fail('研究室名称请在研究室档案中修改。');
     Object.assign(entity, value.data);
+    // Agents see only the open task fields; keep JUAI's own bookkeeping on each task.
+    if (Array.isArray(value.data.tasks))
+      entity.tasks = value.data.tasks.map((task) => {
+        const previousTask = previousTasks.get(task.id);
+        const kept = { ...task };
+        for (const field of INTERNAL_TASK_FIELDS)
+          if (kept[field] === undefined && previousTask?.[field] !== undefined)
+            kept[field] = previousTask[field];
+        // The remembered progress only matters while a material is ticked as done.
+        if (kept.progress !== 100 || kept.kind !== 'material')
+          delete kept.progressBeforeDone;
+        return kept;
+      });
     const after = {
       schemaVersion: 1,
       kind: entry.kind,
@@ -720,6 +761,12 @@ export function createInformationService({
       (key) => stable(entity[key]) !== stable(value.data[key]),
     );
     if (changedFields.length === 0) fail('建议与当前资料相同，无需修改。');
+    if (
+      entry.kind === 'professor' &&
+      value.data.laboratory !== undefined &&
+      value.data.laboratory !== entity.laboratory
+    )
+      fail('研究室名称请在研究室档案中修改。');
     Object.assign(entity, value.data);
     validateExplorer(data);
     return {

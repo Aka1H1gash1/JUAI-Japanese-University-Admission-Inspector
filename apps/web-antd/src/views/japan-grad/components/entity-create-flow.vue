@@ -3,11 +3,13 @@ import type { AiManagement } from '../ai-management-types';
 import type { CollectionJob } from '../collection-types';
 import type { EntityKind } from '../explorer';
 
-import { computed, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { computed, h, ref, watch } from 'vue';
+import { RouterLink, useRoute } from 'vue-router';
 
+import { useEventListener } from '@vueuse/core';
 import { App, Button, Input, InputNumber, Modal, Select } from 'ant-design-vue';
 
+import { useCollectionJobsStore } from '../collection-jobs';
 import { COLLECTION_NAMES } from '../collection-types';
 import { jsonOptions, localApi } from '../local-api';
 import { vAccessibleSelect } from '../select-accessibility';
@@ -22,7 +24,7 @@ const props = defineProps<{
 const emit = defineEmits<{ saved: [id: string]; manual: [] }>();
 const open = defineModel<boolean>('open', { default: false });
 const route = useRoute();
-const router = useRouter();
+const jobs = useCollectionJobsStore();
 const { message } = App.useApp();
 const busy = ref(false);
 const errorMessage = ref('');
@@ -38,17 +40,34 @@ const kindName = computed(() =>
     ? '特殊入学项目'
     : COLLECTION_NAMES[props.kind],
 );
-const selectedConnection = computed(() => {
-  const preferred = management.value?.features.find(
-    (f) => f.id === 'web_collection',
-  )?.connectionId;
-  const matches =
+const modeConnections = computed(
+  () =>
     management.value?.connections.filter(
       (c) =>
         c.enabled &&
         (aiMode.value === 'agent' ? c.kind === 'codex' : c.kind !== 'codex'),
-    ) || [];
+    ) || [],
+);
+// A remote API key lives only in memory, so a restart leaves the connection without one.
+const usable = (c: (typeof modeConnections.value)[number]) =>
+  c.kind === 'codex' || c.provider.local || c.keyConfigured;
+const selectedConnection = computed(() => {
+  const preferred = management.value?.features.find(
+    (f) => f.id === 'web_collection',
+  )?.connectionId;
+  const matches = modeConnections.value.filter(usable);
   return matches.find((c) => c.id === preferred) || matches[0];
+});
+const keyMissing = computed(
+  () =>
+    !selectedConnection.value && modeConnections.value.some((c) => !usable(c)),
+);
+const aiSetupPath = computed(
+  () => `/japan-grad/ai?returnTo=${encodeURIComponent(route.fullPath)}`,
+);
+// The AI page opens in a new tab so the link and notes typed here are kept.
+useEventListener(window, 'focus', () => {
+  if (open.value && mode.value === 'url' && !busy.value) void loadAiState();
 });
 const selectedModel = computed(() => {
   const feature = management.value?.features.find(
@@ -90,6 +109,9 @@ const chooserOpen = computed({
 });
 async function chooseUrl() {
   mode.value = 'url';
+  await loadAiState(true);
+}
+async function loadAiState(applyDefaults = false) {
   const token = generation;
   try {
     const [state, settings] = await Promise.all([
@@ -100,6 +122,8 @@ async function chooseUrl() {
     ]);
     if (token === generation) {
       management.value = state;
+      errorMessage.value = '';
+      if (!applyDefaults) return;
       year.value = settings.profile.admissionYear;
       identity.value = settings.profile.identity;
       const current = state.connections.find(
@@ -171,14 +195,16 @@ async function parse() {
       }),
     );
     open.value = false;
-    try {
-      await router.push({
-        path: '/japan-grad/collection',
-        query: { job: job.id, returnTo: route.path },
-      });
-    } catch {
-      message.info('网址解析任务已创建，请从新增入口或查询记录查看。');
-    }
+    jobs.track(job);
+    const to = {
+      path: '/japan-grad/collection',
+      query: { job: job.id, returnTo: route.path },
+    };
+    message.success({
+      content: () =>
+        h(RouterLink, { to }, () => '解析任务已创建，点此查看进度'),
+      duration: 6,
+    });
   } catch (error) {
     errorMessage.value =
       error instanceof Error ? error.message : '解析任务创建失败。';
@@ -247,20 +273,27 @@ async function parse() {
           v-model:value="aiMode"
           :disabled="busy"
           :options="[
-            { value: 'agent', label: '本地 Agent 查询' },
-            { value: 'api', label: 'API 查询' },
+            { value: 'agent', label: '本机 Codex（沿用你电脑上的登录）' },
+            { value: 'api', label: '自己的 API（DeepSeek、OpenAI 等）' },
           ]"
       /></label>
       <p class="create-parent">
         自动整理本层与所属上级，优先复用已有档案；找到的资料核对后再生成。
       </p>
       <p v-if="selectedConnection" class="create-parent">
-        使用 {{ selectedConnection.name }} · {{ selectedModel }}
+        使用 {{ selectedConnection.name }} ·
+        {{ selectedModel }}。点击后，官网网页、PDF
+        和这里的备注会发送给这个模型服务处理，费用按服务商规则计算。
       </p>
       <p v-else-if="management" class="form-error">
-        请先<RouterLink to="/japan-grad/ai" @click="open = false">
-          连接本地 Agent 或填写 API
-</RouterLink>。
+        {{
+          keyMissing
+            ? 'API Key 只保存在本次运行中，JUAI 重启后需要重新填写。'
+            : aiMode === 'agent'
+              ? '还没有连接本机 Codex。'
+              : '还没有填写自己的 API。'
+        }}
+        <a :href="aiSetupPath" target="_blank" rel="noopener">在新标签页打开 AI 管理</a>，完成后回到这里即可继续，已填内容会保留。
       </p>
       <p v-if="errorMessage" class="form-error" role="alert">
         {{ errorMessage }}

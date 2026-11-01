@@ -136,7 +136,7 @@ test('the desktop schema guard covers all shipped server migrations', async () =
     if (!name.endsWith('.mjs') || name.includes('.test.')) continue;
     const source = await readFile(new URL(name, directory), 'utf8');
     for (const match of source.matchAll(
-      /INSERT INTO schema_migrations VALUES\s*\((\d+)/g,
+      /(?:INSERT INTO schema_migrations VALUES\s*\(|RELATIONAL_SCHEMA_VERSION\s*=\s*)(\d+)/g,
     ))
       maximum = Math.max(maximum, Number(match[1]));
   }

@@ -78,7 +78,7 @@ function removeProfessor() {
   modal.confirm({
     title: `删除「${name}」？`,
     content:
-      '老师资料、论文索引和邮件记录会一并删除，论文原文件保留在本地工作区。',
+      '老师资料、论文索引和邮件记录会一并删除，论文原文件保留在本地工作区。删除后无法在界面撤销，可先到「设置 → 本地工作区」备份。',
     okText: '确认删除',
     cancelText: '取消',
     okButtonProps: { danger: true },
@@ -136,7 +136,7 @@ function removeProfessor() {
           :aria-pressed="professor.favorite"
           @click="store.toggleFavorite(professor.id)"
         >
-          <ExplorerIcon name="heart" />{{
+          <ExplorerIcon name="star" />{{
             professor.favorite ? '已标记为心仪老师' : '标记为心仪老师'
           }}
         </Button>

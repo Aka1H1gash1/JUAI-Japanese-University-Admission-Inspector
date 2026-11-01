@@ -242,11 +242,10 @@ function clearFilters() {
 </script>
 
 <template>
-  <section class="special-programs">
+  <section class="special-programs" :class="{ 'directory-page': !programId }">
     <header class="program-heading">
       <div>
-        <p class="program-eyebrow">SPECIAL ADMISSIONS / 特殊入学项目</p>
-        <h1>
+        <h1 class="workspace-title">
           {{ programId ? detail?.name || '项目详情' : '特殊入学项目' }}
         </h1>
         <p v-if="programId">把项目要求、申请材料与时间，放在同一份档案里。</p>
@@ -312,38 +311,58 @@ function clearFilters() {
       <p v-if="records.length" class="program-list-count">
         {{ shown.length }} 个项目
       </p>
-      <div v-if="shown.length" class="program-grid">
-        <article v-for="p in shown" :key="p.id" class="program-card">
-          <RouterLink :to="`${base}/${p.id}`" class="program-card-main">
-            <div class="program-card-top">
-              <span class="program-category">{{ p.category }}</span><span class="program-status" :data-status="p.status">{{
+      <div v-if="shown.length" class="program-directory">
+        <div class="program-directory-head" aria-hidden="true">
+          <span>项目 / 院校</span><span>学位 / 授课语言</span><span>申请状态</span><span>出愿截止</span>
+        </div>
+        <article v-for="p in shown" :key="p.id" class="program-directory-entry">
+          <RouterLink
+            :to="`${base}/${p.id}`"
+            class="program-entry-main"
+            :aria-label="`查看${p.name}项目详情`"
+          >
+            <div class="program-entry-identity">
+              <div>
+                <span class="program-category">{{ p.category }}</span><ExplorerIcon v-if="p.favorite" name="heart" />
+              </div>
+              <h2>{{ p.name }}</h2>
+              <p>{{ affiliation(p) }}</p>
+              <p v-if="p.summary" class="program-entry-summary">
+                {{ p.summary }}
+              </p>
+            </div>
+            <div class="directory-field">
+              <span class="directory-mobile-label">学位 / 授课语言</span><strong>{{
+                p.degree ? PROGRAM_DEGREES[p.degree] : '学位待补充'
+              }}</strong><small>{{
+                [p.language, p.intake].filter(Boolean).join(' · ') ||
+                '语言与入学时间待补充'
+              }}</small>
+            </div>
+            <div class="directory-field">
+              <span class="directory-mobile-label">申请状态</span><span class="program-status" :data-status="p.status">{{
                 PROGRAM_STATUSES[p.status]
               }}</span>
             </div>
-            <h2><ExplorerIcon v-if="p.favorite" name="heart" />{{ p.name }}</h2>
-            <p class="program-affiliation">{{ affiliation(p) }}</p>
-            <p class="program-card-summary">
-              {{
-                p.summary ||
-                '项目简介待补充，可在详情中记录申请特点与关注原因。'
-              }}
-            </p>
-            <div class="program-tags">
-              <span v-if="p.degree">{{ PROGRAM_DEGREES[p.degree] }}</span><span v-if="p.language">{{ p.language }}</span><span v-if="p.intake">{{ p.intake }}</span>
-            </div>
-            <div class="program-deadline">
-              <ExplorerIcon name="calendar" /><span>出愿截止<strong>{{
-                  p.applicationEnd || '待补充'
-                }}</strong></span><span class="program-enter">查看项目 →</span>
+            <div class="directory-field program-entry-deadline">
+              <span class="directory-mobile-label">出愿截止</span><strong>{{ p.applicationEnd || '待补充' }}</strong><small>查看项目 <span aria-hidden="true">→</span></small>
             </div>
           </RouterLink>
-          <footer>
-            <button :disabled="opening || saving" @click="edit(p.id)">
-              <ExplorerIcon name="edit" />编辑
-</button><button :disabled="saving" @click="remove(p)">
-              <ExplorerIcon name="trash" />删除
+          <div class="program-entry-actions">
+            <button
+              :disabled="opening || saving"
+              :aria-label="`编辑项目：${p.name}`"
+              @click="edit(p.id)"
+            >
+              <ExplorerIcon name="edit" />
+</button><button
+              :disabled="saving"
+              :aria-label="`删除项目：${p.name}`"
+              @click="remove(p)"
+            >
+              <ExplorerIcon name="trash" />
             </button>
-          </footer>
+          </div>
         </article>
       </div>
       <div v-else-if="!loading && !errorMessage" class="program-empty">

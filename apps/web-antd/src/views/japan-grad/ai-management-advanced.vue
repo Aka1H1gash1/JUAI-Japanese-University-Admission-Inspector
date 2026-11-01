@@ -428,7 +428,6 @@ async function revokeAgent(agent: ExternalAgent) {
   <section class="ai-management">
     <header class="ai-page-heading">
       <div>
-        <p class="eyebrow">AI WORKSPACE / 连接中心</p>
         <h1>高级设置<span>。</span></h1>
         <p>管理你的模型与 Agent，为每项工作选择合适的连接。</p>
       </div>

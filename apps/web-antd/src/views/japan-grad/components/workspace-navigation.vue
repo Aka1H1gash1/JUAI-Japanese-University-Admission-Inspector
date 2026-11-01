@@ -2,151 +2,105 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
+import { useCollectionJobsStore } from '../collection-jobs';
 import { useExplorerStore } from '../explorer';
-import BrandMark from './brand-mark.vue';
 import ExplorerIcon from './explorer-icon.vue';
 
-withDefaults(defineProps<{ showBrand?: boolean }>(), { showBrand: true });
+/**
+ * bar：桌面顶栏里的一行文字导航。
+ * drawer：窄屏抽屉里的竖排导航。
+ */
+withDefaults(defineProps<{ variant?: 'bar' | 'drawer' }>(), {
+  variant: 'bar',
+});
 const emit = defineEmits<{ navigate: [] }>();
 const store = useExplorerStore();
+const jobs = useCollectionJobsStore();
 const route = useRoute();
-const currentUniversity = computed(() =>
-  store.universities.find((item) => item.id === route.params.universityId),
-);
-const currentSchool = computed(() =>
-  store.schools.find(
-    (item) =>
-      item.id === route.params.schoolId &&
-      item.universityId === currentUniversity.value?.id,
-  ),
-);
-const currentMajor = computed(() =>
-  store.majors.find(
-    (item) =>
-      item.id === route.params.majorId &&
-      item.schoolId === currentSchool.value?.id,
-  ),
-);
-const currentLab = computed(() =>
-  store.labs.find(
-    (item) =>
-      item.majorId === currentMajor.value?.id &&
-      (item.id === route.params.labId ||
-        store.professors.some(
-          (person) =>
-            person.id === route.params.professorId && person.labId === item.id,
-        )),
-  ),
-);
+
+const primary = computed(() => [
+  {
+    to: '/japan-grad/overview',
+    label: '申请总览',
+    icon: 'home',
+    active: route.path === '/japan-grad/overview',
+  },
+  {
+    to: '/japan-grad/universities',
+    label: '大学清单',
+    icon: 'grid',
+    count: store.universities.length,
+    active: route.path.startsWith('/japan-grad/universities'),
+  },
+  {
+    to: '/japan-grad/journey',
+    label: '修考之路',
+    icon: 'book',
+    count: store.labs.filter((item) => item.wantApply).length,
+    active: route.path === '/japan-grad/journey',
+  },
+  {
+    to: '/japan-grad/special-programs',
+    label: '特殊入学项目',
+    icon: 'folder',
+    active: route.path.startsWith('/japan-grad/special-programs'),
+  },
+]);
+const secondary = computed(() => [
+  {
+    to: '/japan-grad/collection',
+    label: '网址解析',
+    icon: 'search',
+    count: jobs.running || undefined,
+    active: route.path.startsWith('/japan-grad/collection'),
+  },
+  {
+    to: '/japan-grad/ai',
+    label: 'AI 管理',
+    icon: 'chat',
+    active: route.path === '/japan-grad/ai',
+  },
+  {
+    to: '/japan-grad/settings',
+    label: '设置',
+    icon: 'system',
+    active: route.path === '/japan-grad/settings',
+  },
+]);
 </script>
 
 <template>
-  <div class="workspace-navigation">
-    <RouterLink
-      v-if="showBrand"
-      to="/japan-grad/overview"
-      class="explorer-brand"
-      aria-label="JapanGrad 申请总览首页"
-      @click="emit('navigate')"
-    >
-      <span class="brand-mark"><BrandMark /></span><strong>JapanGrad<span>择校笔记</span></strong>
-    </RouterLink>
-    <nav class="workspace-primary-nav" aria-label="工作区导航">
+  <div class="jg-nav" :class="`is-${variant}`">
+    <nav class="jg-nav-group" aria-label="工作区导航">
       <RouterLink
-        to="/japan-grad/overview"
-        class="workspace-nav-link"
-        :class="{ 'is-active': route.path === '/japan-grad/overview' }"
+        v-for="item in primary"
+        :key="item.to"
+        :to="item.to"
+        class="jg-nav-link"
+        :class="{ 'is-active': item.active }"
+        :aria-current="item.active ? 'page' : undefined"
         @click="emit('navigate')"
       >
-        <ExplorerIcon name="home" /><span>申请总览</span>
-      </RouterLink>
-      <RouterLink
-        to="/japan-grad/universities"
-        class="workspace-nav-link"
-        :class="{ 'is-active': route.path === '/japan-grad/universities' }"
-        @click="emit('navigate')"
-      >
-        <ExplorerIcon name="grid" /><span>大学清单</span><small>{{ store.universities.length }}</small>
-      </RouterLink>
-      <RouterLink
-        to="/japan-grad/journey"
-        class="workspace-nav-link"
-        :class="{
-          'is-active': route.path === '/japan-grad/journey',
-        }"
-        @click="emit('navigate')"
-      >
-        <ExplorerIcon name="book" /><span>修考之路</span><small>{{ store.labs.filter((item) => item.wantApply).length }}</small>
+        <ExplorerIcon v-if="variant === 'drawer'" :name="item.icon" /><span>{{
+          item.label
+        }}</span><small v-if="item.count">{{ item.count }}</small>
       </RouterLink>
     </nav>
-    <nav class="workspace-primary-nav" aria-label="管理">
-      <h2 class="workspace-management-label">管理</h2>
+    <nav class="jg-nav-group is-secondary" aria-label="管理">
+      <h2 v-if="variant === 'drawer'" class="jg-nav-heading">管理</h2>
       <RouterLink
-        to="/japan-grad/special-programs"
-        class="workspace-nav-link"
-        :class="{
-          'is-active': route.path.startsWith('/japan-grad/special-programs'),
-        }"
+        v-for="item in secondary"
+        :key="item.to"
+        :to="item.to"
+        class="jg-nav-link"
+        :class="{ 'is-active': item.active }"
+        :aria-current="item.active ? 'page' : undefined"
         @click="emit('navigate')"
       >
-        <ExplorerIcon name="folder" /><span>特殊入学项目</span>
-      </RouterLink>
-      <RouterLink
-        to="/japan-grad/ai"
-        class="workspace-nav-link"
-        :class="{ 'is-active': route.path === '/japan-grad/ai' }"
-        @click="emit('navigate')"
-      >
-        <ExplorerIcon name="chat" /><span>AI 管理</span>
-      </RouterLink>
-      <RouterLink
-        to="/japan-grad/settings"
-        class="workspace-nav-link"
-        :class="{ 'is-active': route.path === '/japan-grad/settings' }"
-        @click="emit('navigate')"
-      >
-        <ExplorerIcon name="system" /><span>设置</span>
+        <ExplorerIcon v-if="variant === 'drawer'" :name="item.icon" /><span>{{
+          item.label
+        }}</span><small v-if="item.count">{{ item.count }}</small>
       </RouterLink>
     </nav>
-    <section
-      v-if="currentSchool && currentUniversity"
-      class="workspace-context"
-      aria-label="当前路径"
-    >
-      <h2>当前路径</h2>
-      <RouterLink
-        :to="`/japan-grad/universities/${currentUniversity.id}/schools/${currentSchool.id}`"
-        class="workspace-context-link"
-        @click="emit('navigate')"
-      >
-        <ExplorerIcon name="book" /><span>{{
-          currentSchool.name
-        }}</span>
-</RouterLink><RouterLink
-        v-if="currentMajor"
-        :to="`/japan-grad/universities/${currentUniversity.id}/schools/${currentSchool.id}/majors/${currentMajor.id}`"
-        class="workspace-context-link"
-        @click="emit('navigate')"
-      >
-        <ExplorerIcon name="folder" /><span>{{ currentMajor.name }}</span>
-      </RouterLink>
-      <RouterLink
-        v-if="currentLab && currentMajor"
-        :to="`/japan-grad/universities/${currentUniversity.id}/schools/${currentSchool.id}/majors/${currentMajor.id}/labs/${currentLab.id}`"
-        class="workspace-context-link"
-        @click="emit('navigate')"
-      >
-        <ExplorerIcon name="book" /><span>{{ currentLab.name }}</span>
-      </RouterLink>
-    </section>
   </div>
 </template>
-<style scoped>
-.workspace-management-label {
-  margin: 8px 12px 6px;
-  font-size: 10px;
-  font-weight: 500;
-  color: var(--jg-muted);
-  letter-spacing: 0.12em;
-}
-</style>

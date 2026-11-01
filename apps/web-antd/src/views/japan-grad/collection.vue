@@ -66,7 +66,7 @@ async function load() {
     else if (!detail.value && list[0]) await view(list[0].id);
   } catch (error) {
     errorMessage.value =
-      error instanceof Error ? error.message : '收集配置读取失败。';
+      error instanceof Error ? error.message : '网址解析配置读取失败。';
   } finally {
     loading.value = false;
   }
@@ -96,7 +96,7 @@ async function view(id: string) {
   } catch (error) {
     if (version === generation) {
       errorMessage.value =
-        error instanceof Error ? error.message : '收集任务读取失败。';
+        error instanceof Error ? error.message : '解析任务读取失败。';
       timer = setTimeout(() => void view(id), 5000);
     }
   }
@@ -197,12 +197,11 @@ const generatedProfiles = computed(() => {
   <section class="information-collection">
     <header class="collection-page-heading">
       <div>
-        <p class="eyebrow">AI RESEARCH / 解析结果</p>
-        <h1>网址解析结果<span>。</span></h1>
+        <h1>网址解析<span>。</span></h1>
         <p>从各个“新增”入口发起查询，在这里查看进度、核对来源并生成档案。</p>
       </div>
       <RouterLink
-        to="/japan-grad/ai?tab=features&returnTo=/japan-grad/collection"
+        to="/japan-grad/ai?advanced=1&returnTo=/japan-grad/collection"
       >
         AI 接入设置 ↗
       </RouterLink>
@@ -217,7 +216,7 @@ const generatedProfiles = computed(() => {
     <section v-if="jobs.length" class="collection-jobs">
       <header>
         <div>
-          <h2>收集任务</h2>
+          <h2>解析任务</h2>
           <p>离开页面后任务可继续运行，回来可查看来源与结果。</p>
         </div>
         <Button :disabled="busy" :loading="loading" @click="load">
@@ -233,7 +232,7 @@ const generatedProfiles = computed(() => {
             label: `${new Date(j.createdAt).toLocaleString()} · ${COLLECTION_STATUS[j.status]} · ${j.urls[0] || ''}`,
           }))
         "
-        aria-label="选择收集任务"
+        aria-label="选择解析任务"
         @change="(value) => typeof value === 'string' && view(value)"
       />
       <template v-if="detail">
@@ -245,7 +244,6 @@ const generatedProfiles = computed(() => {
         >
           <header>
             <div>
-              <p class="collection-eyebrow">YOUR PROFILES / 学校档案</p>
               <h2>档案已生成，信息已填好。</h2>
               <p>主链接对应档案及其上级已按所属关系关联，可继续查看和编辑。</p>
             </div>
@@ -276,12 +274,12 @@ const generatedProfiles = computed(() => {
                   : ''
               }}</small>
           </div>
-          <Button v-if="running" :loading="busy" @click="stop">停止收集</Button><Button
+          <Button v-if="running" :loading="busy" @click="stop">停止解析</Button><Button
             v-else-if="['failed', 'cancelled'].includes(detail.job.status)"
             :loading="busy"
             @click="retry(false)"
           >
-            继续收集
+            继续解析
 </Button><Button
             v-if="
               ['failed', 'cancelled'].includes(detail.job.status) &&

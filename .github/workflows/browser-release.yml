@@ -3,7 +3,7 @@ name: JUAI Browser Release
 on:
   push:
     tags:
-      - 'v1.2.0'
+      - 'v1.3.0'
   workflow_dispatch:
     inputs:
       publish:
@@ -122,7 +122,7 @@ jobs:
   release:
     name: Publish GitHub Release
     needs: checksums
-    if: github.ref == 'refs/tags/v1.2.0' || github.event.inputs.publish == 'true'
+    if: github.ref == 'refs/tags/v1.3.0' || github.event.inputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -130,8 +130,8 @@ jobs:
         with:
           name: juai-browser-release
           path: release
-      - name: Publish v1.2.0
+      - name: Publish v1.3.0
         env:
           GH_TOKEN: ${{ github.token }}
         run: >-
-          gh release create v1.2.0 release/* --target "$GITHUB_SHA" --title "JUAI v1.2.0 · Local Browser Edition" --notes-file browser/RELEASE_NOTES.md
+          gh release create v1.3.0 release/* --target "$GITHUB_SHA" --title "JUAI v1.3.0" --notes-file browser/RELEASE_NOTES.md

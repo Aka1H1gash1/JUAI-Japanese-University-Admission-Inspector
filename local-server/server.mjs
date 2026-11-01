@@ -9,12 +9,17 @@ import path from 'node:path';
 import process from 'node:process';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 
 import { createAdmissionAiService } from './admission-ai-service.mjs';
 import { createAiManagementService } from './ai-management-service.mjs';
 import { createAnalysisService } from './analysis-service.mjs';
 import { createAssistantService } from './assistant-service.mjs';
 import { createCollectionService } from './collection-service.mjs';
+import {
+  applyEntityDefaults,
+  syncAllLabsForMajor,
+} from './data-migrations.mjs';
 import { createDocumentReaderService } from './document-reader-service.mjs';
 import { createExperienceService } from './experience-service.mjs';
 import {
@@ -26,12 +31,19 @@ import { createInformationService } from './information-service.mjs';
 import geography from './japan-geography.json' with { type: 'json' };
 import {
   planningError,
+  tagImportedTasks,
   validPlannerDay,
   validPlannerMinute,
 } from './planning-fields.mjs';
 import { upgradeResearchLabs } from './research-labs.mjs';
 import { createSpecialProgramService } from './special-program-service.mjs';
 import { timelineError } from './timeline-fields.mjs';
+import { backupRoot, createManualBackup } from './workspace-backup.mjs';
+import {
+  createWorkspaceRepository,
+  hasRelationalWorkspace,
+  migrateWorkspaceRepository,
+} from './workspace-repository.mjs';
 import { createWorkspaceSettingsService } from './workspace-settings-service.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -318,6 +330,24 @@ export async function createLocalApp({
   workspace = await realpath(workspace);
   const db = new DatabaseSync(path.join(workspace, 'workspace.db'));
   db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+  // Back up an existing pre-v14 database before any legacy migration/backfill
+  // can modify it. A fresh installation has no legacy table and needs no copy.
+  let migrationBackup;
+  const legacyTable = db
+    .prepare(
+      "SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_data'",
+    )
+    .get();
+  if (legacyTable) {
+    try {
+      migrationBackup = await createManualBackup(db, workspace, {
+        kind: 'schema14',
+      });
+    } catch (error) {
+      db.close();
+      throw error;
+    }
+  }
   // Append-only schema migrations. Existing migrations must never be edited after release.
   db.exec(
     'CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)',
@@ -342,7 +372,11 @@ export async function createLocalApp({
   } catch (error) {
     if (error.code !== 'EEXIST') throw error;
   }
+  let workspaceRepository = hasRelationalWorkspace(db)
+    ? createWorkspaceRepository({ db, workspace, fail, validateExplorer })
+    : undefined;
   const snapshot = () => {
+    if (workspaceRepository) return workspaceRepository.snapshot();
     const row = db.prepare('SELECT * FROM workspace_data WHERE id = 1').get();
     return {
       initialized: !!row,
@@ -350,6 +384,71 @@ export async function createLocalApp({
       data: row ? JSON.parse(row.data) : structuredClone(EMPTY_DATA),
       workspace,
     };
+  };
+  const writeWorkspace = (data, expectedRevision, previousData) => {
+    try {
+      if (workspaceRepository) {
+        const previous = previousData ?? snapshot().data;
+        data = applyEntityDefaults(structuredClone(data));
+        for (const major of data.majors) {
+          const retained = previous.majors.find((item) => item.id === major.id);
+          const changed = !isDeepStrictEqual(
+            major.examHistory ?? [],
+            retained?.examHistory ?? [],
+          );
+          major.examHistoryVersion =
+            (retained?.examHistoryVersion ?? 0) + Number(changed);
+          if (changed) syncAllLabsForMajor(data, major.id);
+        }
+        for (const lab of data.labs ?? []) {
+          const retained = previous.labs?.find((item) => item.id === lab.id);
+          // Legacy API counters remain a projection for older open pages;
+          // concurrency is enforced by the workspace/row CAS, not these fields.
+          if (lab.timeline)
+            lab.timeline.version =
+              (retained?.timeline?.version ?? 0) +
+              Number(
+                !isDeepStrictEqual(
+                  { ...lab.timeline, version: 0 },
+                  { ...retained?.timeline, version: 0 },
+                ),
+              );
+          if (lab.tasks)
+            lab.tasksVersion =
+              (retained?.tasksVersion ?? 0) +
+              Number(!isDeepStrictEqual(lab.tasks, retained?.tasks));
+        }
+        return workspaceRepository.replace(data, expectedRevision);
+      }
+      const { changes } = db
+        .prepare(`INSERT INTO workspace_data (id,data,revision) VALUES (1,?,1)
+        ON CONFLICT(id) DO UPDATE SET data=excluded.data,revision=workspace_data.revision+1 WHERE workspace_data.revision=?`)
+        .run(JSON.stringify(data), expectedRevision);
+      if (!changes) fail('工作区已更新，请重新读取后保存。', 409);
+      return expectedRevision + 1;
+    } catch (error) {
+      if (/FOREIGN KEY constraint|database is locked/.test(error.message))
+        fail('资料关联或版本已变化，请重新读取后保存。', 409);
+      throw error;
+    }
+  };
+  const saveDocument = (record) => {
+    if (workspaceRepository) return workspaceRepository.saveDocument(record);
+    db.prepare(
+      'INSERT INTO documents VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data,owner_type=excluded.owner_type,owner_id=excluded.owner_id',
+    ).run(record.id, record.ownerType, record.ownerId, JSON.stringify(record));
+  };
+  const saveMessage = (record) => {
+    if (workspaceRepository) return workspaceRepository.saveMessage(record);
+    db.prepare(
+      'INSERT INTO messages VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data',
+    ).run(record.id, record.professorId, JSON.stringify(record));
+  };
+  const saveProgram = (record) => {
+    if (workspaceRepository) return workspaceRepository.saveProgram(record);
+    db.prepare(
+      'INSERT INTO special_admission_programs VALUES (?,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data',
+    ).run(record.id, JSON.stringify(record));
   };
   if (
     !db.prepare('SELECT version FROM schema_migrations WHERE version = 2').get()
@@ -381,8 +480,21 @@ export async function createLocalApp({
       throw error;
     }
   }
-  const ownerExists = (type, id) =>
-    snapshot().data[type === 'major' ? 'majors' : 'professors'].some(
+  // Run legacy backfill only before the relational store becomes authoritative.
+  if (!workspaceRepository) {
+    const row = db
+      .prepare('SELECT data FROM workspace_data WHERE id = 1')
+      .get();
+    if (row) {
+      const data = JSON.parse(row.data);
+      if (tagImportedTasks(data))
+        db.prepare(
+          'UPDATE workspace_data SET data = ?, revision = revision + 1 WHERE id = 1',
+        ).run(JSON.stringify(data));
+    }
+  }
+  const ownerExists = (type, id, current = snapshot()) =>
+    current.data[type === 'major' ? 'majors' : 'professors'].some(
       (item) => item.id === id,
     );
   const document = (id) => {
@@ -417,6 +529,15 @@ export async function createLocalApp({
     }
     return current;
   };
+  let writeQueue = Promise.resolve();
+  const serializeWrite = (work) => {
+    const task = writeQueue.then(work, work);
+    writeQueue = task.then(
+      () => {},
+      () => {},
+    );
+    return task;
+  };
   const transaction = (work) => {
     db.exec('BEGIN IMMEDIATE');
     try {
@@ -424,10 +545,13 @@ export async function createLocalApp({
       db.exec('COMMIT');
     } catch (error) {
       db.exec('ROLLBACK');
+      if (/FOREIGN KEY constraint/.test(error.message))
+        fail('关联资料仍在使用，无法删除这段记录。', 409);
       throw error;
     }
   };
   const analysis = createAnalysisService({
+    writeWorkspace,
     db,
     snapshot,
     document,
@@ -439,6 +563,8 @@ export async function createLocalApp({
     validateExplorer,
   });
   const experiences = createExperienceService({
+    saveMessage,
+    writeWorkspace,
     db,
     snapshot,
     transaction,
@@ -448,6 +574,7 @@ export async function createLocalApp({
     validateExplorer,
   });
   const information = createInformationService({
+    writeWorkspace,
     db,
     snapshot,
     transaction,
@@ -499,6 +626,7 @@ export async function createLocalApp({
   ai.importLegacy();
   ai.initializeFeature('web_collection', 'workspace_chat');
   const specialPrograms = createSpecialProgramService({
+    saveProgram,
     db,
     snapshot,
     transaction,
@@ -514,6 +642,8 @@ export async function createLocalApp({
     jsonBody,
   });
   const collection = createCollectionService({
+    saveDocument,
+    writeWorkspace,
     db,
     snapshot,
     transaction,
@@ -529,6 +659,34 @@ export async function createLocalApp({
     createSpecialProgram: specialPrograms.createFromCollection,
     specialProgramExists: specialPrograms.exists,
   });
+  if (!workspaceRepository) {
+    try {
+      workspaceRepository = migrateWorkspaceRepository({
+        db,
+        workspace,
+        fail,
+        validateExplorer,
+        backupPath: migrationBackup?.path,
+        normalize: (value) => {
+          const data = applyEntityDefaults(upgradeResearchLabs(value));
+          experiences.prepare(data, data, { checkVersions: false });
+          return validateExplorer(data);
+        },
+      });
+    } catch (error) {
+      for (const service of [
+        collection,
+        admissionAi,
+        ai,
+        reader,
+        assistant,
+        analysis,
+      ])
+        service.close?.();
+      db.close();
+      throw error;
+    }
+  }
   const server = createServer(async (req, res) => {
     try {
       const host = req.headers.host;
@@ -562,177 +720,247 @@ export async function createLocalApp({
         if (await admissionAi.handle(req, res, route)) return;
         if (await analysis.handle(req, res, route)) return;
         if (await reader.handle(req, res, route)) return;
+        const labPatch = route.match(
+          /^\/api\/japangrad\/workspace\/labs\/([\w-]+)$/,
+        );
+        if (labPatch && req.method === 'PATCH') {
+          return await serializeWrite(async () => {
+            const input = await jsonBody(req);
+            if (
+              !input ||
+              !Number.isSafeInteger(input.revision) ||
+              !input.patch ||
+              typeof input.patch !== 'object' ||
+              Array.isArray(input.patch) ||
+              Object.keys(input.patch).length === 0 ||
+              Object.keys(input.patch).some(
+                (key) => !['tasks', 'timeline', 'wantApply'].includes(key),
+              )
+            )
+              fail('研究室增量保存参数不合法。');
+            const current = snapshot();
+            const data = structuredClone(current.data);
+            const lab = data.labs.find((item) => item.id === labPatch[1]);
+            if (!lab) fail('研究室不存在。', 404);
+            if (current.entityRevisions.labs[lab.id] !== input.revision)
+              fail('研究室已在其他页面更新，请重新读取后保存。', 409);
+            Object.assign(lab, input.patch);
+            applyEntityDefaults(data);
+            experiences.prepare(data, current.data);
+            validateExplorer(data);
+            transaction(() =>
+              writeWorkspace(data, current.revision, current.data),
+            );
+            return json(res, snapshot());
+          });
+        }
         if (route === '/api/japangrad/workspace' && req.method === 'GET') {
+          const since = url.searchParams.get('since');
+          if (
+            since !== null &&
+            since === String(workspaceRepository.revision())
+          )
+            return json(res, { unchanged: true, revision: Number(since) });
           const current = snapshot();
           if (url.searchParams.get('since') === String(current.revision))
             return json(res, { unchanged: true, revision: current.revision });
           return json(res, current);
         }
+        if (route === '/api/japangrad/workspace/backup' && req.method === 'GET')
+          return json(res, { root: backupRoot(workspace) });
+        if (
+          route === '/api/japangrad/workspace/backup' &&
+          req.method === 'POST'
+        )
+          return await serializeWrite(async () =>
+            json(res, await createManualBackup(db, workspace), 201),
+          );
         if (route === '/api/japangrad/workspace' && req.method === 'PUT') {
-          const input = await jsonBody(req);
-          const current = snapshot();
-          if (input.revision !== current.revision)
-            fail('工作区已在其他页面更新，请刷新后重试。', 409);
-          if (
-            !input.data ||
-            input.data.version !== 2 ||
-            ['universities', 'schools', 'majors', 'professors'].some(
-              (key) => !Array.isArray(input.data[key]),
-            ) ||
-            (input.data.labs !== undefined && !Array.isArray(input.data.labs))
-          )
-            fail('工作区数据格式错误。');
-          const legacyLabs = input.data.labs === undefined;
-          const data = upgradeResearchLabs(input.data, current.data);
-          // An older page cannot manage labs; remove only labs whose parent was deleted.
-          const majorIds = new Set((data.majors ?? []).map((item) => item.id));
-          if (legacyLabs)
-            data.labs = data.labs.filter((item) => majorIds.has(item.majorId));
-          const previousPeople = new Map(
-            current.data.professors.map((item) => [item.id, item]),
-          );
-          for (const person of data.professors) {
-            const previous = previousPeople.get(person?.id);
+          return await serializeWrite(async () => {
+            const input = await jsonBody(req);
+            const current = snapshot();
+            if (input.revision !== current.revision)
+              fail('工作区已在其他页面更新，请刷新后重试。', 409);
             if (
-              person &&
-              person.contact === undefined &&
-              previous?.contact !== undefined
+              !input.data ||
+              input.data.version !== 2 ||
+              ['universities', 'schools', 'majors', 'professors'].some(
+                (key) => !Array.isArray(input.data[key]),
+              ) ||
+              (input.data.labs !== undefined && !Array.isArray(input.data.labs))
             )
-              person.contact = previous.contact;
-          }
-          for (const person of data.professors) {
-            const previous = previousPeople.get(person?.id);
-            if (
-              previous?.contact &&
-              person.contact &&
-              (!person.contact.experienceId ||
-                person.contact.experienceId === previous.contact.experienceId)
-            )
-              person.contact = { ...previous.contact, ...person.contact };
-            if (person.contactHistory === undefined && previous?.contactHistory)
-              person.contactHistory = previous.contactHistory;
-          }
-          const previousLabs = new Map(
-            (current.data.labs ?? []).map((item) => [item.id, item]),
-          );
-          for (const lab of data.labs) {
-            if (!lab) continue;
-            const previous = previousLabs.get(lab.id);
-            for (const key of [
-              'timeline',
-              'tasks',
-              'mainProfessorId',
-              'languageRequirements',
-            ])
-              if (lab[key] === undefined && previous?.[key] !== undefined)
-                lab[key] = previous[key];
-            if (
-              lab.mainProfessorId &&
-              previous?.mainProfessorId === lab.mainProfessorId &&
-              !data.professors.some(
-                (person) =>
-                  person?.id === lab.mainProfessorId && person.labId === lab.id,
-              )
-            )
-              lab.mainProfessorId = '';
-          }
-          validateExplorer(data);
-          const previousUniversities = new Map(
-            current.data.universities.map((item) => [item.id, item]),
-          );
-          for (const university of data.universities) {
-            const previous = previousUniversities.get(university.id);
-            for (const key of ['japanRank', 'japanRankYear', 'japanRankSource'])
-              if (
-                university[key] === undefined &&
-                previous?.[key] !== undefined
-              )
-                university[key] = previous[key];
-            if (
-              university.prefecture === undefined &&
-              previous?.prefecture !== undefined
-            )
-              university.prefecture = previous.prefecture;
-          }
-          // Validate again after preserving fields omitted by older open pages.
-          validateExplorer(data);
-          const previousMajors = new Map(
-            current.data.majors.map((major) => [major.id, major]),
-          );
-          for (const major of data.majors) {
-            const previousMajor = previousMajors.get(major.id);
-            for (const key of [
-              'applicationStart',
-              'applicationEnd',
-              'applicationMaterials',
-              'languageRequirements',
-            ]) {
-              if (
-                major[key] === undefined &&
-                previousMajor?.[key] !== undefined
-              )
-                major[key] = previousMajor[key];
-            }
-            // Older open pages do not know this field; omission must not erase history.
-            const previous = previousMajors.get(major.id)?.examHistory;
-            if (major.examHistory === undefined && previous !== undefined)
-              major.examHistory = previous;
-            if (major.examHistory && previous) {
-              const previousRecords = new Map(
-                previous.map((record) => [record.id, record]),
+              fail('工作区数据格式错误。');
+            const legacyLabs = input.data.labs === undefined;
+            let data = upgradeResearchLabs(input.data, current.data);
+
+            for (const major of data.majors) {
+              const previous = current.data.majors.find(
+                (item) => item.id === major.id,
               );
-              for (const record of major.examHistory) {
-                const retained = previousRecords.get(record.id);
-                for (const key of [
-                  'writtenDate',
-                  'interviewDate',
-                  'resultDate',
-                ]) {
-                  if (
-                    record[key] === undefined &&
-                    retained?.[key] !== undefined
-                  )
-                    record[key] = retained[key];
+              if (
+                major.analysisHistory === undefined &&
+                previous?.analysisHistory !== undefined
+              )
+                major.analysisHistory = previous.analysisHistory;
+            }
+            data = applyEntityDefaults(data);
+
+            // An older page cannot manage labs; remove only labs whose parent was deleted.
+            const majorIds = new Set(
+              (data.majors ?? []).map((item) => item.id),
+            );
+            if (legacyLabs)
+              data.labs = data.labs.filter((item) =>
+                majorIds.has(item.majorId),
+              );
+            const previousPeople = new Map(
+              current.data.professors.map((item) => [item.id, item]),
+            );
+            for (const person of data.professors) {
+              const previous = previousPeople.get(person?.id);
+              if (
+                person &&
+                person.contact === undefined &&
+                previous?.contact !== undefined
+              )
+                person.contact = previous.contact;
+            }
+            for (const person of data.professors) {
+              const previous = previousPeople.get(person?.id);
+              if (
+                previous?.contact &&
+                person.contact &&
+                (!person.contact.experienceId ||
+                  person.contact.experienceId === previous.contact.experienceId)
+              )
+                person.contact = { ...previous.contact, ...person.contact };
+              if (
+                person.contactHistory === undefined &&
+                previous?.contactHistory
+              )
+                person.contactHistory = previous.contactHistory;
+            }
+            const previousLabs = new Map(
+              (current.data.labs ?? []).map((item) => [item.id, item]),
+            );
+            for (const lab of data.labs) {
+              if (!lab) continue;
+              const previous = previousLabs.get(lab.id);
+              for (const key of [
+                'timeline',
+                'tasks',
+                'mainProfessorId',
+                'languageRequirements',
+              ])
+                if (lab[key] === undefined && previous?.[key] !== undefined)
+                  lab[key] = previous[key];
+              if (
+                lab.mainProfessorId &&
+                previous?.mainProfessorId === lab.mainProfessorId &&
+                !data.professors.some(
+                  (person) =>
+                    person?.id === lab.mainProfessorId &&
+                    person.labId === lab.id,
+                )
+              )
+                lab.mainProfessorId = '';
+            }
+            validateExplorer(data);
+            const previousUniversities = new Map(
+              current.data.universities.map((item) => [item.id, item]),
+            );
+            for (const university of data.universities) {
+              const previous = previousUniversities.get(university.id);
+              for (const key of [
+                'japanRank',
+                'japanRankYear',
+                'japanRankSource',
+              ])
+                if (
+                  university[key] === undefined &&
+                  previous?.[key] !== undefined
+                )
+                  university[key] = previous[key];
+              if (
+                university.prefecture === undefined &&
+                previous?.prefecture !== undefined
+              )
+                university.prefecture = previous.prefecture;
+            }
+            const previousMajors = new Map(
+              current.data.majors.map((major) => [major.id, major]),
+            );
+            for (const major of data.majors) {
+              const previousMajor = previousMajors.get(major.id);
+              for (const key of [
+                'applicationStart',
+                'applicationEnd',
+                'applicationMaterials',
+                'languageRequirements',
+              ]) {
+                if (
+                  major[key] === undefined &&
+                  previousMajor?.[key] !== undefined
+                )
+                  major[key] = previousMajor[key];
+              }
+              // Older open pages do not know this field; omission must not erase history.
+              const previous = previousMajors.get(major.id)?.examHistory;
+              if (major.examHistory === undefined && previous !== undefined)
+                major.examHistory = previous;
+              if (major.examHistory && previous) {
+                const previousRecords = new Map(
+                  previous.map((record) => [record.id, record]),
+                );
+                for (const record of major.examHistory) {
+                  const retained = previousRecords.get(record.id);
+                  for (const key of [
+                    'writtenDate',
+                    'interviewDate',
+                    'resultDate',
+                  ]) {
+                    if (
+                      record[key] === undefined &&
+                      retained?.[key] !== undefined
+                    )
+                      record[key] = retained[key];
+                  }
                 }
               }
             }
-          }
-          for (const university of data.universities) {
-            if (university.logoId)
-              await safeFile(
-                path.posix.join('university-logos', university.logoId),
-              );
-          }
-          // File validation awaits I/O; recheck the revision before committing.
-          if (input.revision !== snapshot().revision)
-            fail('工作区已在其他页面更新，请刷新后重试。', 409);
-          const majors = new Set(data.majors.map((item) => item.id));
-          const professors = new Set(data.professors.map((item) => item.id));
-          experiences.prepare(data, current.data);
-          validateExplorer(data);
-          transaction(() => {
-            // Remove metadata atomically with parent records. Original files remain recoverable on disk.
-            for (const row of db
-              .prepare('SELECT id, owner_type, owner_id FROM documents')
-              .all()) {
-              if (
-                !(row.owner_type === 'major' ? majors : professors).has(
-                  row.owner_id,
+            for (const university of data.universities) {
+              if (university.logoId)
+                await safeFile(
+                  path.posix.join('university-logos', university.logoId),
+                );
+            }
+            const majors = new Set(data.majors.map((item) => item.id));
+            const professors = new Set(data.professors.map((item) => item.id));
+            experiences.prepare(data, current.data);
+
+            validateExplorer(data);
+            transaction(() => {
+              // Remove metadata atomically with parent records. Original files remain recoverable on disk.
+              for (const row of db
+                .prepare('SELECT id, owner_type, owner_id FROM documents')
+                .all()) {
+                if (
+                  !(row.owner_type === 'major' ? majors : professors).has(
+                    row.owner_id,
+                  )
                 )
-              )
-                db.prepare('DELETE FROM documents WHERE id = ?').run(row.id);
-            }
-            for (const row of db
-              .prepare('SELECT id, professor_id FROM messages')
-              .all()) {
-              if (!professors.has(row.professor_id))
-                db.prepare('DELETE FROM messages WHERE id = ?').run(row.id);
-            }
-            db.prepare(
-              'INSERT INTO workspace_data (id, data, revision) VALUES (1, ?, ?) ON CONFLICT(id) DO UPDATE SET data = excluded.data, revision = excluded.revision',
-            ).run(JSON.stringify(data), current.revision + 1);
+                  db.prepare('DELETE FROM documents WHERE id = ?').run(row.id);
+              }
+              for (const row of db
+                .prepare('SELECT id, professor_id FROM messages')
+                .all()) {
+                if (!professors.has(row.professor_id))
+                  db.prepare('DELETE FROM messages WHERE id = ?').run(row.id);
+              }
+              writeWorkspace(data, current.revision, current.data);
+            });
+            return json(res, snapshot());
           });
-          return json(res, snapshot());
         }
         if (
           route === '/api/japangrad/university-logos' &&
@@ -886,12 +1114,7 @@ export async function createLocalApp({
             venue: '',
             createdAt: new Date().toISOString(),
           };
-          db.prepare('INSERT INTO documents VALUES (?, ?, ?, ?)').run(
-            id,
-            record.ownerType,
-            record.ownerId,
-            JSON.stringify(record),
-          );
+          saveDocument(record);
           return json(res, record, 201);
         }
         const fileMatch = route.match(
@@ -945,10 +1168,7 @@ export async function createLocalApp({
               );
             if (input.analysis !== undefined)
               fail('募集要项自动提取暂未启用。');
-            db.prepare('UPDATE documents SET data = ? WHERE id = ?').run(
-              JSON.stringify(record),
-              record.id,
-            );
+            saveDocument(record);
             return json(res, record);
           }
           if (!fileMatch[2] && req.method === 'DELETE') {

@@ -17,7 +17,7 @@ test('browser launcher proxies the workspace, reuses one instance and protects m
     assert.equal(statusResponse.status, 200);
     const status = await statusResponse.json();
     assert.equal(status.browserMode, true);
-    assert.equal(status.version, '1.2.0');
+    assert.equal(status.version, '1.3.0');
     assert.equal(status.workspace, workspace);
 
     const workspaceResponse = await fetch(
@@ -84,5 +84,61 @@ test('browser launcher proxies the workspace, reuses one instance and protects m
   } finally {
     await runtime.shutdown();
     await rm(workspace, { force: true, recursive: true });
+  }
+});
+
+test('browser launcher prefers a stable port and falls back when it is taken', async () => {
+  const first = await mkdtemp(path.join(tmpdir(), 'juai-browser-port-a-'));
+  const second = await mkdtemp(path.join(tmpdir(), 'juai-browser-port-b-'));
+  const preferredPort = 20_000 + Math.floor(Math.random() * 20_000);
+  const a = await startJuaiBrowser({
+    launchBrowser: false,
+    preferredPort,
+    workspace: first,
+  });
+  try {
+    assert.equal(a.origin, `http://127.0.0.1:${preferredPort}`);
+    const b = await startJuaiBrowser({
+      launchBrowser: false,
+      preferredPort,
+      workspace: second,
+    });
+    try {
+      assert.notEqual(b.origin, a.origin);
+      const response = await fetch(`${b.origin}/api/japangrad/workspace`);
+      assert.equal(response.status, 200);
+    } finally {
+      await b.shutdown();
+    }
+  } finally {
+    await a.shutdown();
+    await rm(first, { recursive: true, force: true });
+    await rm(second, { recursive: true, force: true });
+  }
+});
+
+test('a migrated workspace can restart with the same application version', async () => {
+  const workspace = await mkdtemp(path.join(tmpdir(), 'juai-browser-restart-'));
+  let runtime;
+  try {
+    runtime = await startJuaiBrowser({
+      launchBrowser: false,
+      preferredPort: 0,
+      workspace,
+    });
+    await runtime.shutdown();
+    runtime = undefined;
+    runtime = await startJuaiBrowser({
+      launchBrowser: false,
+      preferredPort: 0,
+      workspace,
+    });
+    const response = await fetch(`${runtime.origin}/api/japangrad/workspace`);
+    assert.equal(response.status, 200);
+    const snapshot = await response.json();
+    assert.ok(snapshot.entityRevisions);
+  } finally {
+    if (runtime) await runtime.shutdown();
+    await rm(workspace, { recursive: true, force: true });
   }
 });

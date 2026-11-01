@@ -1,8 +1,11 @@
 <script setup lang="ts">
 import type { MajorAdmissionFields } from '../major-admissions';
+
 import { computed, ref } from 'vue';
+
 import { App, Button, Input, Modal } from 'ant-design-vue';
 
+import { dateFromText } from '../application-planning';
 import { useExplorerStore } from '../explorer';
 import { admissionRangeError } from '../major-admissions';
 import ExplorerIcon from './explorer-icon.vue';
@@ -21,6 +24,16 @@ const materials = computed(() =>
 );
 const open = ref(false);
 const feedback = ref('');
+// Only exact dates reach the timeline; describe that at the field instead of failing silently.
+function dateHint(value: string) {
+  const text = value.trim();
+  if (!text) return '';
+  return dateFromText(text)
+    ? `会显示在时间线：${dateFromText(text)}`
+    : '这不是具体日期，只作为文字记录，不会出现在时间线和提醒中。';
+}
+const startHint = computed(() => dateHint(form.value.applicationStart));
+const endHint = computed(() => dateHint(form.value.applicationEnd));
 const form = ref<MajorAdmissionFields>({
   applicationStart: '',
   applicationEnd: '',
@@ -60,7 +73,12 @@ async function save() {
 </script>
 
 <template>
-  <section v-if="major" class="major-admissions" aria-label="出愿信息">
+  <section
+    v-if="major"
+    id="major-admissions"
+    class="major-admissions"
+    aria-label="出愿信息"
+  >
     <header class="collection-heading">
       <div>
         <h2>出愿信息</h2>
@@ -68,24 +86,22 @@ async function save() {
           记录通用时间与材料要求，各年份的特殊变更可在下方考试表备注中补充。
         </p>
       </div>
-      <Button class="icon-button" @click="edit"
-        ><ExplorerIcon name="edit" />编辑出愿信息</Button
-      >
+      <Button class="icon-button" @click="edit">
+        <ExplorerIcon name="edit" />编辑出愿信息
+      </Button>
     </header>
     <div class="admission-overview-grid">
       <div class="admission-period">
         <h3><ExplorerIcon name="calendar" />出愿时间</h3>
         <div class="admission-period-range">
           <div>
-            <span>开始</span
-            ><strong :class="{ 'not-filled': !major.applicationStart }">{{
+            <span>开始</span><strong :class="{ 'not-filled': !major.applicationStart }">{{
               major.applicationStart || '待填写'
             }}</strong>
           </div>
           <span class="admission-period-separator">至</span>
           <div>
-            <span>截止</span
-            ><strong :class="{ 'not-filled': !major.applicationEnd }">{{
+            <span>截止</span><strong :class="{ 'not-filled': !major.applicationEnd }">{{
               major.applicationEnd || '待填写'
             }}</strong>
           </div>
@@ -93,9 +109,7 @@ async function save() {
       </div>
       <div class="admission-materials">
         <h3>
-          <ExplorerIcon name="book" />出愿所需材料<span v-if="materials.length"
-            >{{ materials.length }} 项</span
-          >
+          <ExplorerIcon name="book" />出愿所需材料<span v-if="materials.length">{{ materials.length }} 项</span>
         </h3>
         <ul v-if="materials.length">
           <li v-for="(item, index) in materials" :key="index">{{ item }}</li>
@@ -142,28 +156,39 @@ async function save() {
             />
           </div>
           <div class="field">
-            <label for="admission-start">出愿开始时间</label
-            ><Input
+            <label for="admission-start">出愿开始时间</label><Input
               id="admission-start"
               v-model:value="form.applicationStart"
               :maxlength="120"
-              placeholder="如每年 6 月 1 日，或 2026-06-01"
+              placeholder="如 2027-06-01；也可写每年 6 月上旬"
               :disabled="store.saving"
+              aria-describedby="admission-start-hint"
             />
+            <small
+              v-if="startHint"
+              id="admission-start-hint"
+              class="admission-date-hint"
+              :class="{ 'is-text': !dateFromText(form.applicationStart) }"
+              >{{ startHint }}</small>
           </div>
           <div class="field">
-            <label for="admission-end">出愿截止时间</label
-            ><Input
+            <label for="admission-end">出愿截止时间</label><Input
               id="admission-end"
               v-model:value="form.applicationEnd"
               :maxlength="120"
-              placeholder="如每年 6 月 15 日，或 2026-06-15"
+              placeholder="如 2027-06-15；也可写每年 6 月中旬"
               :disabled="store.saving"
+              aria-describedby="admission-end-hint"
             />
+            <small
+              v-if="endHint"
+              id="admission-end-hint"
+              class="admission-date-hint"
+              :class="{ 'is-text': !dateFromText(form.applicationEnd) }"
+              >{{ endHint }}</small>
           </div>
           <div class="field full">
-            <label for="admission-materials">出愿所需材料</label
-            ><Input.TextArea
+            <label for="admission-materials">出愿所需材料</label><Input.TextArea
               id="admission-materials"
               v-model:value="form.applicationMaterials"
               :rows="7"
@@ -175,13 +200,24 @@ async function save() {
         </div>
         <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
         <div class="form-footer">
-          <span>支持具体日期或每年的时间段，未知内容可留空</span
-          ><Button :disabled="store.saving" @click="open = false">取消</Button
-          ><Button type="primary" html-type="submit" :loading="store.saving"
-            >保存出愿信息</Button
-          >
+          <span>写成 2027-06-01
+            这样的具体日期才会进入时间线和提醒，未知内容可留空</span><Button :disabled="store.saving" @click="open = false">取消</Button><Button type="primary" html-type="submit" :loading="store.saving">
+            保存出愿信息
+          </Button>
         </div>
       </form>
     </Modal>
   </section>
 </template>
+<style scoped>
+.admission-date-hint {
+  display: block;
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--jg-muted);
+}
+
+.admission-date-hint.is-text {
+  color: var(--jg-warning, #a15c00);
+}
+</style>

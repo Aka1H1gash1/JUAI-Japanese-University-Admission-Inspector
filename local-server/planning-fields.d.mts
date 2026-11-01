@@ -65,3 +65,13 @@ export function emptyContactRecord(): ContactRecord;
 export function validPlannerDay(value: unknown): boolean;
 export function validPlannerMinute(value: unknown): boolean;
 export function planningError(data: unknown): string;
+export const TASK_ORIGINS: readonly [
+  'applicationStart',
+  'applicationEnd',
+  'applicationMaterials',
+  'writtenDate',
+  'interviewDate',
+  'resultDate',
+];
+export type TaskOrigin = (typeof TASK_ORIGINS)[number];
+export function tagImportedTasks(data: unknown): boolean;

@@ -282,7 +282,6 @@ const returnTo = computed(() =>
   <section class="ai-connect-simple">
     <header class="ai-simple-heading">
       <div>
-        <p>AI CONNECTION / AI 接入</p>
         <h1>选一种方式，就能开始<span>。</span></h1>
         <small>本地 Agent 或自己的 API，连接一次即可供各项 AI 功能使用。</small>
       </div>
@@ -331,7 +330,7 @@ const returnTo = computed(() =>
         :class="{ active: shared?.kind === 'codex' }"
       >
         <header>
-          <span class="ai-simple-icon"><ExplorerIcon name="drive" /></span><small>01 / LOCAL AGENT</small><span v-if="shared?.kind === 'codex'" class="ai-simple-active">当前选择</span>
+          <span class="ai-simple-icon"><ExplorerIcon name="drive" /></span><small>方式一</small><span v-if="shared?.kind === 'codex'" class="ai-simple-active">当前选择</span>
         </header>
         <h2>连接本地 Agent</h2>
         <p>目前支持本机 Codex，自动沿用已有登录，无需填写 API Key。</p>
@@ -391,7 +390,7 @@ const returnTo = computed(() =>
         :class="{ active: shared && shared.kind !== 'codex' }"
       >
         <header>
-          <span class="ai-simple-icon"><ExplorerIcon name="globe" /></span><small>02 / YOUR API</small><span
+          <span class="ai-simple-icon"><ExplorerIcon name="globe" /></span><small>方式二</small><span
             v-if="shared && shared.kind !== 'codex'"
             class="ai-simple-active"
             >当前选择</span>
