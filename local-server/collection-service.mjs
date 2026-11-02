@@ -992,7 +992,7 @@ export function createCollectionService({
       }
       if (!savedOnly && searchEnabled) {
         const seed = [...(initial[0]?.title || new URL(j.urls[0]).hostname)]
-          .slice(0, 64)
+          .slice(0, 40)
           .join('');
         const focus = [
           ...(j.requestedProgram ||
@@ -1000,17 +1000,27 @@ export function createCollectionService({
               .filter((v) => typeof v === 'string')
               .join(' ')),
         ]
-          .slice(0, 32)
+          .slice(0, 20)
           .join('');
         const purpose =
           j.seekGuidelines === false
             ? '公式サイト'
-            : `${j.context.admissionYear} ${j.context.degree === 'doctor' ? '博士' : '大学院'} 募集要項`;
-        const query = [...`${seed} ${focus} ${purpose}`.trim()]
+            : `${j.context.admissionYear} ${j.context.degree === 'doctor' ? '博士' : '修士'} 募集要項`;
+        const host = new URL(j.urls[0]).hostname;
+        const query = [...`site:${host} ${seed} ${focus} ${purpose}`.trim()]
           .slice(0, 128)
           .join('');
         try {
-          await searchWeb(j, query, signal, selection);
+          const found = await searchWeb(j, query, signal, selection);
+          const candidate = found.results.find(
+            (r) =>
+              new URL(r.url).hostname === host &&
+              /募集|入試|admission|guide/i.test(`${r.title} ${r.url}`),
+          );
+          if (candidate)
+            initial.push(
+              await readWeb(j, candidate.url, '读取官方搜索候选原文', signal),
+            );
         } catch (error) {
           if (signal.aborted) throw error;
         }
