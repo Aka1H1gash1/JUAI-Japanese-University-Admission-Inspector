@@ -28,6 +28,44 @@
   gap: 10px;
 }
 
+.collection-search-records {
+  padding: 18px 20px;
+  margin: 20px 0;
+  background: var(--jg-surface);
+  border: 1px solid var(--jg-line);
+  border-radius: 10px;
+}
+
+.collection-search-records summary {
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.collection-search-records p,
+.collection-search-records small {
+  color: var(--jg-muted);
+}
+
+.collection-search-records article {
+  padding-top: 14px;
+}
+
+.collection-search-records strong {
+  display: block;
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.collection-search-records li {
+  padding: 5px 0;
+  overflow-wrap: anywhere;
+}
+
+.collection-search-records small {
+  margin-left: 10px;
+  font-size: 11px;
+}
+
 .collection-settings-actions a {
   display: inline-flex;
   align-items: center;

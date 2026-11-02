@@ -40,6 +40,7 @@ const mode = ref<'choose' | 'manual' | 'url'>('choose');
 const url = ref('');
 const aiMode = ref<'agent' | 'api'>(serverMode ? 'api' : 'agent');
 const browserMode = ref('http');
+const searchMode = ref<'auto' | 'off'>('auto');
 const identity = ref('修士・外国人留学生');
 const notes = ref('');
 const importScope = ref('current');
@@ -72,6 +73,15 @@ const keyMissing = computed(
   () =>
     !selectedConnection.value && modeConnections.value.some((c) => !usable(c)),
 );
+const officialSearch = computed(() => {
+  try {
+    const url = new URL(selectedConnection.value?.provider.baseUrl || '');
+    if (url.protocol !== 'https:') return '';
+    if (url.hostname === 'api.deepseek.com') return 'DeepSeek';
+    if (url.hostname === 'api.openai.com') return 'OpenAI';
+  } catch {}
+  return '';
+});
 const aiSetupPath = computed(
   () => `/japan-grad/ai?returnTo=${encodeURIComponent(route.fullPath)}`,
 );
@@ -105,6 +115,7 @@ watch(
     management.value = undefined;
     notes.value = '';
     importScope.value = 'current';
+    searchMode.value = 'auto';
     selectedMajors.value = [];
     if (props.urlOnly) void loadAiState(true);
   },
@@ -218,6 +229,7 @@ async function parse() {
         aiMode: aiMode.value,
         aiConnectionId: selectedConnection.value?.id,
         browserMode: serverMode ? browserMode.value : 'auto',
+        searchMode: officialSearch.value ? searchMode.value : 'off',
       }),
     );
     open.value = false;
@@ -301,7 +313,7 @@ async function parse() {
           :disabled="busy"
           placeholder="选拔类别或希望重点查询的内容"
       /></label>
-      <label>查询方式<Select
+      <label>分析方式<Select
           v-accessible-select
           v-model:value="aiMode"
           :disabled="busy"
@@ -312,6 +324,17 @@ async function parse() {
             { value: 'api', label: '自己的 API（DeepSeek、OpenAI 等）' },
           ]"
       /></label>
+      <label v-if="officialSearch">
+        官方联网搜索<Select
+          v-model:value="searchMode"
+          :disabled="busy"
+          :options="[
+            { value: 'auto', label: `启用 ${officialSearch} 官方搜索` },
+            { value: 'off', label: '关闭，仅沿已知页面链接读取' },
+          ]"
+          aria-label="官方联网搜索"
+        />
+      </label>
       <p class="create-parent">
         {{
           urlOnly
@@ -321,8 +344,8 @@ async function parse() {
       </p>
       <p v-if="selectedConnection" class="create-parent">
         使用 {{ selectedConnection.name }} ·
-        {{ selectedModel }}。点击后，官网网页、PDF
-        和这里的备注会发送给这个模型服务处理，费用按服务商规则计算。
+        {{ selectedModel }}。点击后，官网网页、检索关键词、PDF
+        和这里的备注会发送给这个服务商处理，模型与搜索费用按服务商规则计算。
       </p>
       <p v-else-if="management" class="form-error">
         {{

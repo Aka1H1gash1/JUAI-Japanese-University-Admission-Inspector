@@ -32,6 +32,11 @@ function created(id: string) {
 const store = useExplorerStore();
 const config = ref<CollectionStatus>();
 const jobs = ref<CollectionJob[]>([]);
+function searchResultRead(url: string) {
+  return detail.value?.job.sources?.some(
+    (source) => source.url === url || source.requestedUrl === url,
+  );
+}
 function jobLabel(job: CollectionJob) {
   if (job.resultProgramName) return job.resultProgramName;
   const ids = job.resultIds || job.target?.ids || {};
@@ -349,6 +354,30 @@ const generatedProfiles = computed(() => {
             {{ warning }}
           </li>
         </ul>
+        <details
+          v-if="detail.job.searches?.length"
+          class="collection-search-records"
+          :open="running"
+        >
+          <summary>官方联网搜索 · {{ detail.job.searches.length }} 次</summary>
+          <p>搜索结果是候选链接，读取原文后才作为档案引用来源。</p>
+          <article v-for="search in detail.job.searches" :key="search.id">
+            <strong>{{ search.provider }} · {{ search.query }}</strong>
+            <span v-if="search.status === 'searching'" role="status">搜索中…</span>
+            <p v-else-if="search.error" class="form-error">
+              {{ search.error }}
+            </p>
+            <p v-else-if="!search.results.length">未找到匹配的公开结果。</p>
+            <ul v-else>
+              <li v-for="result in search.results" :key="result.url">
+                <a :href="result.url" target="_blank" rel="noopener noreferrer">{{ result.title }} ↗</a>
+                <small>{{
+                  searchResultRead(result.url) ? '原文已读取' : '待阅读候选'
+                }}</small>
+              </li>
+            </ul>
+          </article>
+        </details>
         <details
           v-if="detail.job.log?.length"
           class="collection-activity"

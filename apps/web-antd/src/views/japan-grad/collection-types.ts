@@ -91,6 +91,7 @@ export interface CollectionSource {
   id: string;
   title: string;
   url: string;
+  requestedUrl?: string;
   kind: 'pdf' | 'web';
   via: string;
   totalPages: number;
@@ -100,6 +101,16 @@ export interface CollectionSource {
   truncated: boolean;
 }
 export interface CollectionJob {
+  searchMode?: 'auto' | 'off';
+  searches?: {
+    id: string;
+    provider: string;
+    query: string;
+    fetchedAt: string;
+    status: 'cancelled' | 'complete' | 'failed' | 'searching';
+    results: { url: string; title: string; snippet: string }[];
+    error: string;
+  }[];
   requestedProgram?: string;
   id: string;
   createdAt: string;

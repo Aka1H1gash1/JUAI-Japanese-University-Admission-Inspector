@@ -8,9 +8,18 @@ const object = (properties, required) => ({
 });
 export const collectionTools = [
   {
+    name: 'search_web',
+    description:
+      '使用当前服务商的官方搜索查找本次目标的官网、所属上级和募集要项。关键词最多 128 字，优先官网。返回的是候选链接，必须再用 read_web_page 读取原文后才能引用，不能直接把搜索摘要写入档案。',
+    parameters: object(
+      { query: { type: 'string', minLength: 1, maxLength: 128 } },
+      ['query'],
+    ),
+  },
+  {
     name: 'read_web_page',
     description:
-      '读取用户提供或已访问页面中实际出现的相关链接；自动保存网页来源或下载 PDF。不能编造链接。用于本次链接对象、所属上级与对应募集要项收集。',
+      '读取用户提供、已访问页面出现或官方搜索返回的相关链接；自动保存网页来源或下载 PDF。不能编造链接。用于本次链接对象、所属上级与对应募集要项收集。',
     parameters: object(
       { url: { type: 'string' }, purpose: { type: 'string' } },
       ['url', 'purpose'],
@@ -48,7 +57,11 @@ export async function runCollectionAgent({
   getFinalPrompt,
   onPhase = () => {},
   savedOnly = false,
+  searchEnabled = false,
 }) {
+  const tools = collectionTools.filter(
+    (tool) => searchEnabled || tool.name !== 'search_web',
+  );
   const selected = selection || ai.resolve('web_collection');
   const config = { ...selected.provider };
   const apiKey = ai.credentials(config);
@@ -126,7 +139,7 @@ export async function runCollectionAgent({
       throw new Error('整理阶段请求了未开放的工具，来源仍保留，可继续整理。');
     return result;
   };
-  const names = new Set(collectionTools.map((t) => t.name));
+  const names = new Set(tools.map((t) => t.name));
   let calls = 0;
   const invoke = async (name, args) => {
     signal.throwIfAborted();
@@ -152,7 +165,7 @@ export async function runCollectionAgent({
   if (savedOnly) return finalize('resume_saved');
   if (config.protocol === 'codex') {
     try {
-      return await nativeTurn(prompt, collectionTools);
+      return await nativeTurn(prompt, tools);
     } catch (error) {
       if (error.code !== 'CODEX_TOOL_LIMIT' || signal.aborted) throw error;
       return finalize('tool_budget');
@@ -169,7 +182,7 @@ export async function runCollectionAgent({
       apiKey,
       instructions,
       messages,
-      tools: collectionTools,
+      tools,
       outputSchema: selected.structured ? outputSchema : undefined,
       signal,
       onText: observe,
