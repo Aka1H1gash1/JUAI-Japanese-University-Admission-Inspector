@@ -1,22 +1,90 @@
 import { execFileSync } from 'node:child_process';
-import { mkdir,cp,writeFile,chmod,readFile,rm } from 'node:fs/promises';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-if(process.platform!=='darwin'||process.arch!=='arm64')throw new Error('Build and verify on macOS Apple Silicon');
-const dir=path.dirname(fileURLToPath(import.meta.url)),root=path.dirname(dir);
-const out=path.resolve(process.env.JUAI_CONNECTOR_OUTPUT||path.join(dir,'dist'));
-const app=path.join(out,'JUAI Connector.app'),resources=path.join(app,'Contents/Resources'),core=path.join(resources,'core');
-await rm(app,{recursive:true,force:true});await mkdir(path.join(app,'Contents/MacOS'),{recursive:true});await mkdir(path.join(core,'connector'),{recursive:true});await mkdir(path.join(core,'local-server'),{recursive:true});
-await cp(path.join(dir,'main.mjs'),path.join(core,'connector/main.mjs'));
-for(const name of ['collection-web.mjs','browser-discovery.mjs'])await cp(path.join(root,'local-server',name),path.join(core,'local-server',name));
-await cp(path.join(dir,'package.json'),path.join(core,'package.json'));await cp(path.join(dir,'package-lock.json'),path.join(core,'package-lock.json'));
-execFileSync('npm',['ci','--prefix',core,'--ignore-scripts','--omit=dev','--no-audit','--no-fund'],{stdio:'inherit'});
-const node=process.env.NODE_RUNTIME_PATH||process.execPath;const version=execFileSync(node,['--version'],{encoding:'utf8'}).trim();if(!version.startsWith('v24.'))throw new Error('Node 24 runtime required');
-await cp(node,path.join(resources,'node'));await chmod(path.join(resources,'node'),0o755);
-await cp(process.env.NODE_RUNTIME_LICENSE || path.join(path.dirname(node),'LICENSE'),path.join(resources,'NODE-LICENSE'));
-await writeFile(path.join(app,'Contents/MacOS/JUAIConnector'),'#!/bin/sh\nJUAI_DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"\nexec "$JUAI_DIR/node" "$JUAI_DIR/core/connector/main.mjs"\n');await chmod(path.join(app,'Contents/MacOS/JUAIConnector'),0o755);
-await writeFile(path.join(app,'Contents/Info.plist'),`<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleExecutable</key><string>JUAIConnector</string><key>CFBundleIdentifier</key><string>online.gotojuai.connector</string><key>CFBundleName</key><string>JUAI Connector</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleShortVersionString</key><string>0.1.0</string><key>LSMinimumSystemVersion</key><string>14.0</string><key>LSUIElement</key><true/></dict></plist>`);
-await writeFile(path.join(resources,'BUILD.json'),JSON.stringify({version:'0.1.0',protocol:1,platform:'mac-arm64',runtime:version,builtAt:new Date().toISOString()}));
-execFileSync('codesign',['--force','--deep','--sign','-',app],{stdio:'inherit'});
-const archive=path.join(out,'JUAI-Connector-0.1.0-mac-arm64.zip');await rm(archive,{force:true});execFileSync('ditto',['-c','-k','--keepParent',app,archive]);const digest=createHash('sha256').update(await readFile(archive)).digest('hex');await writeFile(path.join(out,'JUAI-Connector-SHA256SUMS.txt'),`${digest}  ${path.basename(archive)}\n`);console.log(`Built ${archive}`);
+import { chmod, cp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import path from 'node:path';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+if (process.platform !== 'darwin' || process.arch !== 'arm64')
+  throw new Error('Build and verify on macOS Apple Silicon');
+const dir = path.dirname(fileURLToPath(import.meta.url));
+const root = path.dirname(dir);
+const out = path.resolve(
+  process.env.JUAI_CONNECTOR_OUTPUT || path.join(dir, 'dist'),
+);
+const app = path.join(out, 'JUAI Connector.app');
+const resources = path.join(app, 'Contents/Resources');
+const core = path.join(resources, 'core');
+await rm(app, { recursive: true, force: true });
+await mkdir(path.join(app, 'Contents/MacOS'), { recursive: true });
+await mkdir(path.join(core, 'connector'), { recursive: true });
+await mkdir(path.join(core, 'local-server'), { recursive: true });
+await cp(path.join(dir, 'main.mjs'), path.join(core, 'connector/main.mjs'));
+await cp(
+  path.join(dir, 'isolated-chrome.mjs'),
+  path.join(core, 'connector/isolated-chrome.mjs'),
+);
+for (const name of ['collection-web.mjs', 'browser-discovery.mjs'])
+  await cp(
+    path.join(root, 'local-server', name),
+    path.join(core, 'local-server', name),
+  );
+await cp(path.join(dir, 'package.json'), path.join(core, 'package.json'));
+await cp(
+  path.join(dir, 'package-lock.json'),
+  path.join(core, 'package-lock.json'),
+);
+execFileSync(
+  'npm',
+  [
+    'ci',
+    '--prefix',
+    core,
+    '--ignore-scripts',
+    '--omit=dev',
+    '--no-audit',
+    '--no-fund',
+  ],
+  { stdio: 'inherit' },
+);
+const node = process.env.NODE_RUNTIME_PATH || process.execPath;
+const version = execFileSync(node, ['--version'], { encoding: 'utf8' }).trim();
+if (!version.startsWith('v24.')) throw new Error('Node 24 runtime required');
+await cp(node, path.join(resources, 'node'));
+await chmod(path.join(resources, 'node'), 0o755);
+await cp(
+  process.env.NODE_RUNTIME_LICENSE || path.join(path.dirname(node), 'LICENSE'),
+  path.join(resources, 'NODE-LICENSE'),
+);
+await writeFile(
+  path.join(app, 'Contents/MacOS/JUAIConnector'),
+  '#!/bin/sh\nJUAI_DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"\nexec "$JUAI_DIR/node" "$JUAI_DIR/core/connector/main.mjs"\n',
+);
+await chmod(path.join(app, 'Contents/MacOS/JUAIConnector'), 0o755);
+await writeFile(
+  path.join(app, 'Contents/Info.plist'),
+  `<?xml version="1.0"?><plist version="1.0"><dict><key>CFBundleExecutable</key><string>JUAIConnector</string><key>CFBundleIdentifier</key><string>online.gotojuai.connector</string><key>CFBundleName</key><string>JUAI Connector</string><key>CFBundlePackageType</key><string>APPL</string><key>CFBundleShortVersionString</key><string>0.1.0</string><key>LSMinimumSystemVersion</key><string>14.0</string><key>LSUIElement</key><true/></dict></plist>`,
+);
+await writeFile(
+  path.join(resources, 'BUILD.json'),
+  JSON.stringify({
+    version: '0.1.0',
+    protocol: 1,
+    platform: 'mac-arm64',
+    runtime: version,
+    builtAt: new Date().toISOString(),
+  }),
+);
+execFileSync('codesign', ['--force', '--deep', '--sign', '-', app], {
+  stdio: 'inherit',
+});
+const archive = path.join(out, 'JUAI-Connector-0.1.0-mac-arm64.zip');
+await rm(archive, { force: true });
+execFileSync('ditto', ['-c', '-k', '--keepParent', app, archive]);
+const digest = createHash('sha256')
+  .update(await readFile(archive))
+  .digest('hex');
+await writeFile(
+  path.join(out, 'JUAI-Connector-SHA256SUMS.txt'),
+  `${digest}  ${path.basename(archive)}\n`,
+);
+console.warn(`Built ${archive}`);

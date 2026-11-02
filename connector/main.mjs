@@ -12,6 +12,7 @@ import {
   collectionUrl,
   createCollectionBrowser,
 } from '../local-server/collection-web.mjs';
+import { connectIsolatedChrome } from './isolated-chrome.mjs';
 const require = createRequire(import.meta.url);
 const WebSocket = require('ws');
 const home =
@@ -26,7 +27,7 @@ let config = {
 try {
   config = { ...config, ...JSON.parse(await readFile(credentialFile, 'utf8')) };
 } catch {}
-const bridge = createCollectionBrowser();
+const bridge = createCollectionBrowser({ connect: connectIsolatedChrome });
 bridge.attachments = true;
 let authorized = false;
 let chromeVersion = '';
