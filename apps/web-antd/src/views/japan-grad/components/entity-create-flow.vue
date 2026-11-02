@@ -15,6 +15,8 @@ import { jsonOptions, localApi } from '../local-api';
 import { vAccessibleSelect } from '../select-accessibility';
 import EntityEditor from './entity-editor.vue';
 import ExplorerIcon from './explorer-icon.vue';
+import ImportScope from './import-scope.vue';
+import { serverMode } from '../runtime-capabilities';
 const props = defineProps<{
   kind: 'special_program' | EntityKind;
   parentId?: string;
@@ -31,9 +33,12 @@ const errorMessage = ref('');
 const management = ref<AiManagement>();
 const mode = ref<'choose' | 'manual' | 'url'>('choose');
 const url = ref('');
-const aiMode = ref<'agent' | 'api'>('agent');
+const aiMode = ref<'agent' | 'api'>(serverMode ? 'api' : 'agent');
+const browserMode = ref('http');
 const identity = ref('修士・外国人留学生');
 const notes = ref('');
+const importScope = ref('current');
+const selectedMajors = ref<string[]>([]);
 const year = ref(new Date().getFullYear() + 1);
 const kindName = computed(() =>
   props.kind === 'special_program'
@@ -92,6 +97,8 @@ watch(
     errorMessage.value = '';
     management.value = undefined;
     notes.value = '';
+    importScope.value = 'current';
+    selectedMajors.value = [];
   },
   { immediate: true },
 );
@@ -144,6 +151,15 @@ async function parse() {
   busy.value = true;
   errorMessage.value = '';
   try {
+    if (
+      importScope.value === 'selected' &&
+      (!selectedMajors.value.length ||
+        selectedMajors.value.length > 3 ||
+        selectedMajors.value.some(
+          (value) => value.split('/').filter((v) => v.trim()).length !== 2,
+        ))
+    )
+      throw new Error('请选择 1–3 个专攻，新名称按“研究科 / 专攻”填写。');
     const parentKind = (() => {
       if (props.kind === 'school') {
         return 'university';
@@ -180,6 +196,8 @@ async function parse() {
         primaryUrl: url.value.trim(),
         supportingUrl: '',
         targetKind: props.kind,
+        selectedPrograms:
+          importScope.value === 'selected' ? selectedMajors.value : [],
         parent:
           props.parentId && parentKind
             ? { kind: parentKind, id: props.parentId }
@@ -191,7 +209,7 @@ async function parse() {
         notes: notes.value.trim(),
         aiMode: aiMode.value,
         aiConnectionId: selectedConnection.value?.id,
-        browserMode: 'auto',
+        browserMode: serverMode ? browserMode.value : 'auto',
       }),
     );
     open.value = false;
@@ -232,14 +250,17 @@ async function parse() {
             : (mode = 'manual')
         "
       >
-        <ExplorerIcon name="edit" /><strong>手动新增</strong><span>自己填写名称与基本资料</span>
+        <ExplorerIcon name="edit" /><strong>手动新增</strong
+        ><span>自己填写名称与基本资料</span>
       </button>
       <button @click="chooseUrl">
-        <ExplorerIcon name="globe" /><strong>网址解析查询</strong><span>AI 读取官网，查找信息与募集要项</span>
+        <ExplorerIcon name="globe" /><strong>网址解析查询</strong
+        ><span>AI 读取官网，查找信息与募集要项</span>
       </button>
     </div>
     <form v-else class="create-url-form" @submit.prevent="parse">
-      <label>{{ kindName }}官网链接<Input
+      <label
+        >{{ kindName }}官网链接<Input
           v-model:value="url"
           type="url"
           required
@@ -248,32 +269,41 @@ async function parse() {
           placeholder="https://…"
       /></label>
       <div class="create-application-context">
-        <label>入学年份<InputNumber
+        <label
+          >入学年份<InputNumber
             v-model:value="year"
             :min="1900"
             :max="2200"
             :precision="0"
-            :disabled="busy"
-/></label><label>申请身份<Input
+            :disabled="busy" /></label
+        ><label
+          >申请身份<Input
             v-model:value="identity"
             :disabled="busy"
             :maxlength="240"
             placeholder="如：修士・外国人留学生 / 博士 / 研究生"
         /></label>
       </div>
-      <label>备注<Input.TextArea
+      <ImportScope
+        v-if="kind !== 'special_program'"
+        v-model:scope="importScope"
+        v-model:selections="selectedMajors"
+      />
+      <label
+        >备注<Input.TextArea
           v-model:value="notes"
           :rows="2"
           :maxlength="1000"
           :disabled="busy"
           placeholder="选拔类别或希望重点查询的内容"
       /></label>
-      <label>查询方式<Select
+      <label
+        >查询方式<Select
           v-accessible-select
           v-model:value="aiMode"
           :disabled="busy"
           :options="[
-            { value: 'agent', label: '本机 Codex（沿用你电脑上的登录）' },
+              ...(!serverMode ? [{ value: 'agent', label: '本机 Codex（沿用你电脑上的登录）' }] : []),
             { value: 'api', label: '自己的 API（DeepSeek、OpenAI 等）' },
           ]"
       /></label>
@@ -293,13 +323,17 @@ async function parse() {
               ? '还没有连接本机 Codex。'
               : '还没有填写自己的 API。'
         }}
-        <a :href="aiSetupPath" target="_blank" rel="noopener">在新标签页打开 AI 管理</a>，完成后回到这里即可继续，已填内容会保留。
+        <a :href="aiSetupPath" target="_blank" rel="noopener"
+          >在新标签页打开 AI 管理</a
+        >，完成后回到这里即可继续，已填内容会保留。
       </p>
       <p v-if="errorMessage" class="form-error" role="alert">
         {{ errorMessage }}
       </p>
+      <label v-if="serverMode">网页读取方式<Select v-model:value="browserMode" :options="[{value:'http',label:'服务器读取公开网页'},{value:'browser',label:'使用我已授权的 Chrome 连接器（电脑需在线）'}]" /></label>
       <footer>
-        <Button :disabled="busy" @click="mode = 'choose'">返回</Button><Button
+        <Button :disabled="busy" @click="mode = 'choose'">返回</Button
+        ><Button
           type="primary"
           html-type="submit"
           :loading="busy"

@@ -520,7 +520,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
         let result = await localApi<WorkspaceSnapshot>('/workspace');
         if (!isExplorerData(result.data))
           throw new Error('工作区数据格式不合法，原始文件已保留。');
-        if (!result.initialized) {
+        if (!result.initialized && !(window as any).__JUAI_SERVER__) {
           const raw = localStorage.getItem(STORAGE_KEY);
           if (raw) {
             let old: unknown;
@@ -548,7 +548,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
         apply(result.data);
         revision = result.revision;
         labRevisions = result.entityRevisions?.labs ?? {};
-        workspacePath.value = result.workspace;
+        workspacePath.value = (window as any).__JUAI_SERVER__ ? '个人资料空间' : result.workspace;
         loaded.value = true;
       } catch (error) {
         storageError.value =

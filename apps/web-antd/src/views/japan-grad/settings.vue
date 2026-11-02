@@ -8,6 +8,7 @@ import { App, Button, Input, InputNumber, Tabs } from 'ant-design-vue';
 
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
+import { serverMode } from './runtime-capabilities';
 interface Profile {
   displayName: string;
   email: string;
@@ -290,7 +291,8 @@ async function shutdownRuntime() {
         </form>
       </Tabs.TabPane>
       <Tabs.TabPane key="browser" tab="浏览器连接">
-        <section class="settings-panel">
+        <section v-if="serverMode" class="settings-panel"><h2>连接你的 Chrome</h2><p>下载轻量连接器后，在设备连接页确认配对与授权。</p><a href="/devices">打开设备连接 →</a></section>
+        <section v-else class="settings-panel">
           <h2>连接你的 Chrome / Edge</h2>
           <p>
             这一步是可选的。网址解析默认直接读取公开网页，大多数学校官网不需要连接浏览器。只有页面需要登录，或内容由脚本动态加载时，才需要让
@@ -335,7 +337,7 @@ async function shutdownRuntime() {
           <p>查询只创建并关闭自己的标签页。登录和验证码由你在浏览器中完成。</p>
         </section>
       </Tabs.TabPane>
-      <Tabs.TabPane key="mobile" tab="手机访问">
+      <Tabs.TabPane v-if="!serverMode" key="mobile" tab="手机访问">
         <section class="settings-panel">
           <h2>在手机上打开 JUAI</h2>
           <p>
@@ -405,7 +407,7 @@ async function shutdownRuntime() {
           </p>
         </section>
       </Tabs.TabPane>
-      <Tabs.TabPane key="runtime" tab="本地工作区">
+      <Tabs.TabPane v-if="!serverMode" key="runtime" tab="本地工作区">
         <section class="settings-panel">
           <h2>工作区位置</h2>
           <div class="settings-copy-row">

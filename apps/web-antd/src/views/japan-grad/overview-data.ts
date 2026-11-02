@@ -73,7 +73,7 @@ export function informationGaps(targets: LabTarget[], today = japanToday()) {
         gaps.push({
           id: `university-${university.id}`,
           name: university.name,
-          context: '大学预算 · 所属研究室共用',
+          context: '大学预算',
           fields,
           path: `/japan-grad/universities/${university.id}`,
           editor: { kind: 'university', id: university.id },
@@ -110,7 +110,7 @@ export function informationGaps(targets: LabTarget[], today = japanToday()) {
         gaps.push({
           id: `major-${major.id}`,
           name: major.name,
-          context: `${university.name} · 专攻资料共用`,
+          context: university.name,
           fields,
           path: majorPath(target),
         });

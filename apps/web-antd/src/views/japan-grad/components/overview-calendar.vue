@@ -85,7 +85,6 @@ function addTodo(event: PlannerEvent) {
         <h2 id="overview-deadlines">
           近期日历 <span>{{ visibleCount }}</span>
         </h2>
-        <p>出愿、考试与联络节点</p>
       </div>
       <Segmented
         v-model:value="view"

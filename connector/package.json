@@ -1,0 +1,1 @@
+{"name":"juai-chrome-connector","version":"0.1.0","type":"module","private":true,"description":"Fixed-protocol JUAI Chrome connector. macOS Apple Silicon verified target.","dependencies":{"ws":"8.18.3","cheerio":"1.2.0","playwright-core":"1.63.0","undici":"7.30.1"}}

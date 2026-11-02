@@ -120,9 +120,6 @@ function drop(event: DragEvent, status: ContactStatus) {
 </script>
 <template>
   <section class="journey-contact-board" aria-label="教授联络看板">
-    <p class="planner-view-description">
-      按每位老师的当前考学阶段显示对应资料。记录邮件后，首封和回复阶段会自动前进；通过微信或当面得到回复时，也可以直接拖到「已回复」，之后不会被邮件记录改回。面试与后续进展由你确认，每段经历的完整记录持续保留。
-    </p>
     <p v-if="sources.error" class="form-error" role="alert">
       {{ sources.error }}
       <Button size="small" @click="refresh">重试关联资料</Button>

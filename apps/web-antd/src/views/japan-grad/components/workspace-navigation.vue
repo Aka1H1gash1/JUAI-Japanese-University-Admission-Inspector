@@ -19,6 +19,7 @@ const jobs = useCollectionJobsStore();
 const route = useRoute();
 
 const primary = computed(() => [
+  { to: '/japan-grad/files', label: '文件管理', icon: 'folder', active: route.path === '/japan-grad/files' },
   {
     to: '/japan-grad/overview',
     label: '申请总览',

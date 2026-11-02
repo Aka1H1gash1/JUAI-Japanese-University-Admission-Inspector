@@ -11,6 +11,7 @@ import JourneyExportDialog from './components/journey-export-dialog.vue';
 import JourneyLabEntry from './components/journey-lab-entry.vue';
 import JourneyLabPicker from './components/journey-lab-picker.vue';
 import JourneyTimeline from './components/journey-timeline.vue';
+import QuestionLibrary from './components/question-library.vue';
 import { useExplorerStore } from './explorer';
 import { geographySearchTerms } from './japan-geography';
 import { labComparisonRows, labContext, labPath } from './lab-targets';
@@ -21,7 +22,7 @@ const route = useRoute();
 const router = useRouter();
 const view = computed({
   get: () =>
-    ['contacts', 'timeline'].includes(String(route.query.view))
+    ['contacts', 'timeline', 'questions'].includes(String(route.query.view))
       ? String(route.query.view)
       : 'targets',
   set: (value: string) => {
@@ -126,7 +127,7 @@ function openExport() {
         </Button>
       </div>
     </header>
-    <template v-if="targets.length">
+    <template v-if="targets.length || view === 'questions'">
       <div class="journey-planning-layout">
         <div class="journey-planning-main">
           <div class="list-toolbar">
@@ -160,6 +161,7 @@ function openExport() {
             <span>已选 {{ selected.length }} 个研究室</span><Button @click="openExport">导出所选</Button><Button type="text" @click="selected = []">清空选择</Button>
           </div>
           <Tabs v-model:active-key="view" class="journey-workspace-tabs">
+            <Tabs.TabPane key="questions" tab="过去问专区"><QuestionLibrary v-if="view === 'questions'" /></Tabs.TabPane>
             <Tabs.TabPane key="targets" tab="研究室清单">
               <div v-if="visible.length" class="journey-directory">
                 <JourneyLabEntry
@@ -196,6 +198,7 @@ function openExport() {
     <section v-else class="collection-empty journey-empty">
       <span class="empty-symbol"><ExplorerIcon name="book" /></span>
       <h2>从一个想考的研究室开始</h2>
+      <Button @click="view = 'questions'">过去问专区</Button>
       <p>直接选择已整理的研究室，建立想考清单，再比较方向、考试和费用。</p>
       <Button type="primary" class="icon-button" @click="pickerOpen = true">
         <ExplorerIcon name="plus" />选择想考研究室

@@ -20,6 +20,7 @@ import {
   proposalSchema,
 } from './admission-analysis.mjs';
 import { informationPermissions } from './information-service.mjs';
+import { blankCollectionEntity } from './collection-fields.mjs';
 import { validPlannerDay } from './planning-fields.mjs';
 
 const digest = (value) => createHash('sha256').update(value).digest('hex');
@@ -373,9 +374,22 @@ export function createAnalysisService({
     for (const id of input.documentIds) {
       if (!identifier(id)) fail('资料 ID 不合法。');
       const source = document(id);
+      const workspaceData = snapshot().data;
+      const targetMajor = workspaceData.majors.find((m) => m.id === majorId);
+      const sourceMajor = workspaceData.majors.find(
+        (m) => m.id === source.ownerId,
+      );
+      const universityFor = (m) =>
+        workspaceData.schools.find((s) => s.id === m?.schoolId)?.universityId;
+      const sharedSource =
+        !scope &&
+        input.sourceMajorId === source.ownerId &&
+        sourceMajor &&
+        targetMajor &&
+        universityFor(sourceMajor) === universityFor(targetMajor);
       if (
         source.ownerType !== 'major' ||
-        source.ownerId !== majorId ||
+        (source.ownerId !== majorId && !sharedSource) ||
         source.kind !== 'guidelines'
       )
         fail('请选择本专攻的募集要项资料。');
@@ -389,7 +403,7 @@ export function createAnalysisService({
         title: source.title,
         filename: source.filename,
         year: source.year,
-        majorId,
+        majorId: source.ownerId,
         sha256: digest(content),
       });
     }
@@ -691,8 +705,95 @@ export function createAnalysisService({
         jobs: allJobs().filter((j) => j.majorId === match[1]),
       });
     }
-    if (endpoint === 'jobs' && req.method === 'POST')
-      return respond(await createJob(await jsonBody(req), scope), 201);
+    if (endpoint === 'jobs' && req.method === 'POST') {
+      const input = await jsonBody(req);
+      const selections = input.selectedPrograms || [];
+      if (scope && selections.length)
+        fail('外部 Agent 不能扩大分析授权范围。', 403);
+      if (
+        !Array.isArray(selections) ||
+        selections.length > 3 ||
+        selections.some(
+          (v) =>
+            typeof v !== 'string' ||
+            v.length > 300 ||
+            v.split('/').filter((n) => n.trim()).length !== 2,
+        )
+      )
+        fail('其他专攻最多 3 个，请按“研究科 / 专攻”填写。');
+      if (
+        allJobs().filter((job) => ['parsing', 'queued'].includes(job.status))
+          .length +
+          new Set(selections).size +
+          1 >
+        4
+      )
+        fail(
+          '同时最多 4 个读取任务，请等待已有任务完成后再进行多专攻分析。',
+          409,
+        );
+      const first = await createJob(input, scope);
+      const related = [];
+      for (const value of [...new Set(selections)]) {
+        const [schoolName, majorName] = value.split('/').map((v) => v.trim());
+        const current = snapshot();
+        const original = current.data.majors.find(
+          (m) => m.id === input.majorId,
+        );
+        const originalSchool = current.data.schools.find(
+          (s) => s.id === original.schoolId,
+        );
+        const data = structuredClone(current.data);
+        let school = data.schools.find(
+          (s) =>
+            s.universityId === originalSchool.universityId &&
+            s.name === schoolName,
+        );
+        if (!school) {
+          school = {
+            ...blankCollectionEntity(
+              'school',
+              randomUUID(),
+              originalSchool.universityId,
+            ),
+            name: schoolName,
+          };
+          data.schools.push(school);
+        }
+        let major = data.majors.find(
+          (m) => m.schoolId === school.id && m.name === majorName,
+        );
+        if (!major) {
+          major = {
+            ...blankCollectionEntity('major', randomUUID(), school.id),
+            name: majorName,
+          };
+          data.majors.push(major);
+        }
+        if (major.id === input.majorId) continue;
+        validateExplorer(data);
+        transaction(() => writeWorkspace(data, current.revision, current.data));
+        const job = await createJob(
+          {
+            ...input,
+            majorId: major.id,
+            sourceMajorId: input.majorId,
+            selectedPrograms: [],
+            context: {
+              ...input.context,
+              notes:
+                `仅提取 ${schoolName} / ${majorName} 的信息。文件可能包含其他专攻，禁止混用。${input.context.notes}`.slice(
+                  0,
+                  1000,
+                ),
+            },
+          },
+          null,
+        );
+        related.push({ majorId: major.id, name: value, jobId: job.id });
+      }
+      return respond({ ...first, related }, 201);
+    }
     match = endpoint.match(
       /^jobs\/([\w-]+)(?:\/(pages|image|schema|package|proposals|retry))?$/,
     );

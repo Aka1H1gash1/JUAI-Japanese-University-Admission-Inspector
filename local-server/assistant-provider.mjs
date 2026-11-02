@@ -1,5 +1,7 @@
+import { providerFetch, validateServerProvider } from './server-outbound.mjs';
 export function providerConfig(input, fail) {
   if (input?.protocol === 'codex') {
+    if (process.env.JUAI_SERVER_MODE === '1') fail('服务器模式不执行本机 Codex。',403);
     if (
       typeof input.model !== 'string' ||
       input.model.length > 160 ||
@@ -34,6 +36,7 @@ export function providerConfig(input, fail) {
     fail('API 地址不是有效 URL。');
   }
   const local = ['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname);
+  try { validateServerProvider(url); } catch(e) { fail(e.message,403); }
   if (
     (url.protocol !== 'https:' && !(local && url.protocol === 'http:')) ||
     url.username ||
@@ -324,9 +327,10 @@ export async function modelTurn({
             ? { max_completion_tokens: maxOutputTokens }
             : { max_tokens: maxOutputTokens }),
           stream: config.stream,
+          ...(config.stream ? {stream_options:{include_usage:true}} : {}),
         };
   try {
-    const response = await fetch(
+    const response = await providerFetch(
       `${config.baseUrl}/${protocol === 'responses' ? 'responses' : 'chat/completions'}`,
       {
         method: 'POST',

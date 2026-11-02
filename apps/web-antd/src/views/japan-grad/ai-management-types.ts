@@ -53,5 +53,5 @@ export interface AiManagement {
   features: AiFeature[];
   permissions: { majorIds: string[]; writableKinds: string[] };
   native: AiNativeState;
-  keyStorage: 'memory';
+  keyStorage: 'memory' | 'encrypted';
 }

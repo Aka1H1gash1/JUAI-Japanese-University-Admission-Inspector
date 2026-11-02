@@ -230,7 +230,7 @@ const saveLabel = computed(() => {
   if (store.saving) {
     return '正在保存…';
   }
-  return '已连接本地工作区';
+  return '';
 });
 const contextLabel = computed(() => {
   if (route.path === '/japan-grad/settings') {
@@ -300,6 +300,7 @@ const contextLabel = computed(() => {
             </RouterLink>
             <WorkspaceNavigation class="jg-masthead-nav" />
             <span
+              v-if="saveLabel"
               class="jg-save-state"
               :class="{
                 'is-error': store.storageError,

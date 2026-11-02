@@ -254,7 +254,6 @@ function fillGap(gap: InformationGap) {
             <h2 id="overview-tasks-heading">
               待办事项 <span>{{ tasks.length }}</span>
             </h2>
-            <p>需要你亲自完成的事</p>
           </div>
           <Button size="small" type="primary" @click="openTask()">
 <ExplorerIcon name="plus" />新增待办
@@ -322,15 +321,8 @@ function fillGap(gap: InformationGap) {
                     : '没有逾期事项'
               }}
             </h3>
-            <p>
-              {{
-                targets.length
-                  ? '把要做的事情记下来，完成一件，划掉一件。'
-                  : '先选择一个想考研究室，再为它安排待办。'
-              }}
-            </p>
-            <button class="text-button" @click="openTask()">
-              {{ targets.length ? '添加一件事' : '选择想考研究室' }}
+            <button v-if="!targets.length" class="text-button" @click="openTask()">
+              选择想考研究室
               <ExplorerIcon name="plus" />
             </button>
           </div>
@@ -347,7 +339,6 @@ function fillGap(gap: InformationGap) {
             <h2 id="overview-labs-heading">
               研究室进度 <span>{{ targets.length }}</span>
             </h2>
-            <p>按主要联系老师的记录展示阶段</p>
           </div>
           <RouterLink to="/japan-grad/journey" class="overview-inline-link">
 修考之路 <ExplorerIcon name="arrow" />
@@ -476,7 +467,6 @@ function fillGap(gap: InformationGap) {
             <h2 id="overview-gaps-heading">
               待补信息 <span>{{ gapCount }}</span>
             </h2>
-            <p>只提醒你关心的缺项</p>
           </div>
           <Popover
             v-model:open="reminderOpen"

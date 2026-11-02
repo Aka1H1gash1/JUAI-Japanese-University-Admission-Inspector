@@ -14,6 +14,7 @@ import ExplorerIcon from './components/explorer-icon.vue';
 import { jsonOptions, localApi } from './local-api';
 import { requireValue } from './required-value';
 import { vAccessibleSelect } from './select-accessibility';
+import { serverMode } from './runtime-capabilities';
 
 const AdvancedSettings = defineAsyncComponent(
   () => import('./ai-management-advanced.vue'),
@@ -326,6 +327,7 @@ const returnTo = computed(() =>
     </section>
     <div class="ai-simple-choices">
       <article
+        v-if="!serverMode"
         class="ai-simple-card"
         :class="{ active: shared?.kind === 'codex' }"
       >
@@ -467,7 +469,7 @@ const returnTo = computed(() =>
               :disabled="!!busy || !data"
             >
               保存并使用 API
-</Button><small class="ai-simple-help">API Key 仅在本次本地服务内存中保存，重启后需补填。</small>
+</Button><small class="ai-simple-help">{{ serverMode ? 'API Key 加密保存在你的个人空间，重启后自动恢复。' : 'API Key 仅在本次本地服务内存中保存，重启后需补填。' }}</small>
           </footer>
         </form>
       </article>

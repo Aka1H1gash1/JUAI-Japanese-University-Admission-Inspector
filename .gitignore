@@ -80,3 +80,4 @@ desktop/build/
 desktop/resources/
 desktop/dist/
 !desktop/package-lock.json
+!connector/package-lock.json

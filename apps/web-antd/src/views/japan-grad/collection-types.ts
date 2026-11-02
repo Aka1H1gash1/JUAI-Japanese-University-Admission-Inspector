@@ -100,6 +100,7 @@ export interface CollectionSource {
   truncated: boolean;
 }
 export interface CollectionJob {
+  requestedProgram?: string;
   id: string;
   createdAt: string;
   updatedAt?: string;

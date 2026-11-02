@@ -63,7 +63,7 @@ export function collectionUrl(raw, base) {
     throw new Error('网址解析不打开退出、删除、提交等操作链接。');
   return url.toString();
 }
-async function publicAddresses(url) {
+export async function publicAddresses(url) {
   const host = new URL(url).hostname.replaceAll(/^\[|\]$/g, '');
   if (/^(?:localhost|.*\.localhost|.*\.local|.*\.internal)$/i.test(host))
     throw new Error('网址解析只读取公开网页。');
@@ -347,6 +347,26 @@ export function createCollectionBrowser({
       signal.throwIfAborted();
       const context = browser.contexts()[0];
       if (!context) throw new Error('Chrome 没有可用的用户浏览器上下文。');
+      // Attachments are fetched locally with the authorized browser context.
+      // Never send its cookies or authentication headers to the server.
+      if (this.attachments === true) {
+        let target = url;
+        for(let i=0;i<6;i++) {
+          await publicAddresses(target);
+          if(new URL(target).origin!==new URL(url).origin) throw new Error('附件跨站跳转需要单独授权');
+          const response=await context.request.get(target,{maxRedirects:0,timeout:30000});
+          try {
+            if([301,302,303,307,308].includes(response.status())) {const location=response.headers().location;if(!location)throw new Error('附件跳转缺少目标');target=collectionUrl(location,target);continue;}
+            if(!response.ok())throw new Error(`用户浏览器返回 ${response.status()}`);
+            if(Number(response.headers()['content-length']||0)>40*1024*1024)throw new Error('附件超过 40 MB');
+            if(/application\/pdf/i.test(response.headers()['content-type']||'')) {
+              const bytes=await response.body();signal.throwIfAborted();if(bytes.length>40*1024*1024||!bytes.subarray(0,1024).includes(Buffer.from('%PDF-')))throw new Error('附件类型或大小不正确');
+              return {kind:'pdf',title:decodeURIComponent(new URL(target).pathname.split('/').at(-1)||'附件.pdf'),url:target,mime:'application/pdf',bytes,links:[],via:'browser'};
+            }
+            break;
+          } finally {await response.dispose();}
+        }
+      }
       const page = await context.newPage();
       pages.add(page);
       const abort = () => void page.close().catch(() => {});
@@ -358,6 +378,7 @@ export function createCollectionBrowser({
         await page.route('**/*', async (route) => {
           try {
             const target = collectionUrl(route.request().url());
+            if(this.attachments === true && route.request().isNavigationRequest() && route.request().frame() === page.mainFrame() && new URL(target).origin !== new URL(url).origin) return route.abort();
             if (!['GET', 'HEAD'].includes(route.request().method()))
               return route.abort();
             await publicAddresses(target);

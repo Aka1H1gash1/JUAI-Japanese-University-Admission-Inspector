@@ -26,6 +26,24 @@ const route = useRoute();
 const store = useExplorerStore();
 const config = ref<CollectionStatus>();
 const jobs = ref<CollectionJob[]>([]);
+function jobLabel(job: CollectionJob) {
+  if (job.resultProgramName) return job.resultProgramName;
+  const ids = job.resultIds || job.target?.ids || {};
+  const lists = {
+    university: store.universities,
+    school: store.schools,
+    major: store.majors,
+    lab: store.labs,
+    professor: store.professors,
+  };
+  const names = COLLECTION_KINDS.map(
+    (kind) =>
+      lists[kind].find((e) => e.id === ids[kind])?.name ||
+      job.resultEntities?.find((e) => e.kind === kind)?.name ||
+      job.draft?.[kind]?.find((f) => f.field === 'name')?.value,
+  ).filter(Boolean);
+  return names.join(' / ') || job.requestedProgram || '正在识别档案内容';
+}
 const detail = ref<CollectionDetail>();
 const busy = ref(false);
 const loading = ref(false);
@@ -198,16 +216,17 @@ const generatedProfiles = computed(() => {
     <header class="collection-page-heading">
       <div>
         <h1>网址解析<span>。</span></h1>
-        <p>从各个“新增”入口发起查询，在这里查看进度、核对来源并生成档案。</p>
       </div>
-      <RouterLink
-        to="/japan-grad/ai?advanced=1&returnTo=/japan-grad/collection"
-      >
-        AI 接入设置 ↗
-      </RouterLink>
-      <RouterLink to="/japan-grad/settings?tab=browser">
-        浏览器设置 ↗
-      </RouterLink>
+      <div class="collection-settings-actions">
+        <RouterLink
+          to="/japan-grad/ai?advanced=1&returnTo=/japan-grad/collection"
+        >
+          AI 接入设置 ↗
+        </RouterLink>
+        <RouterLink to="/japan-grad/settings?tab=browser">
+          浏览器设置 ↗
+        </RouterLink>
+      </div>
     </header>
     <p v-if="errorMessage" class="form-error" role="alert">
       {{ errorMessage }}
@@ -217,7 +236,6 @@ const generatedProfiles = computed(() => {
       <header>
         <div>
           <h2>解析任务</h2>
-          <p>离开页面后任务可继续运行，回来可查看来源与结果。</p>
         </div>
         <Button :disabled="busy" :loading="loading" @click="load">
           刷新列表
@@ -229,7 +247,7 @@ const generatedProfiles = computed(() => {
         :options="
           jobs.map((j) => ({
             value: j.id,
-            label: `${new Date(j.createdAt).toLocaleString()} · ${COLLECTION_STATUS[j.status]} · ${j.urls[0] || ''}`,
+            label: jobLabel(j),
           }))
         "
         aria-label="选择解析任务"
@@ -243,11 +261,7 @@ const generatedProfiles = computed(() => {
           aria-label="已生成的档案"
         >
           <header>
-            <div>
-              <h2>档案已生成，信息已填好。</h2>
-              <p>主链接对应档案及其上级已按所属关系关联，可继续查看和编辑。</p>
-            </div>
-            <RouterLink :to="resultLink">查看本次生成的档案 ↗</RouterLink>
+            <RouterLink :to="resultLink">点击生成的档案</RouterLink>
           </header>
           <div class="collection-generated-grid">
             <RouterLink
@@ -255,32 +269,39 @@ const generatedProfiles = computed(() => {
               :key="profile.kind"
               :to="profile.path"
             >
-              <span>{{ COLLECTION_NAMES[profile.kind] }}
-                <small>{{ profile.action }}</small></span><strong>{{ profile.name }}</strong><em>查看档案 →</em>
+              <span
+                >{{ COLLECTION_NAMES[profile.kind] }}
+                <small>{{ profile.action }}</small></span
+              ><strong>{{ profile.name }}</strong
+              ><em>查看档案 →</em>
             </RouterLink>
           </div>
-          <p class="collection-help">
-            所选内容已保存。募集要项摘要与来源可在主对象档案中查看，未采纳的字段可继续补充。
-          </p>
         </section>
         <div class="collection-progress">
           <div>
             <span class="collection-job-status">{{
               COLLECTION_STATUS[detail.job.status]
-            }}</span><strong>{{ detail.job.message }}</strong><small>{{ detail.job.model || '尚未调用模型' }} ·
+            }}</span
+            ><strong v-if="detail.job.status !== 'applied'">{{
+              detail.job.message
+            }}</strong
+            ><small
+              >{{ detail.job.model || '尚未调用模型' }} ·
               {{ detail.job.sources?.length || 0 }} 个已保存来源{{
                 detail.job.phase === 'finalizing' && running
                   ? ' · 正在生成草稿'
                   : ''
-              }}</small>
+              }}</small
+            >
           </div>
-          <Button v-if="running" :loading="busy" @click="stop">停止解析</Button><Button
+          <Button v-if="running" :loading="busy" @click="stop">停止解析</Button
+          ><Button
             v-else-if="['failed', 'cancelled'].includes(detail.job.status)"
             :loading="busy"
             @click="retry(false)"
           >
-            继续解析
-</Button><Button
+            继续解析 </Button
+          ><Button
             v-if="
               ['failed', 'cancelled'].includes(detail.job.status) &&
               detail.job.sources?.some((s) => s.readPages.length)
@@ -288,8 +309,8 @@ const generatedProfiles = computed(() => {
             :loading="busy"
             @click="retry(true)"
           >
-            用已读资料生成草稿
-</Button><RouterLink
+            用已读资料生成草稿 </Button
+          ><RouterLink
             v-else-if="detail.job.status === 'applied'"
             :to="resultLink"
           >
@@ -322,24 +343,32 @@ const generatedProfiles = computed(() => {
           <summary>访问记录</summary>
           <ol>
             <li v-for="(item, i) in detail.job.log" :key="i">
-              <time>{{ new Date(item.at).toLocaleTimeString() }}</time>{{ item.message }}
+              <time>{{ new Date(item.at).toLocaleTimeString() }}</time
+              >{{ item.message }}
             </li>
           </ol>
         </details>
         <div v-if="detail.job.sources?.length" class="collection-sources">
           <article v-for="source in detail.job.sources" :key="source.id">
-            <span>{{ source.kind === 'pdf' ? 'PDF' : '网页'
-              }}{{ source.via === 'browser' ? ' · 用户浏览器' : '' }}</span><a :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }} ↗</a><small>{{
+            <span
+              >{{ source.kind === 'pdf' ? 'PDF' : '网页'
+              }}{{ source.via === 'browser' ? ' · 用户浏览器' : '' }}</span
+            ><a :href="source.url" target="_blank" rel="noopener noreferrer"
+              >{{ source.title }} ↗</a
+            ><small
+              >{{
                 source.kind === 'pdf'
                   ? `已阅读 ${source.readPages.length} / ${source.totalPages} 页`
                   : '已保存网页正文快照'
               }}
-              · {{ new Date(source.fetchedAt).toLocaleString() }}</small><a
+              · {{ new Date(source.fetchedAt).toLocaleString() }}</small
+            ><a
               v-if="source.kind === 'pdf'"
               :href="`/api/japangrad/collection/jobs/${detail.job.id}/sources/${source.id}/file`"
               target="_blank"
               rel="noopener noreferrer"
-              >查看下载的原文件</a>
+              >查看下载的原文件</a
+            >
           </article>
         </div>
         <CollectionReview

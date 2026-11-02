@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 
 import { providerConfig } from './assistant-provider.mjs';
 import { createCodexBridge } from './codex-bridge.mjs';
+import { providerFetch } from './server-outbound.mjs';
 
 const now = () => new Date().toISOString();
 const identifier = (s) => typeof s === 'string' && /^[\w-]{1,100}$/.test(s);
@@ -49,7 +50,7 @@ const redact = (s, key) =>
     .replaceAll(/sk-[\w-]{8,}/g, '[已隐藏密钥]')
     .slice(0, 600);
 async function requestApiModels(provider, key) {
-  const response = await fetch(`${provider.baseUrl}/models`, {
+  const response = await providerFetch(`${provider.baseUrl}/models`, {
     redirect: 'error',
     signal: AbortSignal.timeout(20_000),
     headers: key ? { Authorization: `Bearer ${key}` } : {},
@@ -107,6 +108,7 @@ export function createAiManagementService({
   json,
   jsonBody,
   fail,
+  platform,
 }) {
   if (
     !db.prepare('SELECT version FROM schema_migrations WHERE version=10').get()
@@ -121,8 +123,9 @@ export function createAiManagementService({
     );
   const discovering = new Set();
   const invalidators = new Set();
-  const native = createCodexBridge();
-  const vault = new Map();
+  const native = platform?.native || createCodexBridge();
+  const vault = new Map(platform?.secrets?.entries() || []);
+  const persistKey = (id, value) => { if(value) platform?.secrets?.set(id, value); else platform?.secrets?.delete(id); };
   let closed = false;
   let settingUp = false;
   const all = () =>
@@ -198,6 +201,7 @@ export function createAiManagementService({
     connection(id);
     invalidate(id);
     vault.delete(id);
+    persistKey(id, '');
   };
   function resolve(feature, required = true, overrideId) {
     const base = binding(feature);
@@ -324,14 +328,17 @@ export function createAiManagementService({
     ) {
       invalidate(id);
       vault.delete(id);
+      persistKey(id, '');
     } else if (old?.enabled && input.enabled === false) invalidate(id);
     if (input.clearKey === true) {
       invalidate(id);
       vault.delete(id);
+      persistKey(id, '');
     }
     if (input.apiKey?.trim()) {
       invalidate(id);
       vault.set(id, input.apiKey.trim());
+      persistKey(id, input.apiKey.trim());
     }
     const value = {
       id,
@@ -916,7 +923,7 @@ export function createAiManagementService({
           features: aiFeatures.map((f) => ({ ...f, ...binding(f.id) })),
           permissions: permissions(),
           native: await native.status(),
-          keyStorage: 'memory',
+          keyStorage: platform ? 'encrypted' : 'memory',
         });
       if (endpoint === '/quick-setup' && req.method === 'POST')
         return reply(await quickSetup(await jsonBody(req)));
@@ -935,6 +942,7 @@ export function createAiManagementService({
             fail('此连接仍被功能使用，请先为对应功能换一个连接。', 409);
           invalidate(value.id);
           vault.delete(value.id);
+          persistKey(value.id, '');
           db.prepare('DELETE FROM ai_connections WHERE id=?').run(value.id);
           return reply({ deleted: true });
         }
@@ -942,6 +950,7 @@ export function createAiManagementService({
           await jsonBody(req);
           invalidate(value.id);
           vault.delete(value.id);
+          persistKey(value.id, '');
           return reply(publicConnection(value));
         }
         if (match[2] === 'models' && req.method === 'POST') {

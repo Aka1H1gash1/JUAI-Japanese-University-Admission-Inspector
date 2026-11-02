@@ -27,6 +27,7 @@ import ExplorerIcon from './components/explorer-icon.vue';
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
 import { vAccessibleSelect } from './select-accessibility';
+import { serverMode } from './runtime-capabilities';
 
 interface ExternalAgent {
   id: string;
@@ -195,7 +196,7 @@ async function load(preserveDrafts = false) {
   try {
     const [result, agents] = await Promise.all([
       localApi<AiManagement>('/ai/management'),
-      localApi<ExternalAgent[]>('/analysis/connections'),
+      serverMode ? Promise.resolve([] as ExternalAgent[]) : localApi<ExternalAgent[]>('/analysis/connections'),
     ]);
     if (version !== generation) return;
     data.value = result;
@@ -689,7 +690,7 @@ async function revokeAgent(agent: ExternalAgent) {
             </p>
           </div>
         </div>
-        <article class="ai-native-panel">
+        <article v-if="!serverMode" class="ai-native-panel">
           <div>
             <span class="ai-eyebrow">LOCAL AGENT</span>
             <h3>本机 Codex</h3>
@@ -763,7 +764,7 @@ async function revokeAgent(agent: ExternalAgent) {
           </fieldset>
           <small>包含所选专攻所属大学、研究室及老师基本资料。邮件与考学经历不通过网页工作区助手开放。</small>
         </article>
-        <article class="ai-external-panel">
+        <article v-if="!serverMode" class="ai-external-panel">
           <header>
             <div>
               <h3>外部 Agent 授权 · {{ activeAgents.length }}</h3>
@@ -832,7 +833,7 @@ async function revokeAgent(agent: ExternalAgent) {
               v-model:value="form.kind"
               :disabled="!!busy"
               :options="
-                Object.entries(typeNames).map(([value, label]) => ({
+                Object.entries(typeNames).filter(([value]) => !serverMode || value !== 'codex').map(([value, label]) => ({
                   value,
                   label,
                 }))

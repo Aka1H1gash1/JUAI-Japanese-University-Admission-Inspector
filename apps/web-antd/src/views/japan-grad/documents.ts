@@ -1,4 +1,5 @@
 export type DocumentKind =
+  | 'other'
   | 'answer'
   | 'consent'
   | 'guidelines'
@@ -27,6 +28,7 @@ export interface StoredDocument {
   createdAt: string;
 }
 export const kindLabels: Record<DocumentKind, string> = {
+  other: '特殊文件',
   guidelines: '募集要项',
   question: '过去问',
   answer: '对应答案',

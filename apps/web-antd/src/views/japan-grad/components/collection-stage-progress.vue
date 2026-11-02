@@ -33,7 +33,7 @@ const heading = computed(() => {
 const hint = computed(() => {
   if (failed.value) return '进度停留在失败阶段，已读取的来源仍保留，可重试。';
   if (stopped.value) return '已保留当前资料，继续查询后会恢复进度。';
-  if (props.job.status === 'applied') return '解析结果已确认，档案已保存。';
+  if (props.job.status === 'applied') return '';
   if (done.value) return 'AI 已完成整理，请核对下方信息后生成档案。';
   if (step.value === 2) return '正在整理要求、时间与来源，生成待核对的信息。';
   if (step.value === 1) return '正在读取官网、查找关联页面和募集要项。';
@@ -53,7 +53,7 @@ const hint = computed(() => {
     <header>
       <div>
         <strong aria-live="polite" role="status">{{ heading }}</strong>
-        <p>{{ hint }}</p>
+        <p v-if="hint">{{ hint }}</p>
       </div>
       <span>{{ done ? '4 / 4' : `${step + 1} / 4` }}</span>
     </header>

@@ -11,6 +11,7 @@ import EntityEditor from './components/entity-editor.vue';
 import ExamHistory from './components/exam-history.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import MajorAdmissions from './components/major-admissions.vue';
+import MajorAdmissionTable from './components/major-admission-table.vue';
 import ResearchLabCollection from './components/research-lab-collection.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
 
@@ -105,6 +106,7 @@ function deleteMajor() {
       <p v-if="major.notes" class="overview-notes">{{ major.notes }}</p>
     </section>
     <CollectedAdmissions kind="major" :id="major.id" />
+    <MajorAdmissionTable :major-id="major.id" />
     <MajorAdmissions :key="`admissions-${major.id}`" :major-id="major.id" />
     <ExamHistory :key="`exams-${major.id}`" :major-id="major.id" />
     <AnalysisHistory
