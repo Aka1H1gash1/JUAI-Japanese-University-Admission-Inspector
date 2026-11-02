@@ -6,7 +6,7 @@ import type {
 } from './collection-types';
 
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import { Button, Select } from 'ant-design-vue';
 
@@ -17,12 +17,18 @@ import {
 } from './collection-types';
 import CollectionReview from './components/collection-review.vue';
 import CollectionStageProgress from './components/collection-stage-progress.vue';
+import EntityCreateFlow from './components/entity-create-flow.vue';
 import SpecialProgramReview from './components/special-program-review.vue';
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
 import { requireValue } from './required-value';
 import { vAccessibleSelect } from './select-accessibility';
 const route = useRoute();
+const router = useRouter();
+const createOpen = ref(false);
+function created(id: string) {
+  void router.replace({ path: route.path, query: { ...route.query, job: id } });
+}
 const store = useExplorerStore();
 const config = ref<CollectionStatus>();
 const jobs = ref<CollectionJob[]>([]);
@@ -218,6 +224,7 @@ const generatedProfiles = computed(() => {
         <h1>网址解析<span>。</span></h1>
       </div>
       <div class="collection-settings-actions">
+        <Button type="primary" @click="createOpen = true">新建解析</Button>
         <RouterLink
           to="/japan-grad/ai?advanced=1&returnTo=/japan-grad/collection"
         >
@@ -230,8 +237,23 @@ const generatedProfiles = computed(() => {
     </header>
     <p v-if="errorMessage" class="form-error" role="alert">
       {{ errorMessage }}
+      <Button :loading="loading" @click="load">重试</Button>
     </p>
     <CollectionStageProgress v-if="pendingJob" :job="pendingJob" />
+    <section
+      v-if="!loading && !errorMessage && !jobs.length"
+      class="collection-empty"
+      aria-label="尚无解析任务"
+    >
+      <h2>还没有解析任务</h2>
+      <p>粘贴大学、研究科、专攻或研究室链接，开始解析。</p>
+      <Button type="primary" @click="createOpen = true">
+        输入网址开始解析
+      </Button>
+    </section>
+    <p v-else-if="loading && !jobs.length && !pendingJob" role="status">
+      正在读取解析任务…
+    </p>
     <section v-if="jobs.length" class="collection-jobs">
       <header>
         <div>
@@ -269,11 +291,8 @@ const generatedProfiles = computed(() => {
               :key="profile.kind"
               :to="profile.path"
             >
-              <span
-                >{{ COLLECTION_NAMES[profile.kind] }}
-                <small>{{ profile.action }}</small></span
-              ><strong>{{ profile.name }}</strong
-              ><em>查看档案 →</em>
+              <span>{{ COLLECTION_NAMES[profile.kind] }}
+                <small>{{ profile.action }}</small></span><strong>{{ profile.name }}</strong><em>查看档案 →</em>
             </RouterLink>
           </div>
         </section>
@@ -281,27 +300,22 @@ const generatedProfiles = computed(() => {
           <div>
             <span class="collection-job-status">{{
               COLLECTION_STATUS[detail.job.status]
-            }}</span
-            ><strong v-if="detail.job.status !== 'applied'">{{
+            }}</span><strong v-if="detail.job.status !== 'applied'">{{
               detail.job.message
-            }}</strong
-            ><small
-              >{{ detail.job.model || '尚未调用模型' }} ·
+            }}</strong><small>{{ detail.job.model || '尚未调用模型' }} ·
               {{ detail.job.sources?.length || 0 }} 个已保存来源{{
                 detail.job.phase === 'finalizing' && running
                   ? ' · 正在生成草稿'
                   : ''
-              }}</small
-            >
+              }}</small>
           </div>
-          <Button v-if="running" :loading="busy" @click="stop">停止解析</Button
-          ><Button
+          <Button v-if="running" :loading="busy" @click="stop">停止解析</Button><Button
             v-else-if="['failed', 'cancelled'].includes(detail.job.status)"
             :loading="busy"
             @click="retry(false)"
           >
-            继续解析 </Button
-          ><Button
+            继续解析
+</Button><Button
             v-if="
               ['failed', 'cancelled'].includes(detail.job.status) &&
               detail.job.sources?.some((s) => s.readPages.length)
@@ -309,8 +323,8 @@ const generatedProfiles = computed(() => {
             :loading="busy"
             @click="retry(true)"
           >
-            用已读资料生成草稿 </Button
-          ><RouterLink
+            用已读资料生成草稿
+</Button><RouterLink
             v-else-if="detail.job.status === 'applied'"
             :to="resultLink"
           >
@@ -343,32 +357,24 @@ const generatedProfiles = computed(() => {
           <summary>访问记录</summary>
           <ol>
             <li v-for="(item, i) in detail.job.log" :key="i">
-              <time>{{ new Date(item.at).toLocaleTimeString() }}</time
-              >{{ item.message }}
+              <time>{{ new Date(item.at).toLocaleTimeString() }}</time>{{ item.message }}
             </li>
           </ol>
         </details>
         <div v-if="detail.job.sources?.length" class="collection-sources">
           <article v-for="source in detail.job.sources" :key="source.id">
-            <span
-              >{{ source.kind === 'pdf' ? 'PDF' : '网页'
-              }}{{ source.via === 'browser' ? ' · 用户浏览器' : '' }}</span
-            ><a :href="source.url" target="_blank" rel="noopener noreferrer"
-              >{{ source.title }} ↗</a
-            ><small
-              >{{
+            <span>{{ source.kind === 'pdf' ? 'PDF' : '网页'
+              }}{{ source.via === 'browser' ? ' · 用户浏览器' : '' }}</span><a :href="source.url" target="_blank" rel="noopener noreferrer">{{ source.title }} ↗</a><small>{{
                 source.kind === 'pdf'
                   ? `已阅读 ${source.readPages.length} / ${source.totalPages} 页`
                   : '已保存网页正文快照'
               }}
-              · {{ new Date(source.fetchedAt).toLocaleString() }}</small
-            ><a
+              · {{ new Date(source.fetchedAt).toLocaleString() }}</small><a
               v-if="source.kind === 'pdf'"
               :href="`/api/japangrad/collection/jobs/${detail.job.id}/sources/${source.id}/file`"
               target="_blank"
               rel="noopener noreferrer"
-              >查看下载的原文件</a
-            >
+              >查看下载的原文件</a>
           </article>
         </div>
         <CollectionReview
@@ -401,6 +407,12 @@ const generatedProfiles = computed(() => {
         </p>
       </template>
     </section>
+    <EntityCreateFlow
+      v-model:open="createOpen"
+      kind="university"
+      url-only
+      @created="created"
+    />
   </section>
 </template>
 <style scoped src="./collection.css"></style>

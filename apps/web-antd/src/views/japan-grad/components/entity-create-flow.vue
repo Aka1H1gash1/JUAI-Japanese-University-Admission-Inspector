@@ -12,18 +12,23 @@ import { App, Button, Input, InputNumber, Modal, Select } from 'ant-design-vue';
 import { useCollectionJobsStore } from '../collection-jobs';
 import { COLLECTION_NAMES } from '../collection-types';
 import { jsonOptions, localApi } from '../local-api';
+import { serverMode } from '../runtime-capabilities';
 import { vAccessibleSelect } from '../select-accessibility';
 import EntityEditor from './entity-editor.vue';
 import ExplorerIcon from './explorer-icon.vue';
 import ImportScope from './import-scope.vue';
-import { serverMode } from '../runtime-capabilities';
 const props = defineProps<{
   kind: 'special_program' | EntityKind;
   parentId?: string;
   parentName?: string;
   entityId?: string;
+  urlOnly?: boolean;
 }>();
-const emit = defineEmits<{ saved: [id: string]; manual: [] }>();
+const emit = defineEmits<{
+  saved: [id: string];
+  manual: [];
+  created: [id: string];
+}>();
 const open = defineModel<boolean>('open', { default: false });
 const route = useRoute();
 const jobs = useCollectionJobsStore();
@@ -53,7 +58,7 @@ const modeConnections = computed(
         (aiMode.value === 'agent' ? c.kind === 'codex' : c.kind !== 'codex'),
     ) || [],
 );
-// A remote API key lives only in memory, so a restart leaves the connection without one.
+// Each platform reports whether its stored API credentials are available.
 const usable = (c: (typeof modeConnections.value)[number]) =>
   c.kind === 'codex' || c.provider.local || c.keyConfigured;
 const selectedConnection = computed(() => {
@@ -92,13 +97,16 @@ watch(
   (value) => {
     generation++;
     if (!value) return;
-    mode.value = props.entityId ? 'manual' : 'choose';
+    if (props.entityId) mode.value = 'manual';
+    else if (props.urlOnly) mode.value = 'url';
+    else mode.value = 'choose';
     url.value = '';
     errorMessage.value = '';
     management.value = undefined;
     notes.value = '';
     importScope.value = 'current';
     selectedMajors.value = [];
+    if (props.urlOnly) void loadAiState(true);
   },
   { immediate: true },
 );
@@ -153,7 +161,7 @@ async function parse() {
   try {
     if (
       importScope.value === 'selected' &&
-      (!selectedMajors.value.length ||
+      (selectedMajors.value.length === 0 ||
         selectedMajors.value.length > 3 ||
         selectedMajors.value.some(
           (value) => value.split('/').filter((v) => v.trim()).length !== 2,
@@ -195,7 +203,7 @@ async function parse() {
       jsonOptions('POST', {
         primaryUrl: url.value.trim(),
         supportingUrl: '',
-        targetKind: props.kind,
+        targetKind: props.urlOnly ? 'auto' : props.kind,
         selectedPrograms:
           importScope.value === 'selected' ? selectedMajors.value : [],
         parent:
@@ -214,6 +222,7 @@ async function parse() {
     );
     open.value = false;
     jobs.track(job);
+    emit('created', job.id);
     const to = {
       path: '/japan-grad/collection',
       query: { job: job.id, returnTo: route.path },
@@ -234,7 +243,7 @@ async function parse() {
 <template>
   <Modal
     v-model:open="chooserOpen"
-    :title="`新增${kindName}`"
+    :title="urlOnly ? '新建网址解析' : `新增${kindName}`"
     :width="620"
     :footer="null"
     :closable="!busy"
@@ -250,17 +259,15 @@ async function parse() {
             : (mode = 'manual')
         "
       >
-        <ExplorerIcon name="edit" /><strong>手动新增</strong
-        ><span>自己填写名称与基本资料</span>
+        <ExplorerIcon name="edit" /><strong>手动新增</strong><span>自己填写名称与基本资料</span>
       </button>
       <button @click="chooseUrl">
-        <ExplorerIcon name="globe" /><strong>网址解析查询</strong
-        ><span>AI 读取官网，查找信息与募集要项</span>
+        <ExplorerIcon name="globe" /><strong>网址解析查询</strong><span>AI 读取官网，查找信息与募集要项</span>
       </button>
     </div>
     <form v-else class="create-url-form" @submit.prevent="parse">
-      <label
-        >{{ kindName }}官网链接<Input
+      <label>{{ urlOnly ? '网页链接' : `${kindName}官网链接`
+        }}<Input
           v-model:value="url"
           type="url"
           required
@@ -269,15 +276,13 @@ async function parse() {
           placeholder="https://…"
       /></label>
       <div class="create-application-context">
-        <label
-          >入学年份<InputNumber
+        <label>入学年份<InputNumber
             v-model:value="year"
             :min="1900"
             :max="2200"
             :precision="0"
-            :disabled="busy" /></label
-        ><label
-          >申请身份<Input
+            :disabled="busy"
+/></label><label>申请身份<Input
             v-model:value="identity"
             :disabled="busy"
             :maxlength="240"
@@ -289,26 +294,30 @@ async function parse() {
         v-model:scope="importScope"
         v-model:selections="selectedMajors"
       />
-      <label
-        >备注<Input.TextArea
+      <label>备注<Input.TextArea
           v-model:value="notes"
           :rows="2"
           :maxlength="1000"
           :disabled="busy"
           placeholder="选拔类别或希望重点查询的内容"
       /></label>
-      <label
-        >查询方式<Select
+      <label>查询方式<Select
           v-accessible-select
           v-model:value="aiMode"
           :disabled="busy"
           :options="[
-              ...(!serverMode ? [{ value: 'agent', label: '本机 Codex（沿用你电脑上的登录）' }] : []),
+            ...(!serverMode
+              ? [{ value: 'agent', label: '本机 Codex（沿用你电脑上的登录）' }]
+              : []),
             { value: 'api', label: '自己的 API（DeepSeek、OpenAI 等）' },
           ]"
       /></label>
       <p class="create-parent">
-        自动整理本层与所属上级，优先复用已有档案；找到的资料核对后再生成。
+        {{
+          urlOnly
+            ? '自动识别页面对应的大学、研究科、专攻或研究室，核对来源后再生成档案。'
+            : '自动整理本层与所属上级，优先复用已有档案；找到的资料核对后再生成。'
+        }}
       </p>
       <p v-if="selectedConnection" class="create-parent">
         使用 {{ selectedConnection.name }} ·
@@ -318,22 +327,35 @@ async function parse() {
       <p v-else-if="management" class="form-error">
         {{
           keyMissing
-            ? 'API Key 只保存在本次运行中，JUAI 重启后需要重新填写。'
+            ? serverMode
+              ? '该 API 连接尚未配置有效密钥，请在 AI 管理中补充。'
+              : 'API Key 只保存在本次运行中，JUAI 重启后需要重新填写。'
             : aiMode === 'agent'
               ? '还没有连接本机 Codex。'
               : '还没有填写自己的 API。'
         }}
-        <a :href="aiSetupPath" target="_blank" rel="noopener"
-          >在新标签页打开 AI 管理</a
-        >，完成后回到这里即可继续，已填内容会保留。
+        <a :href="aiSetupPath" target="_blank" rel="noopener">在新标签页打开 AI 管理</a>，完成后回到这里即可继续，已填内容会保留。
       </p>
       <p v-if="errorMessage" class="form-error" role="alert">
         {{ errorMessage }}
       </p>
-      <label v-if="serverMode">网页读取方式<Select v-model:value="browserMode" :options="[{value:'http',label:'服务器读取公开网页'},{value:'browser',label:'使用我已授权的 Chrome 连接器（电脑需在线）'}]" /></label>
+      <label v-if="serverMode">网页读取方式<Select
+          v-model:value="browserMode"
+          :options="[
+            { value: 'http', label: '服务器读取公开网页' },
+            {
+              value: 'browser',
+              label: '使用我已授权的 Chrome 连接器（电脑需在线）',
+            },
+          ]"
+      /></label>
       <footer>
-        <Button :disabled="busy" @click="mode = 'choose'">返回</Button
-        ><Button
+        <Button
+          :disabled="busy"
+          @click="urlOnly ? (open = false) : (mode = 'choose')"
+        >
+          {{ urlOnly ? '取消' : '返回' }}
+</Button><Button
           type="primary"
           html-type="submit"
           :loading="busy"

@@ -4,6 +4,24 @@
   margin: auto;
 }
 
+.collection-empty {
+  padding: 48px 28px;
+  text-align: center;
+  background: var(--jg-surface);
+  border: 1px dashed var(--jg-line);
+  border-radius: 14px;
+}
+
+.collection-empty h2 {
+  margin: 0 0 12px;
+  font-size: 20px;
+}
+
+.collection-empty p {
+  margin: 0 0 24px;
+  color: var(--jg-muted);
+}
+
 .collection-settings-actions {
   display: flex;
   flex-wrap: wrap;
