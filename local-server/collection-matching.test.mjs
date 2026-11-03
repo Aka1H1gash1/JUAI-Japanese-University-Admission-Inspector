@@ -5,6 +5,7 @@ import { mkdtemp } from 'node:fs/promises';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 
+import { blankCollectionEntity } from './collection-fields.mjs';
 import { matchCollectionEntities } from './collection-matching.mjs';
 import { createLocalApp } from './server.mjs';
 import { sampleData } from './test-fixtures.mjs';
@@ -87,10 +88,18 @@ test('apply reuses existing ancestors and rejects duplicate parent creation for 
   };
   const db = new DatabaseSync(`${workspace}/workspace.db`);
   try {
-    for (const kind of ['school', 'major', 'lab']) {
+    for (const kind of ['school', 'major', 'lab', 'professor']) {
       const data = structuredClone(sampleData);
       data.professors = [];
       data.labs = [];
+      if (kind === 'professor')
+        data.labs = [
+          {
+            ...blankCollectionEntity('lab', 'l1', 'm1'),
+            name: '原研究室',
+            mainProfessorId: '',
+          },
+        ];
       if (kind === 'school') {
         data.schools = [];
         data.majors = [];
@@ -107,11 +116,15 @@ test('apply reuses existing ancestors and rejects duplicate parent creation for 
         school: { university: 'u1' },
         major: { university: 'u1', school: 's1' },
         lab: { university: 'u1', school: 's1', major: 'm1' },
+        professor: { university: 'u1', school: 's1', major: 'm1', lab: 'l1' },
       }[kind];
       const id = `parent-test-${kind}`;
-      const parent = { school: 'university', major: 'school', lab: 'major' }[
-        kind
-      ];
+      const parent = {
+        school: 'university',
+        major: 'school',
+        lab: 'major',
+        professor: 'lab',
+      }[kind];
       const job = {
         id,
         createdAt: new Date().toISOString(),
@@ -134,13 +147,35 @@ test('apply reuses existing ancestors and rejects duplicate parent creation for 
       for (const [k, v] of Object.entries(chain))
         assert.deepEqual(detail.matches[k], [v]);
       const entities = Object.fromEntries(
-        Object.entries(chain).map(([k, v]) => [k, { id: v, fields: {} }]),
+        Object.entries(chain).map(([k, v]) => [
+          k,
+          {
+            id: v,
+            fields: { name: '不应覆盖的上级名称', notes: '不应覆盖上级说明' },
+          },
+        ]),
       );
+      if (kind === 'lab') {
+        job.draft.professor = [
+          {
+            field: 'name',
+            value: '负责人老师',
+            evidence: [],
+            requiresScopeConfirmation: false,
+          },
+        ];
+        db.prepare('UPDATE collection_jobs SET data=? WHERE id=?').run(
+          JSON.stringify(job),
+          id,
+        );
+        entities.professor = { fields: { name: '负责人老师' } };
+      }
       entities[kind] = { fields: { name: '新对象' } };
       const payload = {
         confirm: true,
         revision: current.revision,
         targetKind: kind,
+        includeProfessor: kind === 'lab',
         entities,
         documents: [],
         exams: [],
@@ -160,8 +195,20 @@ test('apply reuses existing ancestors and rejects duplicate parent creation for 
       assert.equal(result.status, 200, JSON.stringify(result.data));
       const saved = (await call('/workspace')).data.data;
       assert.equal(saved.universities.length, 1);
+      assert.deepEqual(saved.universities, current.data.universities);
+      if (kind !== 'school')
+        assert.deepEqual(saved.schools, current.data.schools);
+      if (kind !== 'major' && kind !== 'school')
+        assert.deepEqual(saved.majors, current.data.majors);
+      if (kind === 'professor') {
+        assert.equal(saved.professors.length, 1);
+        assert.equal(saved.professors[0].labId, 'l1');
+        assert.deepEqual(saved.labs, current.data.labs);
+      }
       if (kind === 'major') assert.equal(saved.majors[0].schoolId, 's1');
       if (kind === 'lab') {
+        assert.equal(saved.professors.length, 1);
+        assert.equal(saved.professors[0].labId, saved.labs[0].id);
         assert.equal(saved.labs[0].majorId, 'm1');
         assert.equal(saved.majors.length, 1);
       }

@@ -180,7 +180,8 @@ const resultLink = computed(() => {
   if (ids.school) path += `/schools/${ids.school}`;
   if (ids.major) path += `/majors/${ids.major}`;
   if (ids.lab) path += `/labs/${ids.lab}`;
-  if (ids.professor) path += `/professors/${ids.professor}`;
+  if (ids.professor && detail.value?.job.appliedKind === 'professor')
+    path += `/professors/${ids.professor}`;
   return path;
 });
 const generatedProfiles = computed(() => {

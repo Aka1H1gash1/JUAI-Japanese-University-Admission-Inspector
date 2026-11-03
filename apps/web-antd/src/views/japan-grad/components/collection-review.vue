@@ -30,15 +30,29 @@ const store = useExplorerStore();
 const { message } = App.useApp();
 type Row = CollectedField & { selected: boolean; edited: string };
 const targetKind = ref<'unknown' | CollectionKind>('unknown');
+const includeProfessor = ref(false);
+const professorCandidate = computed(() =>
+  props.detail.job.draft?.professor.some(
+    (f) => f.field === 'name' && f.value.trim(),
+  ),
+);
+const writable = (kind: CollectionKind) =>
+  kind === targetKind.value ||
+  (kind === 'professor' &&
+    targetKind.value === 'lab' &&
+    includeProfessor.value);
 const activeKinds = computed(() => {
-  const index = COLLECTION_KINDS.indexOf(targetKind.value as CollectionKind);
+  const index = COLLECTION_KINDS.indexOf(
+    targetKind.value === 'lab' && includeProfessor.value
+      ? 'professor'
+      : (targetKind.value as CollectionKind),
+  );
   return index === -1 ? [] : COLLECTION_KINDS.slice(0, index + 1);
 });
 const professorEnabled = computed(() =>
   activeKinds.value.includes('professor'),
 );
-const hasMajor = computed(() => activeKinds.value.includes('major'));
-const hasLab = computed(() => activeKinds.value.includes('lab'));
+const hasMajor = computed(() => targetKind.value === 'major');
 const admissionRows = ref<Row[]>([]);
 const logoFailed = ref(false);
 const logoSelected = ref(false);
@@ -144,6 +158,8 @@ function resetRows(kind: CollectionKind) {
     ...f,
     edited: f.value,
     selected:
+      (writable(kind) ||
+        (!entity && ['japaneseName', 'name'].includes(f.field))) &&
       !f.requiresScopeConfirmation &&
       (!entity?.[f.field] || entity[f.field] === f.value),
   }));
@@ -160,6 +176,14 @@ function resetRows(kind: CollectionKind) {
   rows.value[kind] = list;
 }
 function initialKind(): 'unknown' | CollectionKind {
+  const child: Partial<Record<CollectionKind, CollectionKind>> = {
+    university: 'school',
+    school: 'major',
+    major: 'lab',
+    lab: 'professor',
+  };
+  const parent = props.detail.job.parent?.kind;
+  if (parent && child[parent]) return child[parent];
   const draft = props.detail.job.draft;
   if (draft?.subject && draft.subject.source !== 'legacy')
     return draft.subject.kind === 'special_program'
@@ -187,6 +211,8 @@ function reset() {
   confirmedScopes.value = [];
   acknowledged.value = allowReplace.value = wantApply.value = false;
   targetKind.value = initialKind();
+  includeProfessor.value =
+    targetKind.value === 'lab' && !!professorCandidate.value;
   logoFailed.value = false;
   uploadedLogoId.value = '';
   choices.value = {
@@ -222,7 +248,9 @@ function reset() {
     resetRows(kind);
   }
   logoSelected.value =
-    !!props.detail.job.draft?.logo && !current('university')?.logoId;
+    targetKind.value === 'university' &&
+    !!props.detail.job.draft?.logo &&
+    !current('university')?.logoId;
   admissionRows.value = (props.detail.job.draft?.admissions?.fields || []).map(
     (f) => ({ ...f, edited: f.value, selected: !f.requiresScopeConfirmation }),
   );
@@ -287,6 +315,10 @@ function choose(kind: CollectionKind) {
   confirmedScopes.value = [];
 }
 function changeTarget() {
+  includeProfessor.value =
+    targetKind.value === 'lab' && !!professorCandidate.value;
+  if (targetKind.value !== 'university') logoSelected.value = false;
+  for (const kind of COLLECTION_KINDS) resetRows(kind);
   acknowledged.value = false;
   confirmedScopes.value = [];
   wantApply.value = false;
@@ -355,6 +387,8 @@ const generationPlan = computed(() =>
     const selected = rows.value[kind].filter(
       (r) => r.selected && r.edited.trim(),
     );
+    let action = '自动新建';
+    if (choices.value[kind]) action = writable(kind) ? '更新本级' : '仅关联';
     return {
       kind,
       enabled: kind !== 'professor' || professorEnabled.value,
@@ -362,7 +396,7 @@ const generationPlan = computed(() =>
         selected.find((r) => r.field === 'name')?.edited.trim() ||
         current(kind)?.name ||
         '',
-      action: choices.value[kind] ? '更新已有' : '自动新建',
+      action,
       count: selected.length,
     };
   }),
@@ -451,7 +485,11 @@ async function apply() {
   busy.value = true;
   errorMessage.value = '';
   try {
-    if (logoSelected.value && !uploadedLogoId.value) {
+    if (
+      targetKind.value === 'university' &&
+      logoSelected.value &&
+      !uploadedLogoId.value
+    ) {
       const response = await fetch(logoPreview.value);
       if (!response.ok)
         throw new Error(
@@ -534,7 +572,14 @@ async function apply() {
           id: choices.value[kind] || undefined,
           fields: Object.fromEntries(
             rows.value[kind]
-              .filter((r) => r.selected && r.edited.trim())
+              .filter(
+                (r) =>
+                  r.selected &&
+                  r.edited.trim() &&
+                  (writable(kind) ||
+                    (!choices.value[kind] &&
+                      ['japaneseName', 'name'].includes(r.field))),
+              )
               .map((r) => [r.field, r.edited.trim()]),
           ),
         },
@@ -546,11 +591,15 @@ async function apply() {
         confirm: true,
         revision: props.detail.revision,
         targetKind: targetKind.value,
-        logoId: logoSelected.value ? uploadedLogoId.value : undefined,
+        includeProfessor: targetKind.value === 'lab' && includeProfessor.value,
+        logoId:
+          targetKind.value === 'university' && logoSelected.value
+            ? uploadedLogoId.value
+            : undefined,
         entities,
         confirmedScopes: confirmedScopes.value,
         allowReplace: allowReplace.value,
-        wantApply: hasLab.value && wantApply.value,
+        wantApply: targetKind.value === 'lab' && wantApply.value,
         admissions: Object.fromEntries(
           admissionRows.value
             .filter((r) => r.selected && r.edited.trim())
@@ -611,7 +660,7 @@ async function apply() {
       <label class="collection-target-kind">主链接对应<Select
           v-accessible-select
           v-model:value="targetKind"
-          :disabled="busy"
+          :disabled="busy || !!detail.job.parent"
           :options="[
             { value: 'unknown', label: '请确认对象类型' },
             ...COLLECTION_KINDS.map((kind) => ({
@@ -621,6 +670,20 @@ async function apply() {
           ]"
           @change="changeTarget"
       /></label>
+      <p class="collection-help">
+        只更新当前对象的信息，已有上级仅建立关联，不修改资料。
+      </p>
+      <Checkbox
+        v-if="targetKind === 'lab' && professorCandidate"
+        v-model:checked="includeProfessor"
+        :disabled="busy"
+        @change="
+          resetRows('professor');
+          acknowledged = false;
+        "
+      >
+        同时导入原文中已识别的负责人老师
+      </Checkbox>
       <p v-if="detail.job.draft?.subject?.reason">
         {{ detail.job.draft.subject.reason }}
       </p>
@@ -656,7 +719,7 @@ async function apply() {
       </li>
     </ul>
     <section
-      v-if="detail.job.draft?.logo"
+      v-if="targetKind === 'university' && detail.job.draft?.logo"
       class="collection-entity collection-logo-candidate"
     >
       <div class="collection-logo-preview">
@@ -807,7 +870,11 @@ async function apply() {
       </p>
       <template v-if="kind !== 'professor' || professorEnabled">
         <div
-          v-for="row in rows[kind]"
+          v-for="row in rows[kind].filter(
+            (r) =>
+              writable(kind) ||
+              (!choices[kind] && ['name', 'japaneseName'].includes(r.field)),
+          )"
           :key="row.field"
           class="collection-field"
         >
@@ -985,7 +1052,11 @@ async function apply() {
       <p v-if="errorMessage" class="form-error" role="alert">
         {{ errorMessage }}
       </p>
-      <Checkbox v-if="hasLab" v-model:checked="wantApply" :disabled="busy">
+      <Checkbox
+        v-if="targetKind === 'lab'"
+        v-model:checked="wantApply"
+        :disabled="busy"
+      >
         将研究室加入想考清单
 </Checkbox><small v-if="neededScopes.some((key) => !confirmedScopes.includes(key))">所选时间还有适用对象待确认，请查看字段下方提示。</small><Button
         type="primary"
