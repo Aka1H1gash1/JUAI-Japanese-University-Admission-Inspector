@@ -2,6 +2,7 @@
 // inside parentheses attached to their own item; never split TOEIC/TOEFL/IELTS.
 export function admissionItems(value: string, materials = true): string[] {
   const result: string[] = [];
+  const structured = value.includes('\n');
   let text = '';
   const stack: string[] = [];
   const closing: Record<string, string> = {
@@ -13,7 +14,7 @@ export function admissionItems(value: string, materials = true): string[] {
   const flush = () => {
     const item = text
       .trim()
-      .replace(/^(?:[-*•・]\s*|\d+[.)、．]\s*|[①-⑳]\s*)/u, '')
+      .replace(/^(?:[-*•・]\s*|\d+[.)、．](?=\D)\s*|[①-⑳]\s*)/u, '')
       .trim();
     if (item) result.push(item);
     text = '';
@@ -24,9 +25,10 @@ export function admissionItems(value: string, materials = true): string[] {
     if (
       stack.length === 0 &&
       (character === '\n' ||
-        character === ';' ||
-        character === '；' ||
-        (materials && character === '、'))
+        (!structured &&
+          (character === ';' ||
+            character === '；' ||
+            (materials && character === '、'))))
     )
       flush();
     else text += character;
