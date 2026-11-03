@@ -83,7 +83,8 @@ async function load() {
   loading.value = true;
   errorMessage.value = '';
   try {
-    const [state, list] = await Promise.all([
+    const [, state, list] = await Promise.all([
+      store.load(),
       localApi<CollectionStatus>('/collection/status'),
       localApi<CollectionJob[]>('/collection/jobs'),
     ]);

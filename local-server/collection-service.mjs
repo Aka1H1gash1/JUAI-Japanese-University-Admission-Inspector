@@ -23,6 +23,7 @@ import {
   moneyFields,
   specialProgramFields,
 } from './collection-fields.mjs';
+import { matchCollectionEntities } from './collection-matching.mjs';
 import {
   officialSearchProvider,
   searchOfficialWeb,
@@ -1265,40 +1266,7 @@ export function createCollectionService({
     }
   }
   function matches(j) {
-    const data = snapshot().data;
-    const result = {};
-    for (const kind of collectionKinds) {
-      const fields = j.draft?.[kind] || [];
-      const names = new Set(
-        fields
-          .filter((f) => ['japaneseName', 'name'].includes(f.field))
-          .map((f) => normalizeQuote(f.value).toLowerCase()),
-      );
-      const urls = fields
-        .filter((f) =>
-          ['laboratoryWebsite', 'personalWebsite', 'website'].includes(f.field),
-        )
-        .map((f) => f.value.replace(/\/$/, ''));
-      result[kind] = data[collectionCollections[kind]]
-        .filter(
-          (e) =>
-            names.has(normalizeQuote(e.name).toLowerCase()) ||
-            (e.japaneseName &&
-              names.has(normalizeQuote(e.japaneseName).toLowerCase())) ||
-            urls.some(
-              (url) =>
-                url ===
-                (
-                  e.website ||
-                  e.personalWebsite ||
-                  e.laboratoryWebsite ||
-                  ''
-                ).replace(/\/$/, ''),
-            ),
-        )
-        .map((e) => e.id);
-    }
-    return result;
+    return matchCollectionEntities(snapshot().data, j);
   }
   async function applySpecialProgram(j, input) {
     if (j.status === 'applied') return { job: view(j), alreadyApplied: true };
@@ -1454,6 +1422,12 @@ export function createCollectionService({
       if (!choice) {
         fail(`请选择${collectionNames[kind]}的入库位置。`);
       }
+      const anchor = j.parent && j.target?.ids?.[kind];
+      if (anchor && choice.id !== anchor)
+        fail(
+          `本次从已有上级新增，请沿用当前${collectionNames[kind]}，不要重复新建或改到其他上级。`,
+          409,
+        );
       const list = data[collectionCollections[kind]];
       const existing = choice.id
         ? list.find((e) => e.id === choice.id)

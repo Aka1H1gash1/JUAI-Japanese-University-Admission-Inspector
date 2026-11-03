@@ -108,6 +108,8 @@ const collection = (kind: CollectionKind): any[] => {
 };
 const current = (kind: CollectionKind) =>
   collection(kind).find((e) => e.id === choices.value[kind]);
+const pinned = (kind: CollectionKind) =>
+  props.detail.job.parent ? props.detail.job.target?.ids[kind] : undefined;
 function options(kind: CollectionKind) {
   return collection(kind)
     .filter((e) => {
@@ -187,6 +189,13 @@ function reset() {
   targetKind.value = initialKind();
   logoFailed.value = false;
   uploadedLogoId.value = '';
+  choices.value = {
+    university: '',
+    school: '',
+    major: '',
+    lab: '',
+    professor: '',
+  };
   for (const kind of COLLECTION_KINDS) {
     const available = options(kind);
     const target = props.detail.job.target?.ids[kind];
@@ -784,7 +793,7 @@ async function apply() {
           v-if="kind !== 'professor' || professorEnabled"
           v-accessible-select
           v-model:value="choices[kind]"
-          :disabled="busy"
+          :disabled="busy || !!pinned(kind)"
           :options="[
             { value: '', label: `新建${COLLECTION_NAMES[kind]}档案` },
             ...options(kind),
@@ -793,6 +802,9 @@ async function apply() {
           @change="choose(kind)"
         />
       </header>
+      <p v-if="pinned(kind)" class="collection-help">
+        沿用当前新增位置的已有{{ COLLECTION_NAMES[kind] }}，仅在其下新增档案。
+      </p>
       <template v-if="kind !== 'professor' || professorEnabled">
         <div
           v-for="row in rows[kind]"
