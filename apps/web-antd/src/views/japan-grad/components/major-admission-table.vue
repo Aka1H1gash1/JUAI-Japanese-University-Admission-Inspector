@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+
+import { admissionItems } from '../admission-content';
 import { useExplorerStore } from '../explorer';
 const props = defineProps<{ majorId: string }>();
 const store = useExplorerStore();
@@ -12,9 +14,9 @@ const labs = computed(() =>
   <section v-if="major" class="admission-table-panel">
     <header>
       <h2>专攻招生信息</h2>
-      <RouterLink :to="`/japan-grad/analysis/${majorId}`"
-        >智能导入募集要项 ↗</RouterLink
-      >
+      <RouterLink :to="`/japan-grad/analysis/${majorId}`">
+智能导入募集要项 ↗
+</RouterLink>
     </header>
     <div class="table-scroll">
       <table>
@@ -59,7 +61,19 @@ const labs = computed(() =>
       </div>
       <div>
         <dt>出愿材料</dt>
-        <dd>{{ major.applicationMaterials || '待补充' }}</dd>
+        <dd>
+          <ul v-if="major.applicationMaterials">
+            <li
+              v-for="(item, index) in admissionItems(
+                major.applicationMaterials,
+              )"
+              :key="index"
+            >
+              {{ item }}
+            </li>
+          </ul>
+          <span v-else>待补充</span>
+        </dd>
       </div>
     </dl>
     <div

@@ -8,6 +8,7 @@ import { onBeforeUnmount, ref, watch } from 'vue';
 
 import { Button } from 'ant-design-vue';
 
+import { admissionItems } from '../admission-content';
 import {
   ADMISSION_STATUS_NAMES,
   ADMISSION_SUMMARY_NAMES,
@@ -96,7 +97,21 @@ onBeforeUnmount(() => {
               {{ ADMISSION_SUMMARY_NAMES[field.field] || field.field
               }}<small v-if="field.requiresScopeConfirmation">已核对适用范围</small>
             </h3>
-            <p>{{ field.value }}</p>
+            <ul
+              v-if="['applicationMaterials', 'selection'].includes(field.field)"
+              class="admissions-item-list"
+            >
+              <li
+                v-for="(item, itemIndex) in admissionItems(
+                  field.value,
+                  field.field === 'applicationMaterials',
+                )"
+                :key="itemIndex"
+              >
+                {{ item }}
+              </li>
+            </ul>
+            <p v-else>{{ field.value }}</p>
             <small v-if="field.scopeNote" class="admissions-scope">{{
               field.scopeNote
             }}</small>
@@ -226,6 +241,19 @@ onBeforeUnmount(() => {
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
+}
+
+.admissions-item-list {
+  padding-left: 20px;
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--jg-secondary);
+}
+
+.admissions-item-list li {
+  padding-bottom: 7px;
+  overflow-wrap: anywhere;
 }
 
 .admissions-evidence {

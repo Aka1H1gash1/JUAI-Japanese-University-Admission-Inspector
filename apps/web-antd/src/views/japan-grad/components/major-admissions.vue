@@ -5,6 +5,7 @@ import { computed, ref } from 'vue';
 
 import { App, Button, Input, Modal } from 'ant-design-vue';
 
+import { admissionItems } from '../admission-content';
 import { dateFromText } from '../application-planning';
 import { useExplorerStore } from '../explorer';
 import { admissionRangeError } from '../major-admissions';
@@ -17,10 +18,7 @@ const major = computed(() =>
   store.majors.find((item) => item.id === props.majorId),
 );
 const materials = computed(() =>
-  (major.value?.applicationMaterials ?? '')
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean),
+  admissionItems(major.value?.applicationMaterials ?? ''),
 );
 const open = ref(false);
 const feedback = ref('');

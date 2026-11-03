@@ -4,7 +4,6 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button } from 'ant-design-vue';
 
-import CollectedAdmissions from './components/collected-admissions.vue';
 import EntityEditor from './components/entity-editor.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import ProfessorDetails from './components/professor-details.vue';
@@ -152,7 +151,6 @@ function removeProfessor() {
         </Button>
       </div>
     </header>
-    <CollectedAdmissions kind="professor" :id="professor.id" />
     <ProfessorDetails :key="professor.id" :professor-id="professor.id" />
     <EntityEditor
       v-model:open="editorOpen"
