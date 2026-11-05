@@ -23,6 +23,7 @@ import { useCollectionJobsStore } from './collection-jobs';
 import BrandMark from './components/brand-mark.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import JgLoader from './components/jg-loader.vue';
+import QuickJump from './components/quick-jump.vue';
 import WorkspaceNavigation from './components/workspace-navigation.vue';
 import { useExplorerStore } from './explorer';
 import { antdThemeConfig, cssVariables, DARK, LIGHT } from './palette';
@@ -33,6 +34,7 @@ import './visual.css';
 import './shell.css';
 import './paper.css';
 import './directory.css';
+import './quick-jump.css';
 
 const jobs = useCollectionJobsStore();
 const { message } = App.useApp();
@@ -69,6 +71,8 @@ watch(
 
 const store = useExplorerStore();
 void store.load();
+const jumpOpen = ref(false);
+const jumpKey = /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘K' : 'Ctrl K';
 // Lazy page chunks: show the loader only when a navigation takes noticeably long.
 const routeLoading = ref(false);
 let routeTimer: ReturnType<typeof setTimeout> | undefined;
@@ -322,6 +326,15 @@ const contextLabel = computed(() => {
               <BrandMark /><strong><span>择校笔记</span></strong>
             </RouterLink>
             <WorkspaceNavigation class="jg-masthead-nav" />
+            <button
+              v-if="store.loaded"
+              type="button"
+              class="jg-jump"
+              aria-label="快速跳转到研究室、老师或专攻"
+              @click="jumpOpen = true"
+            >
+              <ExplorerIcon name="search" /><span>快速跳转</span><kbd>{{ jumpKey }}</kbd>
+            </button>
             <span
               v-if="saveLabel"
               class="jg-save-state"
@@ -391,5 +404,6 @@ const contextLabel = computed(() => {
         </Drawer>
       </div>
     </App>
+    <QuickJump v-model:open="jumpOpen" />
   </ConfigProvider>
 </template>

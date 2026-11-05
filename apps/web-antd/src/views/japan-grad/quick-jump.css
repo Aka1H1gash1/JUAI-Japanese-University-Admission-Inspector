@@ -1,0 +1,213 @@
+/* Quick jump (components/quick-jump.vue). The modal is teleported to <body>, so these
+   rules are global but namespaced under .quick-jump. Colours come from --jg-* on <html>. */
+.quick-jump-wrap .ant-modal {
+  top: min(14vh, 120px);
+}
+
+.quick-jump .ant-modal-header {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+
+.quick-jump .ant-modal-content {
+  padding: 0;
+  overflow: hidden;
+}
+
+.quick-jump-field {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 16px 18px;
+  color: var(--jg-muted);
+  border-bottom: 1px solid var(--jg-line);
+}
+
+.quick-jump-field input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  font-size: 16px;
+  color: var(--jg-text);
+  outline: none;
+  background: transparent;
+  border: 0;
+}
+
+.quick-jump-field input::-webkit-search-cancel-button {
+  display: none;
+}
+
+.quick-jump kbd {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--jg-muted);
+  background: var(--jg-surface, transparent);
+  border: 1px solid var(--jg-line);
+  border-radius: 5px;
+}
+
+.quick-jump-caption {
+  padding: 10px 18px 0;
+  margin: 0;
+  font-size: 12px;
+  color: var(--jg-muted);
+}
+
+.quick-jump-list {
+  max-height: min(440px, 52dvh);
+  padding: 8px;
+  margin: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+}
+
+.quick-jump-list li {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.quick-jump-list li.is-active {
+  background: var(--jg-accent-soft, rgb(61 106 153 / 10%));
+}
+
+.quick-jump-kind {
+  flex-shrink: 0;
+  width: 46px;
+  padding: 3px 0;
+  font-size: 11px;
+  color: var(--jg-secondary);
+  text-align: center;
+  border: 1px solid var(--jg-line);
+  border-radius: 5px;
+}
+
+.quick-jump-kind[data-kind='lab'] {
+  color: var(--jg-accent-text, var(--jg-accent));
+  border-color: var(--jg-accent-line, var(--jg-line));
+}
+
+.quick-jump-text {
+  display: grid;
+  flex: 1;
+  gap: 3px;
+  min-width: 0;
+}
+
+.quick-jump-text strong {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+  color: var(--jg-heading, var(--jg-text));
+  white-space: nowrap;
+}
+
+.quick-jump-text small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  color: var(--jg-muted);
+  white-space: nowrap;
+}
+
+.quick-jump-heart {
+  width: 13px;
+  height: 13px;
+  color: var(--jg-seal, #c8553d);
+}
+
+.quick-jump-go {
+  width: 15px;
+  height: 15px;
+  color: var(--jg-muted);
+  opacity: 0;
+}
+
+.quick-jump-list li.is-active .quick-jump-go {
+  opacity: 1;
+}
+
+.quick-jump-empty {
+  padding: 36px 24px;
+  font-size: 13px;
+  line-height: 1.8;
+  color: var(--jg-muted);
+  text-align: center;
+}
+
+.quick-jump-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  padding: 10px 18px;
+  font-size: 12px;
+  color: var(--jg-muted);
+  border-top: 1px solid var(--jg-line);
+}
+
+.quick-jump-hint span {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+/* Header trigger */
+.jg-jump {
+  display: inline-flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: center;
+  height: 34px;
+  padding: 0 10px 0 12px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--jg-muted);
+  cursor: pointer;
+  background: color-mix(in srgb, var(--jg-surface, #fff) 70%, transparent);
+  border: 1px solid var(--jg-line);
+  border-radius: var(--jg-control-radius, 8px);
+}
+
+.jg-jump:hover {
+  color: var(--jg-text);
+  border-color: var(--jg-secondary);
+}
+
+.jg-jump kbd {
+  padding: 1px 5px;
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid var(--jg-line);
+  border-radius: 4px;
+}
+
+@media (max-width: 1100px) {
+  .quick-jump-hint {
+    display: none;
+  }
+
+  .jg-jump > span,
+  .jg-jump kbd {
+    display: none;
+  }
+
+  .jg-jump {
+    justify-content: center;
+    width: 34px;
+    padding: 0;
+  }
+}
