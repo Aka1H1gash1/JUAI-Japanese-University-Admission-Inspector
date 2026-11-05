@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { execFile } from 'node:child_process';
-import { createHash, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import { mkdir, realpath, rename, stat, writeFile } from 'node:fs/promises';
 import { createServer } from 'node:http';
@@ -16,6 +16,7 @@ import { createAiManagementService } from './ai-management-service.mjs';
 import { createAnalysisService } from './analysis-service.mjs';
 import { createAssistantService } from './assistant-service.mjs';
 import { createCollectionService } from './collection-service.mjs';
+import { storeContent } from './content-store.mjs';
 import {
   applyEntityDefaults,
   syncAllLabsForMajor,
@@ -377,7 +378,10 @@ export async function createLocalApp({
     ? createWorkspaceRepository({ db, workspace, fail, validateExplorer })
     : undefined;
   const snapshot = () => {
-    if (workspaceRepository) { const value=workspaceRepository.snapshot(); return platform ? {...value, workspace:'个人资料空间'} : value; }
+    if (workspaceRepository) {
+      const value = workspaceRepository.snapshot();
+      return platform ? { ...value, workspace: '个人资料空间' } : value;
+    }
     const row = db.prepare('SELECT * FROM workspace_data WHERE id = 1').get();
     return {
       initialized: !!row,
@@ -697,11 +701,15 @@ export async function createLocalApp({
       if (platform && !trusted) fail('需要可信身份上下文。', 403);
       const port = server.address()?.port || 5667;
       const ownOrigin = `http://127.0.0.1:${port}`;
-      if (!trusted && ![`127.0.0.1:${port}`, `localhost:${port}`].includes(host))
+      if (
+        !trusted &&
+        ![`127.0.0.1:${port}`, `localhost:${port}`].includes(host)
+      )
         fail('仅允许本机访问。', 403);
       const origin = req.headers.origin;
       if (
-        !trusted && origin &&
+        !trusted &&
+        origin &&
         ![`http://localhost:${port}`, ownOrigin, ...allowedOrigins].includes(
           origin,
         )
@@ -709,7 +717,12 @@ export async function createLocalApp({
         fail('请求来源不受信任。', 403);
       const url = new URL(req.url, ownOrigin);
       const route = url.pathname;
-      if (trusted && platform.allowRequest && !platform.allowRequest(req, route)) fail('服务器模式不提供此本机能力。',403);
+      if (
+        trusted &&
+        platform.allowRequest &&
+        !platform.allowRequest(req, route)
+      )
+        fail('服务器模式不提供此本机能力。', 403);
       if (route.startsWith('/api/japangrad')) {
         if (
           !['GET', 'HEAD'].includes(req.method) &&
@@ -1056,9 +1069,9 @@ export async function createLocalApp({
               'answer',
               'consent',
               'guidelines',
+              'other',
               'paper',
               'question',
-              'other',
             ].includes(meta.kind) ||
             (meta.ownerType === 'professor') !==
               ['consent', 'paper'].includes(meta.kind)
@@ -1110,7 +1123,13 @@ export async function createLocalApp({
           );
           const target = path.join(workspace, relative);
           await ensureDirectory(path.posix.dirname(relative));
-          await writeFile(target, content, { flag: 'wx' });
+          // An identical file already in this workspace is linked, not stored twice.
+          const { digest } = await storeContent({
+            db,
+            workspace,
+            target,
+            bytes: content,
+          });
           if (!ownerExists(meta.ownerType, meta.ownerId))
             fail('所属记录已删除，原文件保留在工作区。', 409);
           if (meta.kind === 'consent')
@@ -1129,7 +1148,7 @@ export async function createLocalApp({
             path: relative,
             size: content.length,
             ...properties,
-            sha256: createHash('sha256').update(content).digest('hex'),
+            sha256: digest,
             ...consentMeta,
             questionId: meta.kind === 'answer' ? meta.questionId : '',
             notes: '',
@@ -1145,20 +1164,46 @@ export async function createLocalApp({
         );
         if (fileMatch) {
           const record = document(fileMatch[1]);
-          if (fileMatch[2] && ['GET','HEAD'].includes(req.method)) {
+          if (fileMatch[2] && ['GET', 'HEAD'].includes(req.method)) {
             const target = await safeFile(record.path);
             const info = await stat(target);
             const delivery = deliveryProperties(
               record,
               url.searchParams.has('download'),
             );
-            let start=0,end=info.size-1,partial=false;
-            if(req.headers.range){const match=/^bytes=(\d*)-(\d*)$/.exec(req.headers.range);if(!match||(!match[1]&&!match[2])){res.writeHead(416,{'Content-Range':`bytes */${info.size}`});return res.end();}if(!match[1])start=Math.max(0,info.size-Number(match[2]));else{start=Number(match[1]);if(match[2])end=Math.min(end,Number(match[2]));}if(!Number.isSafeInteger(start)||!Number.isSafeInteger(end)||start>end||start>=info.size){res.writeHead(416,{'Content-Range':`bytes */${info.size}`});return res.end();}partial=true;}
-            res.writeHead(partial?206:200, {
+            let end = info.size - 1;
+            let partial = false;
+            let start = 0;
+            if (req.headers.range) {
+              const match = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range);
+              if (!match || (!match[1] && !match[2])) {
+                res.writeHead(416, { 'Content-Range': `bytes */${info.size}` });
+                return res.end();
+              }
+              if (match[1]) {
+                start = Number(match[1]);
+                if (match[2]) end = Math.min(end, Number(match[2]));
+              } else {
+                start = Math.max(0, info.size - Number(match[2]));
+              }
+              if (
+                !Number.isSafeInteger(start) ||
+                !Number.isSafeInteger(end) ||
+                start > end ||
+                start >= info.size
+              ) {
+                res.writeHead(416, { 'Content-Range': `bytes */${info.size}` });
+                return res.end();
+              }
+              partial = true;
+            }
+            res.writeHead(partial ? 206 : 200, {
               'Content-Type': delivery.contentType,
-              'Content-Length': Math.max(0,end-start+1),
-              'Accept-Ranges':'bytes',
-              ...(partial?{'Content-Range':`bytes ${start}-${end}/${info.size}`} : {}),
+              'Content-Length': Math.max(0, end - start + 1),
+              'Accept-Ranges': 'bytes',
+              ...(partial
+                ? { 'Content-Range': `bytes ${start}-${end}/${info.size}` }
+                : {}),
               'Content-Disposition': `${delivery.disposition}; filename*=UTF-8''${encodeURIComponent(record.filename)}`,
               'Cache-Control': 'no-store',
               'X-Content-Type-Options': 'nosniff',
@@ -1166,8 +1211,8 @@ export async function createLocalApp({
                 ? { 'Content-Security-Policy': "sandbox; default-src 'none'" }
                 : {}),
             });
-            if(req.method==='HEAD')return res.end();
-            createReadStream(target, partial?{start,end}:undefined)
+            if (req.method === 'HEAD') return res.end();
+            createReadStream(target, partial ? { start, end } : undefined)
               .on('error', () => res.destroy())
               .pipe(res);
             return;
@@ -1376,14 +1421,28 @@ export async function createLocalApp({
   const server = createServer(handler);
   server.handleRequest = handler;
   server.activeTaskCount = () => {
-    let total=0;
-    for (const table of ['collection_jobs', 'admission_ai_runs', 'analysis_jobs', 'assistant_runs']) {
-      try { total+=db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE json_extract(data,'$.status') IN ('preparing','collecting','analyzing','queued','parsing','running')`).get().n; } catch {}
+    let total = 0;
+    for (const table of [
+      'collection_jobs',
+      'admission_ai_runs',
+      'analysis_jobs',
+      'assistant_runs',
+    ]) {
+      try {
+        total += db
+          .prepare(
+            `SELECT COUNT(*) AS n FROM ${table} WHERE json_extract(data,'$.status') IN ('preparing','collecting','analyzing','queued','parsing','running')`,
+          )
+          .get().n;
+      } catch {}
     }
     return total;
   };
-  server.isBusy = () => server.activeTaskCount()>0;
-  server.dispose = () => { server.emit('japangrad:shutdown'); server.emit('close'); };
+  server.isBusy = () => server.activeTaskCount() > 0;
+  server.dispose = () => {
+    server.emit('japangrad:shutdown');
+    server.emit('close');
+  };
   server.on('japangrad:shutdown', () => {
     collection.close();
     admissionAi.close();

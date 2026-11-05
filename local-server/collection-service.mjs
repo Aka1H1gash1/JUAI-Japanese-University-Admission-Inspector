@@ -1,6 +1,6 @@
 import { Buffer } from 'node:buffer';
 import { createHash, randomUUID } from 'node:crypto';
-import { readFile, unlink, writeFile } from 'node:fs/promises';
+import { readFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { Worker } from 'node:worker_threads';
 
@@ -34,6 +34,7 @@ import {
   createCollectionBrowser,
   fetchCollectionUrl,
 } from './collection-web.mjs';
+import { storeContent } from './content-store.mjs';
 import { validateFile } from './file-types.mjs';
 import geography from './japan-geography.json' with { type: 'json' };
 import { validPlannerDay } from './planning-fields.mjs';
@@ -343,8 +344,12 @@ export function createCollectionService({
       await ensureDirectory(path.posix.dirname(relative));
       const parsed = await parser(value.bytes, undefined, signal);
       signal.throwIfAborted();
-      await writeFile(path.join(workspace, relative), value.bytes, {
-        flag: 'wx',
+      // The same PDF fetched again (another job, a re-run) shares the stored bytes.
+      await storeContent({
+        db,
+        workspace,
+        target: path.join(workspace, relative),
+        bytes: value.bytes,
       });
       pages = parsed.pages.map((p) => ({ ...p, read: false }));
       value.warnings = parsed.warnings;
@@ -1710,7 +1715,14 @@ export function createCollectionService({
         );
         await ensureDirectory(path.posix.dirname(relative));
         const file = path.join(workspace, relative);
-        await writeFile(file, content, { flag: 'wx' });
+        // Usually a hard link to the collection-cache copy downloaded for this job.
+        await storeContent({
+          db,
+          workspace,
+          target: file,
+          bytes: content,
+          digest: source.sha256,
+        });
         createdFiles.push(file);
         documentRecords.push({
           id,
