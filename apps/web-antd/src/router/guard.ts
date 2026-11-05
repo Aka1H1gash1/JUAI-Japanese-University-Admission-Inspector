@@ -3,7 +3,6 @@ import type { Router } from 'vue-router';
 import { LOGIN_PATH } from '@vben/constants';
 import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
-import { startProgress, stopProgress } from '@vben/utils';
 
 import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
@@ -21,10 +20,7 @@ function setupCommonGuard(router: Router) {
   router.beforeEach((to) => {
     to.meta.loaded = loadedPaths.has(to.path);
 
-    // 页面加载进度条
-    if (!to.meta.loaded && preferences.transition.progress) {
-      startProgress();
-    }
+    // Page transitions show the JUAI loader in the workspace layout, not a top progress bar.
     return true;
   });
 
@@ -32,11 +28,6 @@ function setupCommonGuard(router: Router) {
     // 记录页面是否加载,如果已经加载，后续的页面切换动画等效果不在重复执行
 
     loadedPaths.add(to.path);
-
-    // 关闭页面加载进度条
-    if (preferences.transition.progress) {
-      stopProgress();
-    }
   });
 }
 

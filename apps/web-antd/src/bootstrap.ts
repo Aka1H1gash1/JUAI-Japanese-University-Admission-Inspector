@@ -1,4 +1,4 @@
-import { createApp, watchEffect } from 'vue';
+import { createApp, h, watchEffect } from 'vue';
 
 import { registerAccessDirective } from '@vben/access';
 import { registerLoadingDirective } from '@vben/common-ui/es/loading';
@@ -8,6 +8,7 @@ import '@vben/styles';
 import '@vben/styles/antd';
 
 import { useTitle } from '@vueuse/core';
+import { Spin } from 'ant-design-vue';
 
 import { $t, setupI18n } from '#/locales';
 
@@ -33,6 +34,23 @@ async function bootstrap(namespace: string) {
   // });
 
   const app = createApp(App);
+
+  // Every Ant Design Vue <Spin> shows the JUAI loader instead of the default dots.
+  Spin.setDefaultIndicator({
+    indicator: () =>
+      h(
+        'span',
+        { class: 'juai-loader juai-loader--sm', 'aria-hidden': 'true' },
+        [
+          h('span', { class: 'juai-loader__sheet' }, [
+            ...Array.from({ length: 4 }, () =>
+              h('i', { class: 'juai-loader__line' }),
+            ),
+            h('i', { class: 'juai-loader__seal' }),
+          ]),
+        ],
+      ),
+  });
 
   // 注册v-loading指令
   registerLoadingDirective(app, {

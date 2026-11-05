@@ -18,6 +18,7 @@ import {
 import CollectionReview from './components/collection-review.vue';
 import CollectionStageProgress from './components/collection-stage-progress.vue';
 import EntityCreateFlow from './components/entity-create-flow.vue';
+import JgLoader from './components/jg-loader.vue';
 import SpecialProgramReview from './components/special-program-review.vue';
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
@@ -258,9 +259,10 @@ const generatedProfiles = computed(() => {
         输入网址开始解析
       </Button>
     </section>
-    <p v-else-if="loading && !jobs.length && !pendingJob" role="status">
-      正在读取解析任务…
-    </p>
+    <JgLoader
+      v-else-if="loading && !jobs.length && !pendingJob"
+      text="正在读取解析任务"
+    />
     <section v-if="jobs.length" class="collection-jobs">
       <header>
         <div>

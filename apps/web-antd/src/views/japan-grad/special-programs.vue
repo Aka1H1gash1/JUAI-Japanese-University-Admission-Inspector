@@ -12,6 +12,7 @@ import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
 import CollectedAdmissions from './components/collected-admissions.vue';
 import EntityCreateFlow from './components/entity-create-flow.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
+import JgLoader from './components/jg-loader.vue';
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
 import { vAccessibleSelect } from './select-accessibility';
@@ -271,9 +272,7 @@ function clearFilters() {
       {{ errorMessage }}
       <RouterLink v-if="programId" :to="base">返回项目列表</RouterLink>
     </p>
-    <p v-if="loading" class="program-loading" role="status">
-      正在读取特殊入学项目…
-    </p>
+    <JgLoader v-if="loading" text="正在读取特殊入学项目" />
 
     <template v-if="!programId">
       <div class="program-toolbar">

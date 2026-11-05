@@ -24,6 +24,7 @@ import { useExplorerStore } from '../explorer';
 import { jsonOptions, localApi } from '../local-api';
 import { requireValue } from '../required-value';
 import { vAccessibleSelect } from '../select-accessibility';
+import JgLoader from './jg-loader.vue';
 const props = defineProps<{
   context: AnalysisContext;
   job?: AnalysisJob;
@@ -260,7 +261,7 @@ async function apply() {
             :title="`${source.title} 第 ${page} 页`"
           ></iframe>
           <pre v-else-if="!sourceLoading">{{ sourceText }}</pre>
-          <p v-if="sourceLoading">正在读取原文…</p>
+          <JgLoader v-if="sourceLoading" size="sm" text="正在读取原文" />
           <p v-if="sourceError" class="form-error">{{ sourceError }}</p>
         </aside>
         <section class="analysis-proposed">

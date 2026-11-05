@@ -27,10 +27,11 @@ import {
   useStorage,
   useWindowSize,
 } from '@vueuse/core';
-import { App, Button, Input, Spin } from 'ant-design-vue';
+import { App, Button, Input } from 'ant-design-vue';
 
 import AssistantChat from './components/assistant-chat.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
+import JgLoader from './components/jg-loader.vue';
 import ReaderNotes from './components/reader-notes.vue';
 import ReaderPdfPage from './components/reader-pdf-page.vue';
 import ReaderTextPage from './components/reader-text-page.vue';
@@ -1103,7 +1104,7 @@ onBeforeUnmount(() => {
 
       <div class="reader-main">
         <div v-if="loading" class="reader-loading" aria-busy="true">
-          <Spin size="large" />
+          <JgLoader layout="plain" text="" />
           <h2>正在打开原文</h2>
           <p>{{ progress ? `已加载 ${progress}%` : '准备阅读页面与笔记…' }}</p>
         </div>

@@ -1,0 +1,192 @@
+/*
+ * JUAI loader: a sheet with a folded corner. Lines are inked in one by one,
+ * a vermilion seal is stamped, then the sheet clears and starts again.
+ * Single source of truth: the core app links it, the private server serves the
+ * same file at /platform/loader.css. Pure CSS, no inline styles, CSP-safe.
+ */
+.juai-loader {
+  --jl-paper: #ffffff;
+  --jl-fold: #dbe5ef;
+  --jl-edge: rgba(31, 61, 96, 0.14);
+  --jl-ink: #3d6a99;
+  --jl-ink-soft: #c9d8e7;
+  --jl-seal: #c8553d;
+  --jl-text: #6b7c8f;
+  --jl-cycle: 2.6s;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  color: var(--jl-text);
+  font: 13px/1.5 -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  letter-spacing: 0.04em;
+}
+.juai-loader__sheet {
+  position: relative;
+  width: 46px;
+  height: 58px;
+  filter: drop-shadow(0 6px 14px rgba(22, 48, 82, 0.12)) drop-shadow(0 1px 1px var(--jl-edge));
+  animation: juai-loader-float var(--jl-cycle) ease-in-out infinite;
+}
+.juai-loader__sheet::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 5px;
+  background: var(--jl-paper);
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 0 100%);
+}
+.juai-loader__sheet::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 13px;
+  height: 13px;
+  border-bottom-left-radius: 3px;
+  background: linear-gradient(225deg, transparent 50%, var(--jl-fold) 50%);
+}
+.juai-loader__line {
+  position: absolute;
+  left: 9px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--jl-ink-soft);
+  overflow: hidden;
+}
+.juai-loader__line::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--jl-ink);
+  transform: scaleX(0);
+  transform-origin: left center;
+  animation: juai-loader-ink var(--jl-cycle) cubic-bezier(0.55, 0, 0.3, 1) infinite;
+}
+.juai-loader__line:nth-child(1) { top: 17px; width: 22px; }
+.juai-loader__line:nth-child(2) { top: 25px; width: 28px; }
+.juai-loader__line:nth-child(3) { top: 33px; width: 25px; }
+.juai-loader__line:nth-child(4) { top: 41px; width: 14px; }
+.juai-loader__line:nth-child(2)::after { animation-delay: 0.16s; }
+.juai-loader__line:nth-child(3)::after { animation-delay: 0.32s; }
+.juai-loader__line:nth-child(4)::after { animation-delay: 0.48s; }
+.juai-loader__seal {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 11px;
+  height: 11px;
+  border-radius: 3px;
+  border: 1.5px solid var(--jl-seal);
+  opacity: 0;
+  transform: scale(1.8) rotate(-12deg);
+  animation: juai-loader-seal var(--jl-cycle) ease-out infinite;
+}
+.juai-loader__seal::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border-radius: 1px;
+  background: var(--jl-seal);
+  opacity: 0.85;
+}
+.juai-loader__text:empty { display: none; }
+.juai-loader__text::after {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+  text-align: left;
+  animation: juai-loader-dots 1.3s steps(4, end) infinite;
+}
+
+@keyframes juai-loader-ink {
+  0%, 6% { transform: scaleX(0); opacity: 1; }
+  30%, 78% { transform: scaleX(1); opacity: 1; }
+  92%, 100% { transform: scaleX(1); opacity: 0; }
+}
+@keyframes juai-loader-seal {
+  0%, 52% { opacity: 0; transform: scale(1.8) rotate(-12deg); }
+  60% { opacity: 1; transform: scale(0.9) rotate(-4deg); }
+  66%, 80% { opacity: 1; transform: scale(1) rotate(-4deg); }
+  92%, 100% { opacity: 0; transform: scale(1) rotate(-4deg); }
+}
+@keyframes juai-loader-float {
+  0%, 100% { transform: translateY(0); }
+  58% { transform: translateY(-2px); }
+  62% { transform: translateY(1px); }
+}
+@keyframes juai-loader-dots {
+  0% { content: ""; }
+  25% { content: "."; }
+  50% { content: ".."; }
+  75%, 100% { content: "..."; }
+}
+/* Sizes and placement */
+.juai-loader--sm { gap: 8px; font-size: 12px; }
+.juai-loader--sm .juai-loader__sheet { zoom: 0.6; }
+.juai-loader--inline { flex-direction: row; gap: 10px; }
+.juai-loader--block { display: flex; justify-content: center; padding: 48px 16px; width: 100%; }
+.juai-loader--overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: flex-start;
+  padding-top: min(26vh, 220px);
+  background: rgba(247, 249, 252, 0.72);
+  backdrop-filter: blur(2px);
+}
+
+/* Full-screen boot screen (core app #__app-loading__ and server pages) */
+.juai-boot {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: #f4f7fa;
+  opacity: 1;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+.juai-boot.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+.juai-boot .juai-loader { gap: 18px; }
+.juai-boot .juai-loader__sheet { zoom: 1.3; margin: 4px 0 6px; }
+.juai-boot__brand {
+  display: block;
+  font: 600 15px/1 Georgia, "Songti SC", serif;
+  letter-spacing: 0.32em;
+  color: #2b4a6b;
+  margin-right: -0.32em;
+}
+
+/* Dark surfaces: follows the workspace theme (layout.vue sets data-japangrad-theme), not vben's html.dark */
+[data-japangrad-theme="dark"] .juai-loader,
+.juai-loader--dark {
+  --jl-paper: #233348;
+  --jl-fold: #34475f;
+  --jl-edge: rgba(0, 0, 0, 0.4);
+  --jl-ink: #8db6e6;
+  --jl-ink-soft: #3a4f69;
+  --jl-seal: #e57a62;
+  --jl-text: #9aabbd;
+}
+[data-japangrad-theme="dark"] .juai-boot { background: #121a26; }
+[data-japangrad-theme="dark"] .juai-boot__brand { color: #c9d8e7; }
+[data-japangrad-theme="dark"] .juai-loader--overlay { background: rgba(18, 26, 38, 0.7); }
+
+/* Ant Design Vue Spin uses this loader as its default indicator */
+.ant-spin .juai-loader { color: inherit; }
+.ant-spin-nested-loading > div > .ant-spin .juai-loader { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+.ant-spin-nested-loading > div > .ant-spin .ant-spin-text { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .juai-loader__sheet,
+  .juai-loader__seal,
+  .juai-loader__line::after,
+  .juai-loader__text::after { animation: none; }
+  .juai-loader__line::after { transform: scaleX(1); }
+  .juai-loader__seal { opacity: 1; transform: rotate(-4deg); }
+  .juai-loader__text::after { content: "…"; }
+  .juai-boot { transition: none; }
+}

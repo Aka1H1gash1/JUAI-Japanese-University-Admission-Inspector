@@ -12,6 +12,15 @@
     <!-- 由 vite 注入 VITE_APP_TITLE 变量，在 .env 文件内配置 -->
     <title>%VITE_APP_TITLE%</title>
     <link rel="icon" href="/favicon.ico" />
+    <link rel="stylesheet" href="/juai-loader.css" />
+    <script>
+      // Paint the boot screen in the workspace theme before the app starts.
+      try {
+        var a = localStorage.getItem('japangrad-appearance') || 'system';
+        var dark = a === 'dark' || (a === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+        document.documentElement.dataset.japangradTheme = dark ? 'dark' : 'light';
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="app"></div>

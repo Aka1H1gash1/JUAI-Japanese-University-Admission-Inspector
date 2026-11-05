@@ -27,12 +27,13 @@ import { fileUrl } from '../documents';
 import { useExplorerStore } from '../explorer';
 import { jsonOptions, localApi } from '../local-api';
 import { requireValue } from '../required-value';
-import { vAccessibleSelect } from '../select-accessibility';
 import { serverMode } from '../runtime-capabilities';
+import { vAccessibleSelect } from '../select-accessibility';
 import AgentConnections from './agent-connections.vue';
 import AnalysisAi from './analysis-ai.vue';
 import AnalysisReview from './analysis-review.vue';
 import ImportScope from './import-scope.vue';
+import JgLoader from './jg-loader.vue';
 const props = defineProps<{ majorId: string }>();
 const route = useRoute();
 const router = useRouter();
@@ -151,7 +152,7 @@ async function create() {
   busy.value = true;
   feedback.value = '';
   try {
-    if (importScope.value === 'selected' && !selectedMajors.value.length)
+    if (importScope.value === 'selected' && selectedMajors.value.length === 0)
       throw new Error('请选择需要同时导入的专攻。');
     const result = await localApi<
       AnalysisJob & {
@@ -174,7 +175,7 @@ async function create() {
     );
     jobs.value.unshift(result);
     relatedJobs.value = result.related || [];
-    if (relatedJobs.value.length) await useExplorerStore().refresh();
+    if (relatedJobs.value.length > 0) await useExplorerStore().refresh();
     await viewJob(result.id);
     message.success('读取任务已创建，完成后可选择 AI 提取并核对填表。');
   } catch (error) {
@@ -284,20 +285,18 @@ function goToMajor() {
       </div>
     </header>
     <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
-    <p v-if="loading">正在读取资料与分析任务…</p>
+    <JgLoader v-if="loading" text="正在读取资料与分析任务" />
     <div class="analysis-setup">
       <h3>选择分析资料</h3>
       <p>选择募集要项、专攻补充说明或修订通知，并说明这次要分析的对象。</p>
       <div class="analysis-context-fields">
-        <label
-          >资料年度<InputNumber
+        <label>资料年度<InputNumber
             v-model:value="admissionYear"
             :min="1900"
             :max="2200"
             :precision="0"
-            :disabled="busy" /></label
-        ><label
-          >学位 / 身份<Select
+            :disabled="busy"
+/></label><label>学位 / 身份<Select
             v-accessible-select
             v-model:value="degree"
             :options="
@@ -306,9 +305,8 @@ function goToMajor() {
                 label,
               }))
             "
-            :disabled="busy" /></label
-        ><label
-          >选拔类别<Input
+            :disabled="busy"
+/></label><label>选拔类别<Input
             v-model:value="selectionType"
             :maxlength="100"
             :disabled="busy"
@@ -331,9 +329,9 @@ function goToMajor() {
       <div v-if="relatedJobs.length">
         <h3>其他专攻的独立分析任务</h3>
         <p v-for="item in relatedJobs" :key="item.jobId">
-          <RouterLink :to="`/japan-grad/analysis/${item.majorId}`"
-            >{{ item.name }} → 查看分析任务</RouterLink
-          >
+          <RouterLink :to="`/japan-grad/analysis/${item.majorId}`">
+            {{ item.name }} → 查看分析任务
+          </RouterLink>
         </p>
       </div>
       <div class="analysis-document-list">
@@ -344,14 +342,12 @@ function goToMajor() {
           :disabled="busy"
           @change="toggle(doc.id)"
         >
-          <strong>{{ doc.title }}</strong
-          ><small>{{ doc.year }} 年 · {{ doc.filename }}</small>
+          <strong>{{ doc.title }}</strong><small>{{ doc.year }} 年 · {{ doc.filename }}</small>
         </Checkbox>
       </div>
       <p v-if="!documents.length">还没有募集要项，请先在专攻资料库上传。</p>
       <div class="detail-actions">
-        <Button @click="goToMajor">前往专攻资料库</Button
-        ><Button
+        <Button @click="goToMajor">前往专攻资料库</Button><Button
           type="primary"
           :disabled="!ids.length || ids.length > 10"
           :loading="busy"
@@ -360,12 +356,10 @@ function goToMajor() {
           读取资料，准备分析
         </Button>
       </div>
-      <small
-        >分两步：先在本机读取所选文件的文字，这一步不会发送任何内容；读取完成后，再用「AI
+      <small>分两步：先在本机读取所选文件的文字，这一步不会发送任何内容；读取完成后，再用「AI
         管理」里设置的模型提取为草稿。 支持 PDF、DOCX、MD、TXT；扫描 PDF
         会先在本机 OCR，或交给支持图片的模型。旧 DOC 请先转为 PDF 或
-        DOCX。</small
-      >
+        DOCX。</small>
     </div>
     <section v-if="jobs.length" class="analysis-jobs">
       <h3>分析任务</h3>
@@ -414,8 +408,7 @@ function goToMajor() {
           <a
             class="analysis-package-link"
             :href="`/api/japangrad/analysis/jobs/${selectedJob.id}/package`"
-            >下载 Agent 任务包（ZIP）</a
-          ><Button :disabled="busy" @click="viewJob(selectedJob.id)">
+            >下载 Agent 任务包（ZIP）</a><Button :disabled="busy" @click="viewJob(selectedJob.id)">
             刷新 Agent 回传结果
           </Button>
           <p>
@@ -423,9 +416,7 @@ function goToMajor() {
             result.json，再导入下方。连接 MCP 后可直接回传草稿。
           </p>
           <div class="analysis-import" @dragover.prevent @drop.prevent="drop">
-            <label :for="`analysis-result-${majorId}`"
-              >拖拽一个结果 JSON 文件到这里，或点击选择文件</label
-            ><input
+            <label :for="`analysis-result-${majorId}`">拖拽一个结果 JSON 文件到这里，或点击选择文件</label><input
               :id="`analysis-result-${majorId}`"
               ref="fileInput"
               type="file"
@@ -440,17 +431,14 @@ function goToMajor() {
         <div class="analysis-proposals">
           <article v-for="item in proposals" :key="item.id">
             <div>
-              <strong>{{ item.executor }}</strong
-              ><small
-                >{{ new Date(item.createdAt).toLocaleString() }} ·
+              <strong>{{ item.executor }}</strong><small>{{ new Date(item.createdAt).toLocaleString() }} ·
                 {{ item.status === 'applied' ? '已采纳' : '待核对' }} ·
                 {{
                   Object.values(item.fields).filter(
                     (f) => f?.status === 'found',
                   ).length
                 }}
-                项已定位</small
-              >
+                项已定位</small>
             </div>
             <Button :disabled="busy" @click="review(item)">
               {{ item.status === 'applied' ? '查看核对记录' : '对照原文核对' }}
@@ -477,8 +465,7 @@ function goToMajor() {
               :href="`${fileUrl(e.documentId)}#page=${e.page}`"
               target="_blank"
               rel="noopener noreferrer"
-              >来源定位 {{ e.page }} ↗</a
-            >
+              >来源定位 {{ e.page }} ↗</a>
             <p>{{ e.quote }}</p>
           </blockquote>
         </details>

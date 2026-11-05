@@ -11,10 +11,11 @@ import { useRoute } from 'vue-router';
 import { App, Button, Input, Select } from 'ant-design-vue';
 
 import ExplorerIcon from './components/explorer-icon.vue';
+import JgLoader from './components/jg-loader.vue';
 import { jsonOptions, localApi } from './local-api';
 import { requireValue } from './required-value';
-import { vAccessibleSelect } from './select-accessibility';
 import { serverMode } from './runtime-capabilities';
+import { vAccessibleSelect } from './select-accessibility';
 
 const AdvancedSettings = defineAsyncComponent(
   () => import('./ai-management-advanced.vue'),
@@ -293,9 +294,7 @@ const returnTo = computed(() =>
     <p v-if="errorMessage" class="form-error" role="alert">
       {{ errorMessage }}
     </p>
-    <p v-if="loading && !data" class="ai-simple-help" role="status">
-      正在读取连接状态…
-    </p>
+    <JgLoader v-if="loading && !data" text="正在读取连接状态" />
     <section
       v-if="data"
       class="ai-current-connection"
@@ -469,7 +468,11 @@ const returnTo = computed(() =>
               :disabled="!!busy || !data"
             >
               保存并使用 API
-</Button><small class="ai-simple-help">{{ serverMode ? 'API Key 加密保存在你的个人空间，重启后自动恢复。' : 'API Key 仅在本次本地服务内存中保存，重启后需补填。' }}</small>
+</Button><small class="ai-simple-help">{{
+              serverMode
+                ? 'API Key 加密保存在你的个人空间，重启后自动恢复。'
+                : 'API Key 仅在本次本地服务内存中保存，重启后需补填。'
+            }}</small>
           </footer>
         </form>
       </article>

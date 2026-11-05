@@ -19,6 +19,7 @@ import { vAccessibleSelect } from '../select-accessibility';
 import AgentInformationHistory from './agent-information-history.vue';
 import AssistantAnswer from './assistant-answer.vue';
 import ExplorerIcon from './explorer-icon.vue';
+import JgLoader from './jg-loader.vue';
 const props = defineProps<{ reader?: ReaderAssistantContext }>();
 const emit = defineEmits<{
   locateSource: [source: ReaderSource];
@@ -970,13 +971,7 @@ const proposalLabel = (status: string) =>
         aria-label="对话内容"
         :aria-busy="busy"
       >
-        <div
-          v-if="loading"
-          class="assistant-skeleton"
-          aria-label="正在读取对话"
-        >
-          <span></span><span></span><span></span>
-        </div>
+        <JgLoader v-if="loading" text="正在读取对话" />
         <section
           v-else-if="!session?.messages.length && attachment"
           class="assistant-selection-intro"

@@ -22,6 +22,7 @@ import { App, ConfigProvider, Drawer } from 'ant-design-vue';
 import { useCollectionJobsStore } from './collection-jobs';
 import BrandMark from './components/brand-mark.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
+import JgLoader from './components/jg-loader.vue';
 import WorkspaceNavigation from './components/workspace-navigation.vue';
 import { useExplorerStore } from './explorer';
 import { antdThemeConfig, cssVariables, DARK, LIGHT } from './palette';
@@ -68,6 +69,28 @@ watch(
 
 const store = useExplorerStore();
 void store.load();
+// Lazy page chunks: show the loader only when a navigation takes noticeably long.
+const routeLoading = ref(false);
+let routeTimer: ReturnType<typeof setTimeout> | undefined;
+const layoutRouter = useRouter();
+const endRouteLoading = () => {
+  clearTimeout(routeTimer);
+  routeLoading.value = false;
+};
+const stopBefore = layoutRouter.beforeEach((to, from) => {
+  if (to.path !== from.path) {
+    clearTimeout(routeTimer);
+    routeTimer = setTimeout(() => (routeLoading.value = true), 180);
+  }
+});
+const stopAfter = layoutRouter.afterEach(endRouteLoading);
+const stopError = layoutRouter.onError(endRouteLoading);
+onUnmounted(() => {
+  endRouteLoading();
+  stopBefore();
+  stopAfter();
+  stopError();
+});
 let refreshingWorkspace = false;
 async function refreshWorkspace() {
   if (
@@ -343,26 +366,17 @@ const contextLabel = computed(() => {
                 {{ store.migrationNotice }}
               </p>
               <RouterView v-if="store.loaded" />
-              <section
-                v-else-if="store.loading"
-                class="workspace-skeleton"
-                aria-busy="true"
-                aria-label="正在打开本地工作区"
-              >
-                <span class="skeleton-title"></span><span class="skeleton-description"></span><span class="skeleton-toolbar"></span>
-                <div>
-                  <span
-                    v-for="index in 4"
-                    :key="index"
-                    class="skeleton-card"
-                  ></span>
-                </div>
-              </section>
+              <JgLoader v-else-if="store.loading" text="正在打开工作区" />
               <section v-else class="collection-empty">
                 <span class="empty-symbol"><ExplorerIcon name="drive" /></span>
                 <h2>等待本地服务连接</h2>
                 <p>请双击 JUAI 打开工作台。</p>
               </section>
+              <JgLoader
+                v-if="store.loaded && routeLoading"
+                layout="overlay"
+                text="正在打开页面"
+              />
             </main>
           </div>
         </div>

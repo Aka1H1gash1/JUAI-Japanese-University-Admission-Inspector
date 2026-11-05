@@ -24,10 +24,11 @@ import {
 
 import AgentConnections from './components/agent-connections.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
+import JgLoader from './components/jg-loader.vue';
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
-import { vAccessibleSelect } from './select-accessibility';
 import { serverMode } from './runtime-capabilities';
+import { vAccessibleSelect } from './select-accessibility';
 
 interface ExternalAgent {
   id: string;
@@ -196,7 +197,9 @@ async function load(preserveDrafts = false) {
   try {
     const [result, agents] = await Promise.all([
       localApi<AiManagement>('/ai/management'),
-      serverMode ? Promise.resolve([] as ExternalAgent[]) : localApi<ExternalAgent[]>('/analysis/connections'),
+      serverMode
+        ? Promise.resolve([] as ExternalAgent[])
+        : localApi<ExternalAgent[]>('/analysis/connections'),
     ]);
     if (version !== generation) return;
     data.value = result;
@@ -465,7 +468,7 @@ async function revokeAgent(agent: ExternalAgent) {
     <p v-if="errorMessage" class="form-error" role="alert">
       {{ errorMessage }}
     </p>
-    <p v-if="loading && !data" class="ai-loading">正在读取 AI 配置…</p>
+    <JgLoader v-if="loading && !data" text="正在读取 AI 配置" />
     <template v-if="data">
       <section v-if="tab === 'features'" class="ai-feature-section">
         <div class="ai-section-heading">
@@ -833,10 +836,12 @@ async function revokeAgent(agent: ExternalAgent) {
               v-model:value="form.kind"
               :disabled="!!busy"
               :options="
-                Object.entries(typeNames).filter(([value]) => !serverMode || value !== 'codex').map(([value, label]) => ({
-                  value,
-                  label,
-                }))
+                Object.entries(typeNames)
+                  .filter(([value]) => !serverMode || value !== 'codex')
+                  .map(([value, label]) => ({
+                    value,
+                    label,
+                  }))
               "
               @change="chooseKind"
           /></label>

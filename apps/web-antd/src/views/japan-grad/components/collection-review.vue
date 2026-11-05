@@ -21,6 +21,7 @@ import { useExplorerStore } from '../explorer';
 import { jsonOptions, localApi } from '../local-api';
 import { requireValue } from '../required-value';
 import { vAccessibleSelect } from '../select-accessibility';
+import JgLoader from './jg-loader.vue';
 const props = defineProps<{
   detail: CollectionDetail;
   config: CollectionStatus;
@@ -1130,7 +1131,7 @@ async function apply() {
       :width="1000"
       :footer="null"
     >
-      <p v-if="sourceLoading">正在读取保存的来源…</p>
+      <JgLoader v-if="sourceLoading" size="sm" text="正在读取保存的来源" />
       <p v-if="sourceError" class="form-error">{{ sourceError }}</p>
       <template v-if="source">
         <h3>{{ source.title }}</h3>

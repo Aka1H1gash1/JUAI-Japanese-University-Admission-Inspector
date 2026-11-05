@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router';
 
 import { App, Button, Input, InputNumber, Tabs } from 'ant-design-vue';
 
+import JgLoader from './components/jg-loader.vue';
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
 import { serverMode } from './runtime-capabilities';
@@ -221,7 +222,7 @@ async function shutdownRuntime() {
     <p v-if="errorMessage" class="form-error" role="alert">
       {{ errorMessage }}
     </p>
-    <p v-if="loading">正在读取设置…</p>
+    <JgLoader v-if="loading" text="正在读取设置" />
     <Tabs v-model:active-key="tab">
       <Tabs.TabPane key="profile" tab="个人信息">
         <form v-if="profile" class="settings-panel" @submit.prevent="save">
@@ -291,7 +292,11 @@ async function shutdownRuntime() {
         </form>
       </Tabs.TabPane>
       <Tabs.TabPane key="browser" tab="浏览器连接">
-        <section v-if="serverMode" class="settings-panel"><h2>连接你的 Chrome</h2><p>下载轻量连接器后，在设备连接页确认配对与授权。</p><a href="/devices">打开设备连接 →</a></section>
+        <section v-if="serverMode" class="settings-panel">
+          <h2>连接你的 Chrome</h2>
+          <p>下载轻量连接器后，在设备连接页确认配对与授权。</p>
+          <a href="/devices">打开设备连接 →</a>
+        </section>
         <section v-else class="settings-panel">
           <h2>连接你的 Chrome / Edge</h2>
           <p>
@@ -419,9 +424,9 @@ async function shutdownRuntime() {
             <Button
               :disabled="!workspace.workspacePath"
               @click="copyText(workspace.workspacePath)"
-              >
-复制路径
-</Button>
+            >
+              复制路径
+            </Button>
           </div>
         </section>
         <section class="settings-panel">

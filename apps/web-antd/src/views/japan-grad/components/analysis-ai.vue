@@ -8,6 +8,7 @@ import { Button, Input, Select } from 'ant-design-vue';
 
 import { jsonOptions, localApi } from '../local-api';
 import { vAccessibleSelect } from '../select-accessibility';
+import JgLoader from './jg-loader.vue';
 
 const props = defineProps<{ job: AnalysisJob }>();
 const emit = defineEmits<{ updated: []; review: [id: string] }>();
@@ -300,7 +301,7 @@ async function stop() {
         </Button>
       </footer>
     </template>
-    <p v-else>正在读取模型与资料范围…</p>
+    <JgLoader v-else size="sm" text="正在读取模型与资料范围" />
     <section v-if="latest" class="ai-run" aria-live="polite">
       <div class="ai-run-title">
         <strong>{{ runLabels[latest.status] }}</strong><small>{{ latest.model }} ·
