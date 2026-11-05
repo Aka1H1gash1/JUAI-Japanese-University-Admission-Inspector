@@ -1,5 +1,6 @@
 /*
- * JUAI loader: a sheet with a folded corner. Lines are inked in one by one,
+ * JUAI brand assets: the loading animation and the logo.
+ * Loader: a sheet with a folded corner. Lines are inked in one by one,
  * a vermilion seal is stamped, then the sheet clears and starts again.
  * Single source of truth: the core app links it, the private server serves the
  * same file at /platform/loader.css. Pure CSS, no inline styles, CSP-safe.
@@ -152,13 +153,14 @@
 .juai-boot.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
 .juai-boot .juai-loader { gap: 18px; }
 .juai-boot .juai-loader__sheet { zoom: 1.3; margin: 4px 0 6px; }
-.juai-boot__brand {
-  display: block;
-  font: 600 15px/1 Georgia, "Songti SC", serif;
-  letter-spacing: 0.32em;
-  color: #2b4a6b;
-  margin-right: -0.32em;
-}
+.juai-boot .juai-logo { height: 58px; margin-bottom: 6px; }
+
+/* JUAI logo (also used by page headers). Light art by default, reversed art on dark surfaces. */
+.juai-logo { display: inline-flex; align-items: center; height: 32px; flex-shrink: 0; }
+.juai-logo img { display: block; height: 100%; width: auto; user-select: none; }
+.juai-logo .juai-logo__dark,
+.juai-logo--on-dark .juai-logo__light { display: none; }
+.juai-logo--on-dark .juai-logo__dark { display: block; }
 
 /* Dark surfaces: follows the workspace theme (layout.vue sets data-japangrad-theme), not vben's html.dark */
 [data-japangrad-theme="dark"] .juai-loader,
@@ -172,7 +174,8 @@
   --jl-text: #9aabbd;
 }
 [data-japangrad-theme="dark"] .juai-boot { background: #121a26; }
-[data-japangrad-theme="dark"] .juai-boot__brand { color: #c9d8e7; }
+[data-japangrad-theme="dark"] .juai-logo .juai-logo__light { display: none; }
+[data-japangrad-theme="dark"] .juai-logo .juai-logo__dark { display: block; }
 [data-japangrad-theme="dark"] .juai-loader--overlay { background: rgba(18, 26, 38, 0.7); }
 
 /* Ant Design Vue Spin uses this loader as its default indicator */

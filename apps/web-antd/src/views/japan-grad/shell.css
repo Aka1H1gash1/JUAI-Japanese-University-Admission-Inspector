@@ -48,20 +48,9 @@
   color: var(--jg-text);
 }
 
-/* 银绿品牌徽记与靛蓝图标。 */
-.jg-brand-seal {
-  display: grid;
-  place-items: center;
-  width: 30px;
+/* JUAI logo (styles in public/juai-loader.css), then the product name. */
+.jg-brand .juai-logo {
   height: 30px;
-  color: var(--jg-mint-ink);
-  background: var(--jg-mint);
-  border-radius: 9px;
-}
-
-.jg-brand-seal svg {
-  width: 17px;
-  height: 17px;
 }
 
 .jg-brand strong {
@@ -76,11 +65,13 @@
 }
 
 .jg-brand strong > span {
+  padding-left: 10px;
   font-family: var(--jg-font);
   font-size: 12px;
   font-weight: 400;
   color: var(--jg-muted);
   letter-spacing: 0.08em;
+  border-left: 1px solid var(--jg-line, rgb(120 140 160 / 35%));
 }
 
 .jg-masthead-nav {

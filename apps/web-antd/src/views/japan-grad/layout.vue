@@ -319,7 +319,7 @@ const contextLabel = computed(() => {
               class="jg-brand"
               aria-label="JUAI 申请总览首页"
             >
-              <span class="jg-brand-seal"><BrandMark /></span><strong>JUAI<span>择校笔记</span></strong>
+              <BrandMark /><strong><span>择校笔记</span></strong>
             </RouterLink>
             <WorkspaceNavigation class="jg-masthead-nav" />
             <span

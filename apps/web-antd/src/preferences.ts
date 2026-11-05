@@ -23,6 +23,10 @@ export const overridesPreferences = defineOverridesPreferences({
     defaultHomePath: '/welcome',
   },
   copyright: appCopyrightPreferences,
+  // Local JUAI icon instead of the vben default hosted on unpkg.
+  logo: {
+    source: '/juai-icon-512.png',
+  },
 });
 
 export const preferencesExtension =
