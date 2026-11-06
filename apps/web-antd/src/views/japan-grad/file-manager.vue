@@ -1,11 +1,16 @@
 <script setup lang="ts">
 import type { StoredDocument } from './documents';
+
 import { computed, ref, watch } from 'vue';
+
 import { Button, Input, Select } from 'ant-design-vue';
-import { useExplorerStore } from './explorer';
-import { documentReaderPath, fileSize, kindLabels } from './documents';
-import { localApi } from './local-api';
+
 import DocumentArchive from './components/document-archive.vue';
+import ListPagination from './components/list-pagination.vue';
+import { documentReaderPath, fileSize, kindLabels } from './documents';
+import { useExplorerStore } from './explorer';
+import { localApi } from './local-api';
+import { usePagination } from './use-pagination';
 const props = defineProps<{ university?: string; guidelinesOnly?: boolean }>();
 const store = useExplorerStore();
 const universityId = ref(props.university);
@@ -15,14 +20,14 @@ const year = ref<number>();
 const kind = ref<string>(props.guidelinesOnly ? 'guidelines' : '');
 const query = ref('');
 const files = ref<StoredDocument[]>([]);
-const error = ref('');
+const loadError = ref('');
 const upload = ref(false);
 async function load() {
   try {
     files.value = await localApi<StoredDocument[]>('/documents/index');
-    error.value = '';
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '文件读取失败';
+    loadError.value = '';
+  } catch (error) {
+    loadError.value = error instanceof Error ? error.message : '文件读取失败';
   }
 }
 void load();
@@ -90,6 +95,14 @@ const years = computed(() =>
     .toSorted((a, b) => b - a)
     .map((value) => ({ value, label: `${value} 年` })),
 );
+const { page, pageSize, total, paged } = usePagination(rows, [
+  query,
+  universityId,
+  schoolId,
+  majorId,
+  year,
+  kind,
+]);
 </script>
 <template>
   <section class="explorer-page file-manager">
@@ -101,8 +114,9 @@ const years = computed(() =>
           v-if="!guidelinesOnly"
           :disabled="!majorId"
           @click="upload = !upload"
-          >上传到所选专攻</Button
         >
+          上传到所选专攻
+        </Button>
       </div>
     </header>
     <div class="file-filters">
@@ -153,7 +167,7 @@ const years = computed(() =>
       />
       <Input v-model:value="query" placeholder="搜索文件" allow-clear />
     </div>
-    <p v-if="error" role="alert">{{ error }}</p>
+    <p v-if="loadError" role="alert">{{ loadError }}</p>
     <div v-if="guidelinesOnly" class="file-table-scroll">
       <table class="file-table">
         <thead>
@@ -167,8 +181,8 @@ const years = computed(() =>
           </tr>
         </thead>
         <tbody>
-          <template v-for="major in majors" :key="major.id"
-            ><tr
+          <template v-for="major in majors" :key="major.id">
+            <tr
               v-for="exam in major.examHistory.filter(
                 (e) => !year || Number(e.year) === year,
               )"
@@ -190,11 +204,12 @@ const years = computed(() =>
               <td>
                 <RouterLink
                   :to="`/japan-grad/universities/${universityId}/schools/${major.schoolId}/majors/${major.id}`"
-                  >查看详情 →</RouterLink
                 >
+                  查看详情 →
+                </RouterLink>
               </td>
-            </tr></template
-          >
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
@@ -219,17 +234,16 @@ const years = computed(() =>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="row in rows" :key="row.file.id">
+          <tr v-for="row in paged" :key="row.file.id">
             <td>{{ row.university?.name || '—' }}</td>
             <td>{{ row.school?.name || '—' }}</td>
             <td>{{ row.major?.name || '—' }}</td>
             <td>{{ row.file.year }}</td>
             <td>{{ kindLabels[row.file.kind] }}</td>
             <td>
-              <RouterLink :to="documentReaderPath(row.file.id)">{{
-                row.file.title
-              }}</RouterLink
-              ><small>{{ row.file.filename }}</small>
+              <RouterLink :to="documentReaderPath(row.file.id)">
+                {{ row.file.title }}
+</RouterLink><small>{{ row.file.filename }}</small>
             </td>
             <td>{{ fileSize(row.file.size) }}</td>
           </tr>
@@ -239,6 +253,11 @@ const years = computed(() =>
         </tbody>
       </table>
     </div>
+    <ListPagination
+      v-model:page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+    />
   </section>
 </template>
 <style scoped>
@@ -259,8 +278,8 @@ const years = computed(() =>
 }
 
 .file-table {
-  min-width: 850px;
   width: 100%;
+  min-width: 850px;
   font-size: 13px;
   border-collapse: collapse;
 }

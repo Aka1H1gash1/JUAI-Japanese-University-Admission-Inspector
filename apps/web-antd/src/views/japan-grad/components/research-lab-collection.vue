@@ -4,8 +4,10 @@ import { computed, ref, watch } from 'vue';
 import { Button, Input, Switch } from 'ant-design-vue';
 
 import { useExplorerStore } from '../explorer';
+import { usePagination } from '../use-pagination';
 import EntityCreateFlow from './entity-create-flow.vue';
 import ExplorerIcon from './explorer-icon.vue';
+import ListPagination from './list-pagination.vue';
 import ResearchLabCard from './research-lab-card.vue';
 const props = defineProps<{ majorId: string }>();
 const store = useExplorerStore();
@@ -45,6 +47,11 @@ watch(
     wantedOnly.value = false;
   },
 );
+const { page, pageSize, total, paged } = usePagination(visible, [
+  query,
+  wantedOnly,
+  () => props.majorId,
+]);
 </script>
 <template>
   <section class="lab-collection">
@@ -77,7 +84,7 @@ watch(
       </div>
       <div v-if="visible.length" class="research-lab-grid">
         <ResearchLabCard
-          v-for="lab in visible"
+          v-for="lab in paged"
           :key="lab.id"
           :lab-id="lab.id"
           @edit="edit"
@@ -101,6 +108,11 @@ watch(
       <p>记录研究室名称、研究方向和官网，再添加其中的老师。</p>
       <Button @click="edit()">新增研究室</Button>
     </div>
+    <ListPagination
+      v-model:page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+    />
     <EntityCreateFlow
       v-model:open="editorOpen"
       kind="lab"

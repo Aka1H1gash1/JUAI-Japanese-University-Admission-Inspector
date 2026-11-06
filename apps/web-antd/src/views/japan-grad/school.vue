@@ -8,7 +8,9 @@ import CollectedAdmissions from './components/collected-admissions.vue';
 import EntityCreateFlow from './components/entity-create-flow.vue';
 import EntityEditor from './components/entity-editor.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
+import ListPagination from './components/list-pagination.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
+import { usePagination } from './use-pagination';
 
 const store = useExplorerStore();
 const { message, modal } = App.useApp();
@@ -62,6 +64,10 @@ function deleteSchool() {
     },
   });
 }
+const { page, pageSize, total, paged } = usePagination(visibleMajors, [
+  query,
+  () => route.params.schoolId,
+]);
 </script>
 
 <template>
@@ -135,7 +141,7 @@ function deleteSchool() {
       </Input>
       <div v-if="visibleMajors.length" class="school-grid">
         <RouterLink
-          v-for="major in visibleMajors"
+          v-for="major in paged"
           :key="major.id"
           :to="`/japan-grad/universities/${university.id}/schools/${school.id}/majors/${major.id}`"
           class="school-card major-card"
@@ -175,6 +181,11 @@ function deleteSchool() {
         <ExplorerIcon name="plus" />添加专攻
       </Button>
     </section>
+    <ListPagination
+      v-model:page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+    />
     <EntityEditor
       v-model:open="schoolEditorOpen"
       kind="school"

@@ -11,18 +11,20 @@ import JourneyExportDialog from './components/journey-export-dialog.vue';
 import JourneyLabEntry from './components/journey-lab-entry.vue';
 import JourneyLabPicker from './components/journey-lab-picker.vue';
 import JourneyTimeline from './components/journey-timeline.vue';
+import ListPagination from './components/list-pagination.vue';
 import QuestionLibrary from './components/question-library.vue';
 import { useExplorerStore } from './explorer';
 import { geographySearchTerms } from './japan-geography';
 import { labComparisonRows, labContext, labPath } from './lab-targets';
 import { vAccessibleSelect } from './select-accessibility';
+import { usePagination } from './use-pagination';
 const store = useExplorerStore();
 const { message } = App.useApp();
 const route = useRoute();
 const router = useRouter();
 const view = computed({
   get: () =>
-    ['contacts', 'timeline', 'questions'].includes(String(route.query.view))
+    ['contacts', 'questions', 'timeline'].includes(String(route.query.view))
       ? String(route.query.view)
       : 'targets',
   set: (value: string) => {
@@ -107,6 +109,7 @@ function openExport() {
   comparisonOpen.value = false;
   exportOpen.value = true;
 }
+const { page, pageSize, total, paged } = usePagination(visible, [query]);
 </script>
 <template>
   <section class="explorer-page journey-page directory-page">
@@ -161,11 +164,13 @@ function openExport() {
             <span>已选 {{ selected.length }} 个研究室</span><Button @click="openExport">导出所选</Button><Button type="text" @click="selected = []">清空选择</Button>
           </div>
           <Tabs v-model:active-key="view" class="journey-workspace-tabs">
-            <Tabs.TabPane key="questions" tab="过去问专区"><QuestionLibrary v-if="view === 'questions'" /></Tabs.TabPane>
+            <Tabs.TabPane key="questions" tab="过去问专区">
+              <QuestionLibrary v-if="view === 'questions'" />
+            </Tabs.TabPane>
             <Tabs.TabPane key="targets" tab="研究室清单">
               <div v-if="visible.length" class="journey-directory">
                 <JourneyLabEntry
-                  v-for="item in visible"
+                  v-for="item in paged"
                   :key="item.lab.id"
                   :target="item"
                   :selected="selected.includes(item.lab.id)"
@@ -178,6 +183,11 @@ function openExport() {
                 <h2>没有符合条件的研究室</h2>
                 <Button @click="query = ''">清除搜索</Button>
               </div>
+              <ListPagination
+                v-model:page="page"
+                v-model:page-size="pageSize"
+                :total="total"
+              />
 </Tabs.TabPane><Tabs.TabPane key="contacts" tab="教授联络看板">
               <JourneyContactBoard
                 v-if="view === 'contacts'"

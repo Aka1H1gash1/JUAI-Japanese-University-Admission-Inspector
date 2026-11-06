@@ -5,11 +5,13 @@ import { App, Button, Checkbox, Input, Select } from 'ant-design-vue';
 
 import EntityCreateFlow from './components/entity-create-flow.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
+import ListPagination from './components/list-pagination.vue';
 import UniversityComparison from './components/university-comparison.vue';
 import UniversityLogo from './components/university-logo.vue';
 import { useExplorerStore } from './explorer';
 import { geographySearchTerms, universityLocation } from './japan-geography';
 import { vAccessibleSelect } from './select-accessibility';
+import { usePagination } from './use-pagination';
 
 const store = useExplorerStore();
 const { message } = App.useApp();
@@ -65,6 +67,10 @@ function toggleCompare(id: string) {
   else if (selectedIds.value.length < 4) selectedIds.value.push(id);
   else message.info('一次最多对比 4 所大学，请先取消一个已选目标。');
 }
+const { page, pageSize, total, paged } = usePagination(visibleUniversities, [
+  query,
+  order,
+]);
 </script>
 
 <template>
@@ -120,7 +126,7 @@ function toggleCompare(id: string) {
           <span>大学</span><span>所在地 / 类型</span><span>QS 世界排名</span><span>日本排名</span><span>已整理资料</span><span>对比</span>
         </div>
         <article
-          v-for="university in visibleUniversities"
+          v-for="university in paged"
           :key="university.id"
           class="university-directory-entry"
           :class="{ 'is-selected': selectedIds.includes(university.id) }"
@@ -193,6 +199,11 @@ function toggleCompare(id: string) {
         <p>试试其他名称、所在地或研究方向。</p>
         <Button @click="query = ''">清除搜索</Button>
       </div>
+      <ListPagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+      />
       <div v-if="selectedIds.length" class="comparison-tray">
         <div class="tray-label">
           <ExplorerIcon name="compare" /><span>待对比</span>

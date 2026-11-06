@@ -5,9 +5,11 @@ import { Button, Input, Switch } from 'ant-design-vue';
 
 import { professorInitials, useExplorerStore } from '../explorer';
 import { labContext } from '../lab-targets';
+import { usePagination } from '../use-pagination';
 import ContactStatus from './contact-status.vue';
 import EntityCreateFlow from './entity-create-flow.vue';
 import ExplorerIcon from './explorer-icon.vue';
+import ListPagination from './list-pagination.vue';
 const props = defineProps<{ labId: string }>();
 const store = useExplorerStore();
 const ctx = computed(() => labContext(store, props.labId));
@@ -40,6 +42,11 @@ function editProfessor(id = '') {
   editingProfessorId.value = id;
   professorEditorOpen.value = true;
 }
+const { page, pageSize, total, paged } = usePagination(visibleProfessors, [
+  query,
+  favoritesOnly,
+  () => props.labId,
+]);
 </script>
 <template>
   <section v-if="ctx" class="lab-teacher-section">
@@ -72,7 +79,7 @@ function editProfessor(id = '') {
       </div>
       <div v-if="visibleProfessors.length" class="professor-grid">
         <article
-          v-for="professor in visibleProfessors"
+          v-for="professor in paged"
           :key="professor.id"
           class="professor-card"
           :class="{ 'is-favorite': professor.favorite }"
@@ -162,6 +169,11 @@ function editProfessor(id = '') {
         <ExplorerIcon name="plus" />添加第一位老师
       </Button>
     </section>
+    <ListPagination
+      v-model:page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+    />
     <EntityCreateFlow
       v-model:open="professorEditorOpen"
       kind="professor"

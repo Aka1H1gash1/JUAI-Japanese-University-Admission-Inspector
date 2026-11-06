@@ -4,12 +4,13 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button, Input } from 'ant-design-vue';
 
-import FileManager from './file-manager.vue';
 import EntityCreateFlow from './components/entity-create-flow.vue';
 import EntityEditor from './components/entity-editor.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
+import ListPagination from './components/list-pagination.vue';
 import UniversityLogo from './components/university-logo.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
+import FileManager from './file-manager.vue';
 import { universityAddress, universityGeography } from './japan-geography';
 import {
   dormitoryLabel,
@@ -17,6 +18,7 @@ import {
   universityBudgetTotals,
   universityFees,
 } from './university-fees';
+import { usePagination } from './use-pagination';
 
 const store = useExplorerStore();
 const { message, modal } = App.useApp();
@@ -94,6 +96,10 @@ function deleteUniversity() {
     },
   });
 }
+const { page, pageSize, total, paged } = usePagination(visibleSchools, [
+  query,
+  () => route.params.universityId,
+]);
 </script>
 
 <template>
@@ -347,7 +353,7 @@ function deleteUniversity() {
       </Input>
       <div v-if="visibleSchools.length" class="school-grid">
         <RouterLink
-          v-for="school in visibleSchools"
+          v-for="school in paged"
           :key="school.id"
           :to="`/japan-grad/universities/${university.id}/schools/${school.id}`"
           class="school-card"
@@ -392,6 +398,11 @@ function deleteUniversity() {
         <ExplorerIcon name="plus" />添加研究科
       </Button>
     </section>
+    <ListPagination
+      v-model:page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+    />
     <EntityEditor
       v-model:open="universityEditorOpen"
       kind="university"
