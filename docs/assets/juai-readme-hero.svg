@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="460" viewBox="0 0 1200 460" role="img" aria-labelledby="title desc">
+  <title id="title">JUAI — Japan University Admission-Inspector / Japan University AI</title>
+  <desc id="desc">One name, two readings. A workspace for Japanese graduate school applications, with source-based AI assistance.</desc>
+  <rect width="1200" height="460" rx="24" fill="#f4f7fb"/>
+  <path d="M840 0h336a24 24 0 0 1 24 24v412a24 24 0 0 1-24 24H840Z" fill="#e9eff7"/>
+  <g fill="none" stroke="#d7e1ee" stroke-width="1">
+    <circle cx="1100" cy="410" r="220"/><circle cx="1100" cy="410" r="156"/>
+    <path d="M48 108h1104M48 365h1104"/>
+  </g>
+  <g font-family="'Avenir Next','Trebuchet MS',sans-serif">
+    <rect x="48" y="44" width="8" height="8" fill="#d43b33"/>
+    <text x="70" y="55" font-size="14" font-weight="600" letter-spacing="3" fill="#435775">YOUR NEXT CHAPTER, IN JAPAN.</text>
+    <text x="1148" y="55" text-anchor="end" font-size="13" letter-spacing="2" fill="#435775">READ / COMPARE / PLAN</text>
+    <text x="43" y="272" font-size="148" font-weight="800" font-style="italic" letter-spacing="-9" fill="#081d36">JU<tspan fill="#d43b33">AI</tspan></text>
+    <text x="52" y="319" font-size="15" letter-spacing="2" fill="#435775">ONE NAME. TWO WAYS FORWARD.</text>
+    <path d="M460 157v161" stroke="#bfccdd"/>
+    <text x="500" y="166" font-size="12" font-weight="600" letter-spacing="2" fill="#687e99">THE WORKSPACE</text>
+    <text x="500" y="205" font-size="27" fill="#081d36"><tspan font-weight="800">J</tspan>apan <tspan font-weight="800">U</tspan>niversity</text>
+    <text x="500" y="241" font-size="27" fill="#081d36"><tspan font-weight="800" fill="#d43b33">A</tspan>dmission-<tspan font-weight="800" fill="#d43b33">I</tspan>nspector</text>
+    <text x="500" y="286" font-size="12" font-weight="600" letter-spacing="2" fill="#687e99">THE INTELLIGENCE</text>
+    <text x="500" y="325" font-size="27" fill="#081d36"><tspan font-weight="800">J</tspan>apan <tspan font-weight="800">U</tspan>niversity <tspan font-weight="800" fill="#d43b33">AI</tspan></text>
+    <text x="50" y="413" font-size="19" fill="#081d36" font-family="'PingFang SC','Microsoft YaHei',sans-serif">看清出愿，走向合适的研究。</text>
+    <text x="1148" y="411" text-anchor="end" font-size="13" letter-spacing="1" fill="#435775">SOURCES FIRST. YOUR DECISION.</text>
+  </g>
+</svg>
