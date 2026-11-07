@@ -62,7 +62,7 @@ pre-commit:
       run: pnpm exec stylelint --fix {staged_files}
       stage_fixed: true
     - name: checkType
-      run: pnpm check:type
+      run: pnpm check:type --concurrency=1
 
 post-merge:
   commands:
