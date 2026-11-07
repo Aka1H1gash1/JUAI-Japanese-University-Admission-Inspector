@@ -7,6 +7,7 @@ import { App, Button, Input } from 'ant-design-vue';
 import CollectedAdmissions from './components/collected-admissions.vue';
 import EntityCreateFlow from './components/entity-create-flow.vue';
 import EntityEditor from './components/entity-editor.vue';
+import ExperiencePosts from './components/experience-posts.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import ListPagination from './components/list-pagination.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
@@ -186,6 +187,7 @@ const { page, pageSize, total, paged } = usePagination(visibleMajors, [
       v-model:page-size="pageSize"
       :total="total"
     />
+    <ExperiencePosts :key="school.id" :school-id="school.id" />
     <EntityEditor
       v-model:open="schoolEditorOpen"
       kind="school"

@@ -18,6 +18,7 @@ import {
 import CollectionReview from './components/collection-review.vue';
 import CollectionStageProgress from './components/collection-stage-progress.vue';
 import EntityCreateFlow from './components/entity-create-flow.vue';
+import ExperiencePosts from './components/experience-posts.vue';
 import JgLoader from './components/jg-loader.vue';
 import SpecialProgramReview from './components/special-program-review.vue';
 import { useExplorerStore } from './explorer';
@@ -410,6 +411,18 @@ const generatedProfiles = computed(() => {
               >查看下载的原文件</a>
           </article>
         </div>
+        <ExperiencePosts
+          v-if="
+            detail.job.experienceSearch &&
+            detail.job.experienceSearch.status !== 'searching'
+          "
+          :key="`experiences-${detail.job.id}`"
+          :school-id="
+            detail.job.resultIds?.school || detail.job.target?.ids?.school
+          "
+          :candidates="detail.job.experienceSearch"
+          candidates-only
+        />
         <CollectionReview
           v-if="
             detail.job.status === 'review' &&

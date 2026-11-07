@@ -101,6 +101,7 @@ export interface CollectionSource {
   truncated: boolean;
 }
 export interface CollectionJob {
+  experienceSearch?: import('./experience-posts').ExperienceSearch;
   searchMode?: 'auto' | 'off';
   searches?: {
     id: string;

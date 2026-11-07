@@ -472,6 +472,17 @@ export function createWorkspaceRepository({
           ).run(...columns.map((field) => row[field]));
         }
       }
+      // A major moved to another school must not carry an old post's affiliation.
+      if (
+        db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='experience_posts'",
+          )
+          .get()
+      )
+        db.prepare(
+          'UPDATE experience_posts SET major_id=NULL,version=version+1,updated_at=? WHERE major_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM majors m WHERE m.id=experience_posts.major_id AND m.school_id=experience_posts.school_id)',
+        ).run(new Date().toISOString());
       db.prepare(
         'UPDATE workspace_state SET data_extras_json=? WHERE id=1',
       ).run(

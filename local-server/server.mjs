@@ -22,6 +22,7 @@ import {
   syncAllLabsForMajor,
 } from './data-migrations.mjs';
 import { createDocumentReaderService } from './document-reader-service.mjs';
+import { createExperiencePostService } from './experience-post-service.mjs';
 import { createExperienceService } from './experience-service.mjs';
 import {
   deliveryProperties,
@@ -631,6 +632,15 @@ export async function createLocalApp({
   });
   ai.importLegacy();
   ai.initializeFeature('web_collection', 'workspace_chat');
+  const experiencePosts = createExperiencePostService({
+    db,
+    snapshot,
+    transaction,
+    fail,
+    json,
+    jsonBody,
+    ai,
+  });
   const specialPrograms = createSpecialProgramService({
     saveProgram,
     db,
@@ -732,6 +742,7 @@ export async function createLocalApp({
         if (await ai.handle(req, res, route)) return;
         if (await settings.handle(req, res, route)) return;
         if (await specialPrograms.handle(req, res, route)) return;
+        if (await experiencePosts.handle(req, res, route)) return;
         if (await collection.handle(req, res, route)) return;
         if (await assistant.handle(req, res, route)) return;
         if (await information.handle(req, res, route)) return;

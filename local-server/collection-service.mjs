@@ -35,6 +35,7 @@ import {
   fetchCollectionUrl,
 } from './collection-web.mjs';
 import { storeContent } from './content-store.mjs';
+import { collectExperienceCandidates } from './experience-post-service.mjs';
 import { validateFile } from './file-types.mjs';
 import geography from './japan-geography.json' with { type: 'json' };
 import { validPlannerDay } from './planning-fields.mjs';
@@ -1225,6 +1226,21 @@ export function createCollectionService({
         );
       }
       j.draft = verifyDraft(raw, j);
+      if (searchEnabled && !savedOnly)
+        await collectExperienceCandidates({
+          job: j,
+          ai,
+          selection,
+          signal,
+          onChange: () =>
+            event(
+              j,
+              j.experienceSearch?.status === 'searching'
+                ? '官方草稿已核对，正在补充搜索经验帖候选…'
+                : '经验帖候选搜索已结束，结果单独保存供核对。',
+            ),
+        });
+      signal.throwIfAborted();
       j.status = 'review';
       j.phase = 'complete';
       event(j, '档案草稿已生成，请核对关系、字段与来源后入库。');
@@ -1873,6 +1889,11 @@ export function createCollectionService({
       if (endpoint === '/jobs' && req.method === 'POST') {
         const input = await jsonBody(req);
         if (
+          input.searchExperiences !== undefined &&
+          typeof input.searchExperiences !== 'boolean'
+        )
+          fail('经验帖搜索选项不正确。');
+        if (
           input.searchMode !== undefined &&
           !['auto', 'off'].includes(input.searchMode)
         )
@@ -2043,6 +2064,7 @@ export function createCollectionService({
             input.targetKind !== 'professor' && input.seekGuidelines !== false,
           browserMode: input.browserMode,
           searchMode: input.searchMode || 'auto',
+          searchExperiences: input.searchExperiences !== false,
           searches: [],
           context: {
             admissionYear: input.admissionYear,

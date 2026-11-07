@@ -7,7 +7,15 @@ import { computed, h, ref, watch } from 'vue';
 import { RouterLink, useRoute } from 'vue-router';
 
 import { useEventListener } from '@vueuse/core';
-import { App, Button, Input, InputNumber, Modal, Select } from 'ant-design-vue';
+import {
+  App,
+  Button,
+  Checkbox,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+} from 'ant-design-vue';
 
 import { useCollectionJobsStore } from '../collection-jobs';
 import { COLLECTION_NAMES } from '../collection-types';
@@ -41,6 +49,7 @@ const url = ref('');
 const aiMode = ref<'agent' | 'api'>(serverMode ? 'api' : 'agent');
 const browserMode = ref('http');
 const searchMode = ref<'auto' | 'off'>('auto');
+const searchExperiences = ref(true);
 const identity = ref('修士・外国人留学生');
 const notes = ref('');
 const importScope = ref('current');
@@ -116,6 +125,7 @@ watch(
     notes.value = '';
     importScope.value = 'current';
     searchMode.value = 'auto';
+    searchExperiences.value = true;
     selectedMajors.value = [];
     if (props.urlOnly) void loadAiState(true);
   },
@@ -230,6 +240,7 @@ async function parse() {
         aiConnectionId: selectedConnection.value?.id,
         browserMode: serverMode ? browserMode.value : 'auto',
         searchMode: officialSearch.value ? searchMode.value : 'off',
+        searchExperiences: searchExperiences.value,
       }),
     );
     open.value = false;
@@ -335,6 +346,13 @@ async function parse() {
           aria-label="官方联网搜索"
         />
       </label>
+      <Checkbox
+        v-if="officialSearch && searchMode === 'auto'"
+        v-model:checked="searchExperiences"
+        :disabled="busy"
+        >
+同时搜索经验帖（语言与平台不限，额外一次联网搜索，核对后收录）
+</Checkbox>
       <p class="create-parent">
         {{
           urlOnly
