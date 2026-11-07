@@ -11,9 +11,11 @@ import ListPagination from './list-pagination.vue';
 
 const props = defineProps<{
   schoolId?: string;
+  universityId?: string;
   candidates?: ExperienceSearch;
   candidatesOnly?: boolean;
 }>();
+const emit = defineEmits<{ changed: [] }>();
 const store = useExplorerStore();
 const { message, modal } = App.useApp();
 const selectedSchool = ref(props.schoolId || '');
@@ -43,9 +45,35 @@ const draft = reactive({
   notes: '',
   origin: 'manual',
 });
-const majors = computed(() => store.majorsFor(selectedSchool.value));
+const schools = computed(() =>
+  store.schools.filter(
+    (s) => !props.universityId || s.universityId === props.universityId,
+  ),
+);
+const majors = computed(() =>
+  selectedSchool.value
+    ? store.majorsFor(selectedSchool.value)
+    : store.majors.filter((m) =>
+        schools.value.some((s) => s.id === m.schoolId),
+      ),
+);
+function platform(url: string) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return '原帖';
+  }
+}
+function schoolName(id: string) {
+  return store.schools.find((s) => s.id === id)?.name || '';
+}
+function majorName(id: string) {
+  return store.majors.find((m) => m.id === id)?.name || '研究科通用';
+}
+
+const editorMajors = computed(() => store.majorsFor(draft.schoolId));
 const schoolOptions = computed(() =>
-  store.schools.map((s) => ({
+  schools.value.map((s) => ({
     value: s.id,
     label: `${store.universities.find((u) => u.id === s.universityId)?.name || ''} / ${s.name}`,
   })),
@@ -53,12 +81,14 @@ const schoolOptions = computed(() =>
 let generation = 0;
 async function load() {
   const token = ++generation;
-  if (!selectedSchool.value || props.candidatesOnly) return;
+  if ((!selectedSchool.value && !props.universityId) || props.candidatesOnly)
+    return;
   loading.value = true;
   loadError.value = '';
   try {
     const params = new URLSearchParams({
       schoolId: selectedSchool.value,
+      universityId: props.universityId || '',
       majorId: majorId.value,
       q: query.value,
       page: String(page.value),
@@ -109,7 +139,8 @@ function edit(
   post?: ExperiencePost,
   candidate?: { title: string; url: string; snippet: string },
 ) {
-  if (!selectedSchool.value) {
+  const school = post?.schoolId || selectedSchool.value;
+  if (!school) {
     message.info('请先选择经验帖所属研究科。');
     return;
   }
@@ -118,7 +149,7 @@ function edit(
     {
       id: '',
       version: 0,
-      schoolId: selectedSchool.value,
+      schoolId: school,
       majorId: majorId.value,
       title: '',
       url: '',
@@ -153,6 +184,7 @@ async function save() {
         : '经验帖已保存到研究科。',
     );
     editorOpen.value = false;
+    emit('changed');
     await load();
   } catch (error) {
     message.error(error instanceof Error ? error.message : '保存失败');
@@ -172,6 +204,7 @@ function remove(post: ExperiencePost) {
           `/experience-posts/${post.id}`,
           jsonOptions('DELETE', { version: post.version }),
         );
+        emit('changed');
         await load();
       } catch (error) {
         message.error(error instanceof Error ? error.message : '移除失败');
@@ -206,11 +239,21 @@ async function search() {
         <h2>
           经验帖汇集<span v-if="!candidatesOnly">{{ total }}</span>
         </h2>
-        <p>按研究科汇集出愿、笔试与面试经历，语言和平台不限。</p>
+        <p v-if="!universityId">
+          按研究科汇集出愿、笔试与面试经历，语言和平台不限。
+        </p>
       </div>
       <div v-if="!candidatesOnly" class="experience-actions">
-        <Button :loading="searching" @click="search">AI 搜索经验帖</Button>
-        <Button type="primary" @click="edit()">添加经验帖</Button>
+        <Button
+          :loading="searching"
+          :disabled="!selectedSchool"
+          @click="search"
+        >
+          AI 搜索经验帖
+        </Button>
+        <Button type="primary" :disabled="!selectedSchool" @click="edit()">
+          添加经验帖
+        </Button>
       </div>
     </header>
     <p class="experience-note">
@@ -220,7 +263,11 @@ async function search() {
       <Select
         v-if="!schoolId"
         v-model:value="selectedSchool"
-        :options="schoolOptions"
+        :options="
+          universityId
+            ? [{ value: '', label: '全部研究科' }, ...schoolOptions]
+            : schoolOptions
+        "
         placeholder="选择保存到哪个研究科"
         aria-label="经验帖所属研究科"
         show-search
@@ -248,6 +295,9 @@ async function search() {
         aria-label="搜索经验帖"
       />
     </div>
+    <p v-if="universityId && !selectedSchool" class="experience-note">
+      正在汇总全校经验帖。选择研究科后，可以新增或搜索该研究科的帖子。
+    </p>
     <section
       v-if="candidates"
       class="experience-candidates"
@@ -262,46 +312,87 @@ async function search() {
       <p v-else>
         仅为搜索结果，尚未核对原文与所属关系。打开核对后，选择研究科和专攻收录。
       </p>
-      <article v-for="item in candidates.results" :key="item.url">
-        <div>
-          <a :href="item.url" target="_blank" rel="noopener noreferrer">{{ item.title }} ↗</a>
-          <p>{{ item.snippet }}</p>
-          <small>{{ item.url }}</small>
-        </div>
-        <Button :disabled="!selectedSchool" @click="edit(undefined, item)">
-          核对并收录
-        </Button>
-      </article>
+      <div class="experience-card-grid">
+        <article
+          v-for="item in candidates.results"
+          :key="item.url"
+          class="experience-card is-candidate"
+        >
+          <div class="experience-card-top">
+            <span class="experience-platform">{{ platform(item.url) }}</span><span class="experience-status">待核对</span>
+          </div>
+          <h3>
+            <a
+              :href="item.url"
+              :title="item.title"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ item.title }}</a>
+          </h3>
+          <p class="experience-excerpt">
+            {{
+              item.snippet || '打开原帖查看完整经历，再核对所属研究科和专攻。'
+            }}
+          </p>
+          <footer>
+            <a :href="item.url" target="_blank" rel="noopener noreferrer">查看原帖 ↗</a><Button :disabled="!selectedSchool" @click="edit(undefined, item)">
+              核对并收录
+            </Button>
+          </footer>
+        </article>
+      </div>
     </section>
     <template v-if="!candidatesOnly">
       <p v-if="loadError" role="alert">
         {{ loadError }} <Button @click="load">重试</Button>
       </p>
       <p v-if="loading" role="status">正在读取经验帖…</p>
-      <article v-for="item in items" :key="item.id" class="experience-entry">
-        <div class="experience-entry-main">
-          <a :href="item.url" target="_blank" rel="noopener noreferrer"><strong>{{ item.title }} ↗</strong></a>
-          <p class="experience-meta">
+      <div class="experience-card-grid">
+        <article
+          v-for="item in items"
+          :key="item.id"
+          class="experience-card experience-entry"
+        >
+          <div class="experience-card-top">
+            <span class="experience-platform">{{ platform(item.url) }}</span><span class="experience-year">{{
+              item.year ? `${item.year} 年` : '年份未标注'
+            }}</span>
+          </div>
+          <h3>
+            <a
+              :href="item.url"
+              :title="item.title"
+              target="_blank"
+              rel="noopener noreferrer"
+              >{{ item.title }}</a>
+          </h3>
+          <div class="experience-tags">
+            <span>{{ schoolName(item.schoolId) }}</span><span>{{ majorName(item.majorId) }}</span><span v-if="item.language">{{ item.language }}</span>
+          </div>
+          <p class="experience-excerpt">
             {{
-              [
-                store.majors.find((m) => m.id === item.majorId)?.name ||
-                  '研究科通用／专攻未标注',
-                item.year,
-                item.author,
-                item.language,
-                item.origin === 'search' ? '搜索收录' : '手动添加',
-              ]
+              item.notes || '还没有阅读备注，可以打开原帖后记下对你有用的信息。'
+            }}
+          </p>
+          <details v-if="item.notes" class="experience-full-notes">
+            <summary>展开完整备注</summary>
+            <p>{{ item.notes }}</p>
+          </details>
+          <p class="experience-byline">
+            {{
+              [item.author, item.origin === 'search' ? '搜索收录' : '手动添加']
                 .filter(Boolean)
                 .join(' · ')
             }}
           </p>
-          <p v-if="item.notes" class="experience-notes">{{ item.notes }}</p>
-          <small>{{ item.url }}</small>
-        </div>
-        <div class="experience-actions">
-          <Button @click="edit(item)">编辑</Button><Button danger @click="remove(item)">移除</Button>
-        </div>
-      </article>
+          <footer>
+            <a :href="item.url" target="_blank" rel="noopener noreferrer">阅读原帖 ↗</a>
+            <div>
+              <Button type="text" @click="edit(item)">编辑</Button><Button type="text" danger @click="remove(item)">移除</Button>
+            </div>
+          </footer>
+        </article>
+      </div>
       <p v-if="!loading && !loadError && !items.length" class="search-empty">
         还没有符合条件的经验帖。添加你读过的帖子，或搜索并核对收录。
       </p>
@@ -330,7 +421,7 @@ async function search() {
             v-model:value="draft.majorId"
             :options="[
               { value: '', label: '研究科通用／待核对专攻' },
-              ...majors.map((m) => ({ value: m.id, label: m.name })),
+              ...editorMajors.map((m) => ({ value: m.id, label: m.name })),
             ]"
         /></label>
         <label>经历年份（可留空）<Input
@@ -354,89 +445,4 @@ async function search() {
   </section>
 </template>
 
-<style scoped>
-.experience-posts {
-  margin-top: 28px;
-}
-
-.experience-filters,
-.experience-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-}
-
-.experience-filters {
-  margin: 16px 0;
-}
-
-.experience-filters > * {
-  flex: 1;
-  min-width: 180px;
-}
-
-.experience-note,
-.experience-meta,
-.experience-candidates > p {
-  font-size: 13px;
-  color: var(--jg-muted, #64748b);
-}
-
-.experience-entry,
-.experience-candidates article {
-  display: flex;
-  gap: 16px;
-  align-items: flex-start;
-  justify-content: space-between;
-  padding: 20px 0;
-  border-bottom: 1px solid #dce4ef;
-}
-
-.experience-entry-main,
-.experience-candidates article > div {
-  flex: 1;
-  min-width: 0;
-}
-
-.experience-entry a,
-.experience-candidates a {
-  color: var(--jg-ink, #163251);
-}
-
-.experience-posts p,
-.experience-posts small,
-.experience-posts a {
-  overflow-wrap: anywhere;
-}
-
-.experience-notes {
-  white-space: pre-wrap;
-}
-
-.experience-candidates {
-  padding: 20px;
-  border: 1px solid #dce4ef;
-  border-radius: 12px;
-}
-
-.experience-form {
-  display: grid;
-  gap: 14px;
-}
-
-.experience-form label {
-  display: grid;
-  gap: 6px;
-}
-
-@media (max-width: 600px) {
-  .experience-entry,
-  .experience-candidates article {
-    flex-direction: column;
-  }
-
-  .experience-candidates {
-    padding: 12px;
-  }
-}
-</style>
+<style scoped src="../experience-posts.css" />

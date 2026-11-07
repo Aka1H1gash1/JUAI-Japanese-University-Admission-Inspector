@@ -49,6 +49,9 @@ test('experience posts persist, paginate, validate affiliation, dedupe and prote
     const data = structuredClone(sampleData);
     data.schools.push({ ...data.schools[0], id: 's2' });
     data.majors.push({ ...data.majors[0], id: 'm2', schoolId: 's2' });
+    data.universities.push({ ...data.universities[0], id: 'u2' });
+    data.schools.push({ ...data.schools[0], id: 's3', universityId: 'u2' });
+    data.majors.push({ ...data.majors[0], id: 'm3', schoolId: 's3' });
     assert.equal(
       (await call('/workspace', 'PUT', { data, revision: 0 })).status,
       200,
@@ -59,6 +62,35 @@ test('experience posts persist, paginate, validate affiliation, dedupe and prote
       assert.equal(result.status, 201);
       if (!n) first = result.data;
     }
+    assert.equal(
+      (
+        await call('/experience-posts', 'POST', {
+          ...post(100),
+          schoolId: 's3',
+          majorId: 'm3',
+        })
+      ).status,
+      201,
+    );
+    const universityPosts = (await call('/experience-posts?universityId=u1'))
+      .data;
+    assert.equal(universityPosts.total, 25);
+    assert.ok(universityPosts.items.every((p) => p.schoolId === 's1'));
+    assert.equal(
+      (await call('/experience-posts?universityId=u2')).data.total,
+      1,
+    );
+    assert.equal(
+      (await call('/experience-posts?universityId=u1&majorId=m3')).status,
+      400,
+    );
+    assert.equal(
+      (await call('/experience-posts?universityId=u1&schoolId=s3')).status,
+      400,
+    );
+    const summary = (await call('/experience-posts/summary')).data.items;
+    assert.equal(summary.find((r) => r.universityId === 'u1').total, 25);
+    assert.equal(summary.find((r) => r.universityId === 'u2').total, 1);
     const list = await call('/experience-posts?schoolId=s1&page=3&pageSize=12');
     assert.equal(list.data.total, 25);
     assert.equal(list.data.items.length, 1);

@@ -157,10 +157,46 @@ export function createExperiencePostService({
         }
         return true;
       }
+      if (
+        route === '/api/japangrad/experience-posts/summary' &&
+        req.method === 'GET'
+      ) {
+        const data = snapshot().data;
+        const items =
+          data.universities.length > 0
+            ? db
+                .prepare(
+                  'SELECT s.university_id AS universityId, count(*) AS total, count(DISTINCT p.school_id) AS schoolCount FROM experience_posts p JOIN schools s ON s.id=p.school_id GROUP BY s.university_id',
+                )
+                .all()
+            : [];
+        json(res, { items });
+        return true;
+      }
       if (route === '/api/japangrad/experience-posts' && req.method === 'GET') {
-        const schoolId = url.searchParams.get('schoolId');
+        const schoolId = url.searchParams.get('schoolId') || '';
+        const universityId = url.searchParams.get('universityId') || '';
         const majorId = url.searchParams.get('majorId') || '';
-        scope(schoolId, majorId);
+        const data = snapshot().data;
+        if (schoolId) {
+          const selected = scope(schoolId, majorId);
+          if (universityId && selected.school.universityId !== universityId)
+            fail('研究科不属于所选大学。');
+        } else {
+          if (!data.universities.some((u) => u.id === universityId))
+            fail('大学已不存在。', 404);
+          if (
+            majorId &&
+            !data.majors.some(
+              (m) =>
+                m.id === majorId &&
+                data.schools.some(
+                  (s) => s.id === m.schoolId && s.universityId === universityId,
+                ),
+            )
+          )
+            fail('专攻不属于所选大学。');
+        }
         const page = Math.max(1, Number(url.searchParams.get('page') || 1));
         const pageSize = Number(url.searchParams.get('pageSize') || 12);
         if (
@@ -172,9 +208,9 @@ export function createExperiencePostService({
         const q = (url.searchParams.get('q') || '').trim().toLowerCase();
         if (q.length > 240) fail('搜索词过长。');
         // instr treats %, _ and quotes literally; all terms are bound values.
-        const where = `school_id=?${majorId ? ' AND major_id=?' : ''}${q ? " AND instr(lower(title||' '||author||' '||notes||' '||url||' '||language),?)>0" : ''}`;
+        const where = `${schoolId ? 'school_id=?' : 'school_id IN (SELECT id FROM schools WHERE university_id=?)'}${majorId ? ' AND major_id=?' : ''}${q ? " AND instr(lower(title||' '||author||' '||notes||' '||url||' '||language),?)>0" : ''}`;
         const args = [
-          schoolId,
+          schoolId || universityId,
           ...(majorId ? [majorId] : []),
           ...(q ? [q] : []),
         ];

@@ -73,7 +73,18 @@ const coreRoutes: RouteRecordRaw[] = [
         component: () => import('#/views/japan-grad/journey.vue'),
         meta: { title: '修考之路' },
       },
-      { name: 'FileManager', path: 'files', component: () => import('#/views/japan-grad/file-manager.vue'), meta: { title: '文件管理' } },
+      {
+        name: 'ExperienceHub',
+        path: 'experiences/:universityId?',
+        component: () => import('#/views/japan-grad/experience-hub.vue'),
+        meta: { title: '经验帖' },
+      },
+      {
+        name: 'FileManager',
+        path: 'files',
+        component: () => import('#/views/japan-grad/file-manager.vue'),
+        meta: { title: '文件管理' },
+      },
       {
         name: 'InformationCollection',
         path: 'collection',

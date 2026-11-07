@@ -140,7 +140,10 @@ const { page, pageSize, total, paged } = usePagination(visibleMajors, [
       >
         <template #prefix><ExplorerIcon name="search" /></template>
       </Input>
-      <div v-if="visibleMajors.length" class="school-grid">
+      <div
+        v-if="visibleMajors.length"
+        class="school-grid affiliation-card-grid"
+      >
         <RouterLink
           v-for="major in paged"
           :key="major.id"

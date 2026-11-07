@@ -34,6 +34,7 @@ import './visual.css';
 import './shell.css';
 import './paper.css';
 import './directory.css';
+import './affiliation-cards.css';
 import './quick-jump.css';
 
 const jobs = useCollectionJobsStore();

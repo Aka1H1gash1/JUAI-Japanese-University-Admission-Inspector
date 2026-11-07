@@ -351,7 +351,10 @@ const { page, pageSize, total, paged } = usePagination(visibleSchools, [
       >
         <template #prefix><ExplorerIcon name="search" /></template>
       </Input>
-      <div v-if="visibleSchools.length" class="school-grid">
+      <div
+        v-if="visibleSchools.length"
+        class="school-grid affiliation-card-grid"
+      >
         <RouterLink
           v-for="school in paged"
           :key="school.id"
