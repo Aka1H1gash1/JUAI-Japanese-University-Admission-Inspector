@@ -42,7 +42,7 @@ export const CORE = {
       majorId: 'TEXT',
       ...base,
       ...fields(
-        'examNotes applicationNotes languageRequirements mainProfessorId',
+        'examNotes applicationNotes languageRequirements mainProfessorId foreignStudentStatus foreignStudentSource foreignStudentNotes',
       ),
       wantApply: 'BOOLEAN',
       tasksVersion: 'INTEGER',

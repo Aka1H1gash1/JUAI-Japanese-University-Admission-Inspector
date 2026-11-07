@@ -206,6 +206,9 @@ watch(open, (value) => {
     examNotes: '',
     applicationNotes: '',
     languageRequirements: '',
+    foreignStudentStatus: 'unknown',
+    foreignStudentSource: '',
+    foreignStudentNotes: '',
     email: '',
     website: '',
     personalWebsite: '',
@@ -684,6 +687,35 @@ async function save() {
           </div>
         </template>
         <template v-if="kind === 'lab'">
+          <div class="field">
+            <label for="entity-lab-foreign">有无外国人学生</label><Select
+              id="entity-lab-foreign"
+              v-accessible-select
+              v-model:value="form.foreignStudentStatus"
+              :options="[
+                { value: 'unknown', label: '待确认' },
+                { value: 'yes', label: '有（有来源依据）' },
+                { value: 'no', label: '无（有明确依据）' },
+              ]"
+            />
+          </div>
+          <div class="field">
+            <label for="entity-lab-foreign-source">信息来源</label><Input
+              id="entity-lab-foreign-source"
+              v-model:value="form.foreignStudentSource"
+              placeholder="官网成员页等原文链接"
+              :maxlength="2048"
+            />
+          </div>
+          <div class="field full">
+            <label for="entity-lab-foreign-notes">外国人学生情况说明</label><Input.TextArea
+              id="entity-lab-foreign-notes"
+              v-model:value="form.foreignStudentNotes"
+              :maxlength="4000"
+              :rows="2"
+              placeholder="记录来源与核对时间；不根据姓名推断国籍。"
+            />
+          </div>
           <div class="field full">
             <label for="entity-lab-language">研究室语言要求</label>
             <Input.TextArea

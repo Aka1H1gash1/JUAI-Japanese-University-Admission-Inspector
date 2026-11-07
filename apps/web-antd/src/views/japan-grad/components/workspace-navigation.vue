@@ -20,6 +20,12 @@ const route = useRoute();
 
 const primary = computed(() => [
   {
+    to: '/japan-grad/labs',
+    label: '老师/研究室',
+    icon: 'book',
+    active: route.path === '/japan-grad/labs',
+  },
+  {
     to: '/japan-grad/experiences',
     label: '经验帖',
     icon: 'book',

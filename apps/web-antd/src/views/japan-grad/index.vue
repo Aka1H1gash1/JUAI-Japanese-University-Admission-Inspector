@@ -6,6 +6,7 @@ import { App, Button, Checkbox, Input, Select } from 'ant-design-vue';
 import EntityCreateFlow from './components/entity-create-flow.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
 import ListPagination from './components/list-pagination.vue';
+import ProfileExportDialog from './components/profile-export-dialog.vue';
 import UniversityComparison from './components/university-comparison.vue';
 import UniversityLogo from './components/university-logo.vue';
 import { useExplorerStore } from './explorer';
@@ -18,6 +19,7 @@ const { message } = App.useApp();
 const query = ref('');
 const order = ref('recent');
 const editorOpen = ref(false);
+const reportOpen = ref(false);
 const comparisonOpen = ref(false);
 const selectedIds = ref<string[]>([]);
 const selectedUniversities = computed(() =>
@@ -79,14 +81,22 @@ const { page, pageSize, total, paged } = usePagination(visibleUniversities, [
       <div>
         <h1 class="workspace-title">大学清单</h1>
       </div>
-      <Button
-        type="primary"
-        size="large"
-        class="icon-button"
-        @click="editorOpen = true"
-      >
-        <ExplorerIcon name="plus" />新增大学
-      </Button>
+      <div class="detail-actions">
+        <Button
+          :disabled="!store.universities.length"
+          @click="reportOpen = true"
+          >
+导出大学信息
+</Button>
+        <Button
+          type="primary"
+          size="large"
+          class="icon-button"
+          @click="editorOpen = true"
+        >
+          <ExplorerIcon name="plus" />新增大学
+        </Button>
+      </div>
     </header>
 
     <template v-if="store.universities.length">
@@ -238,6 +248,14 @@ const { page, pageSize, total, paged } = usePagination(visibleUniversities, [
         <span><ExplorerIcon name="building" />大学</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="book" />研究科</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="book" />专攻</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="folder" />研究室</span><ExplorerIcon name="chevron" /><span><ExplorerIcon name="user" />老师</span>
       </div>
     </section>
+    <ProfileExportDialog
+      v-model:open="reportOpen"
+      scope="university"
+      :universities="store.universities"
+      :initial-ids="
+        selectedIds.length ? selectedIds : visibleUniversities.map((u) => u.id)
+      "
+    />
     <EntityCreateFlow v-model:open="editorOpen" kind="university" />
     <UniversityComparison v-model:open="comparisonOpen" :ids="selectedIds" />
   </section>

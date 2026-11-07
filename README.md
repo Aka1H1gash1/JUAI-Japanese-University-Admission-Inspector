@@ -170,3 +170,12 @@ Vue 3 · TypeScript · Ant Design Vue · Vite · Node.js · SQLite。
 项目基于 [Vue Vben Admin](https://github.com/vbenjs/vue-vben-admin) 开发，采用 [MIT License](LICENSE)。共享框架及组件沿用其实现，第三方声明见 [LICENSES/Vue-Vben-Admin.txt](LICENSES/Vue-Vben-Admin.txt)。
 
 <p align="center"><strong>JUAI</strong><br />让每一次出愿，都更接近想做的研究。</p>
+
+
+## 老师与研究室概览、阶段档案导出
+
+独立「老师/研究室」入口提供卡片与横栏，粗略浏览学校、研究方向、外国人学生情况、语言要求及联络阶段。备选指全部已收录研究室，心仪指标记「想考」的研究室；更细的学校、研究科、阶段、外国人学生及语言关键词筛选位于修考之路。未核对的学生构成保持待确认，不根据姓名推断国籍；可在研究室编辑中记录来源和说明。
+
+大学清单、备选概览、心仪研究室均可导出Excel和PDF。导出支持概览版、阶段版和详细版，自动参考主要联系老师阶段，也能为选校、联络、面试、出愿、结果复盘手动选择用途。原有自选字段Excel保留。PDF在浏览器生成，使用内嵌中日文字体与A4分页，不上传导出内容给第三方。
+
+PDF字体由[Google Fonts Noto Sans SC](https://github.com/google/fonts/tree/main/ofl/notosanssc)的可变字体实例化为400字重静态TrueType，许可证见[OFL](apps/web-antd/public/fonts/OFL.txt)。字体按需加载；为保证阅读器兼容而完整嵌入，PDF可能约6MB起。

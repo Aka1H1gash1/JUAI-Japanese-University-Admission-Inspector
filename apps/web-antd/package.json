@@ -28,6 +28,7 @@
     "#/*": "./src/*"
   },
   "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
     "@vben/access": "workspace:*",
     "@vben/common-ui": "workspace:*",
     "@vben/constants": "workspace:*",
@@ -45,10 +46,11 @@
     "@vueuse/core": "catalog:",
     "ant-design-vue": "catalog:",
     "dayjs": "catalog:",
+    "fflate": "0.8.3",
+    "pdf-lib": "^1.17.1",
     "pinia": "catalog:",
     "vue": "catalog:",
-    "vue-router": "catalog:",
-    "fflate": "0.8.3"
+    "vue-router": "catalog:"
   },
   "description": "JUAI Japanese university admission workspace frontend."
 }

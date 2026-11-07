@@ -249,6 +249,10 @@ export function createJourneyWorkbook(
           : []),
       ],
     });
+  return createTabularWorkbook(sheets);
+}
+
+export function createTabularWorkbook(sheets: Sheet[], branded = false) {
   const files: Record<string, Uint8Array> = {};
   const put = (name: string, content: string) => {
     files[name] = strToU8(content);
@@ -269,7 +273,10 @@ export function createJourneyWorkbook(
     'xl/_rels/workbook.xml.rels',
     `<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">${sheets.map((_, index) => `<Relationship Id="rId${index + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet${index + 1}.xml"/>`).join('')}<Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
   );
-  put('xl/styles.xml', styles);
+  put(
+    'xl/styles.xml',
+    branded ? styles.replace('FFB65335', 'FF203252') : styles,
+  );
   sheets.forEach((sheet, index) =>
     put(`xl/worksheets/sheet${index + 1}.xml`, worksheet(sheet)),
   );

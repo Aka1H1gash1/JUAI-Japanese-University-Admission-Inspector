@@ -119,6 +119,9 @@ export interface AnalysisRecord {
 }
 
 export interface ResearchLab {
+  foreignStudentStatus?: '' | 'no' | 'unknown' | 'yes';
+  foreignStudentSource?: string;
+  foreignStudentNotes?: string;
   timeline?: LabTimeline;
   languageRequirements?: string;
   mainProfessorId?: string;
@@ -548,7 +551,9 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
         apply(result.data);
         revision = result.revision;
         labRevisions = result.entityRevisions?.labs ?? {};
-        workspacePath.value = (window as any).__JUAI_SERVER__ ? '个人资料空间' : result.workspace;
+        workspacePath.value = (window as any).__JUAI_SERVER__
+          ? '个人资料空间'
+          : result.workspace;
         loaded.value = true;
       } catch (error) {
         storageError.value =
@@ -791,6 +796,19 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
             fields.languageRequirements === undefined
               ? (previous?.languageRequirements ?? '')
               : get('languageRequirements'),
+          foreignStudentStatus: (fields.foreignStudentStatus === undefined
+            ? (previous?.foreignStudentStatus ?? 'unknown')
+            : get(
+                'foreignStudentStatus',
+              )) as ResearchLab['foreignStudentStatus'],
+          foreignStudentSource:
+            fields.foreignStudentSource === undefined
+              ? (previous?.foreignStudentSource ?? '')
+              : get('foreignStudentSource'),
+          foreignStudentNotes:
+            fields.foreignStudentNotes === undefined
+              ? (previous?.foreignStudentNotes ?? '')
+              : get('foreignStudentNotes'),
           wantApply: previous?.wantApply ?? false,
           mainProfessorId: previous?.mainProfessorId ?? '',
           tasksVersion: previous?.tasksVersion,

@@ -8,7 +8,7 @@ const BasicLayout = () => import('#/layouts/basic.vue');
 const AuthPageLayout = () => import('#/layouts/auth.vue');
 /** 全局404页面 */
 const fallbackNotFoundRoute: RouteRecordRaw = {
-  component: () => import('#/views/_core/fallback/not-found.vue'),
+  component: () => import('#/views/japan-grad/workspace-not-found.vue'),
   meta: {
     hideInBreadcrumb: true,
     hideInMenu: true,
@@ -72,6 +72,12 @@ const coreRoutes: RouteRecordRaw[] = [
         path: 'journey',
         component: () => import('#/views/japan-grad/journey.vue'),
         meta: { title: '修考之路' },
+      },
+      {
+        name: 'LabOverview',
+        path: 'labs',
+        component: () => import('#/views/japan-grad/lab-overview.vue'),
+        meta: { title: '老师与研究室' },
       },
       {
         name: 'ExperienceHub',

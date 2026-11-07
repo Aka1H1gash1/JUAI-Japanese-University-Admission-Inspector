@@ -31,6 +31,7 @@ import {
 } from './file-types.mjs';
 import { createInformationService } from './information-service.mjs';
 import geography from './japan-geography.json' with { type: 'json' };
+import { migrateLabFacts } from './lab-facts-schema.mjs';
 import {
   planningError,
   tagImportedTasks,
@@ -375,6 +376,7 @@ export async function createLocalApp({
   } catch (error) {
     if (error.code !== 'EEXIST') throw error;
   }
+  migrateLabFacts(db);
   let workspaceRepository = hasRelationalWorkspace(db)
     ? createWorkspaceRepository({ db, workspace, fail, validateExplorer })
     : undefined;
@@ -704,6 +706,7 @@ export async function createLocalApp({
       throw error;
     }
   }
+  migrateLabFacts(db);
   const handler = async (req, res) => {
     try {
       const host = req.headers.host;
@@ -879,6 +882,9 @@ export async function createLocalApp({
               for (const key of [
                 'timeline',
                 'tasks',
+                'foreignStudentStatus',
+                'foreignStudentSource',
+                'foreignStudentNotes',
                 'mainProfessorId',
                 'languageRequirements',
               ])

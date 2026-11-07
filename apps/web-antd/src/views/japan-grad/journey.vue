@@ -4,6 +4,11 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button, Input, Modal, Select, Tabs } from 'ant-design-vue';
 
+import {
+  CONTACT_OPTIONS,
+  normalizedContact,
+  primaryProfessor,
+} from './application-planning';
 import ExplorerIcon from './components/explorer-icon.vue';
 import JourneyContactBoard from './components/journey-contact-board.vue';
 import JourneyContactDialog from './components/journey-contact-dialog.vue';
@@ -12,6 +17,7 @@ import JourneyLabEntry from './components/journey-lab-entry.vue';
 import JourneyLabPicker from './components/journey-lab-picker.vue';
 import JourneyTimeline from './components/journey-timeline.vue';
 import ListPagination from './components/list-pagination.vue';
+import ProfileExportDialog from './components/profile-export-dialog.vue';
 import QuestionLibrary from './components/question-library.vue';
 import { useExplorerStore } from './explorer';
 import { geographySearchTerms } from './japan-geography';
@@ -40,10 +46,24 @@ function manageContact(id: string, professorId?: string) {
   contactOpen.value = true;
 }
 const query = ref('');
+const foreignFilter = ref('');
+  const languageFilter = ref('');
+  const schoolFilter = ref('');
+  const stageFilter = ref('');
+  const universityFilter = ref('');
+const filterSchools = computed(() =>
+  store.schools.filter(
+    (s) => !universityFilter.value || s.universityId === universityFilter.value,
+  ),
+);
+watch(universityFilter, () => {
+  schoolFilter.value = '';
+});
 const year = ref('latest');
 const comparisonOpen = ref(false);
 const pickerOpen = ref(false);
 const exportOpen = ref(false);
+const reportOpen = ref(false);
 const exportInitialIds = ref<string[]>([]);
 const selected = ref<string[]>([]);
 const targets = computed(() =>
@@ -55,18 +75,31 @@ const targets = computed(() =>
     }),
 );
 const visible = computed(() =>
-  targets.value.filter((item) =>
-    [
-      item.lab.name,
-      item.lab.research,
-      item.university.name,
-      item.major.name,
-      item.school.name,
-      ...geographySearchTerms(item.university),
-      ...item.professors.map((person) => person.name),
-    ].some((value) =>
-      value.toLowerCase().includes(query.value.trim().toLowerCase()),
-    ),
+  targets.value.filter(
+    (item) =>
+      (!universityFilter.value ||
+        item.university.id === universityFilter.value) &&
+      (!schoolFilter.value || item.school.id === schoolFilter.value) &&
+      (!stageFilter.value ||
+        normalizedContact(primaryProfessor(item)?.contact).status ===
+          stageFilter.value) &&
+      (!foreignFilter.value ||
+        (item.lab.foreignStudentStatus || 'unknown') === foreignFilter.value) &&
+      (!languageFilter.value ||
+        (item.lab.languageRequirements || item.major.languageRequirements || '')
+          .toLowerCase()
+          .includes(languageFilter.value.toLowerCase())) &&
+      [
+        item.lab.name,
+        item.lab.research,
+        item.university.name,
+        item.major.name,
+        item.school.name,
+        ...geographySearchTerms(item.university),
+        ...item.professors.map((person) => person.name),
+      ].some((value) =>
+        value.toLowerCase().includes(query.value.trim().toLowerCase()),
+      ),
   ),
 );
 const selectedTargets = computed(() =>
@@ -104,12 +137,26 @@ function select(id: string) {
   else if (selected.value.length < 6) selected.value.push(id);
   else message.info('一次最多对比 6 个研究室，请先取消一个已选目标。');
 }
+function openReport() {
+  exportInitialIds.value =
+    selected.value.length > 0
+      ? [...selected.value]
+      : visible.value.map((t) => t.lab.id);
+  reportOpen.value = true;
+}
 function openExport() {
   exportInitialIds.value = [...selected.value];
   comparisonOpen.value = false;
   exportOpen.value = true;
 }
-const { page, pageSize, total, paged } = usePagination(visible, [query]);
+const { page, pageSize, total, paged } = usePagination(visible, [
+  query,
+  universityFilter,
+  schoolFilter,
+  stageFilter,
+  foreignFilter,
+  languageFilter,
+]);
 </script>
 <template>
   <section class="explorer-page journey-page directory-page">
@@ -124,9 +171,9 @@ const { page, pageSize, total, paged } = usePagination(visible, [query]);
         <Button
           class="icon-button"
           :disabled="!targets.length"
-          @click="openExport"
+          @click="openReport"
         >
-          <ExplorerIcon name="export" />导出 Excel
+          <ExplorerIcon name="export" />导出心仪档案
         </Button>
       </div>
     </header>
@@ -161,8 +208,65 @@ const { page, pageSize, total, paged } = usePagination(visible, [query]);
             /></label>
           </div>
           <div v-if="selected.length" class="journey-selection">
-            <span>已选 {{ selected.length }} 个研究室</span><Button @click="openExport">导出所选</Button><Button type="text" @click="selected = []">清空选择</Button>
+            <span>已选 {{ selected.length }} 个研究室</span><Button @click="openReport">导出所选</Button><Button type="text" @click="selected = []">清空选择</Button>
           </div>
+          <details class="journey-fine-filters">
+            <summary>详细筛选</summary>
+            <div class="journey-fine-filter-grid">
+              <label>大学<Select
+                  v-model:value="universityFilter"
+                  :options="[
+                    { value: '', label: '全部大学' },
+                    ...store.universities.map((u) => ({
+                      value: u.id,
+                      label: u.name,
+                    })),
+                  ]"
+              /></label>
+              <label>研究科<Select
+                  v-model:value="schoolFilter"
+                  :options="[
+                    { value: '', label: '全部研究科' },
+                    ...filterSchools.map((s) => ({
+                      value: s.id,
+                      label: s.name,
+                    })),
+                  ]"
+              /></label>
+              <label>主要联络阶段<Select
+                  v-model:value="stageFilter"
+                  :options="[
+                    { value: '', label: '全部阶段' },
+                    ...CONTACT_OPTIONS,
+                  ]"
+              /></label>
+              <label>外国人学生<Select
+                  v-model:value="foreignFilter"
+                  :options="[
+                    { value: '', label: '全部情况' },
+                    { value: 'yes', label: '有' },
+                    { value: 'no', label: '无' },
+                    { value: 'unknown', label: '待确认' },
+                  ]"
+              /></label>
+              <label>语言要求关键词<Input
+                  v-model:value="languageFilter"
+                  placeholder="如 TOEFL、日语、英语"
+                  allow-clear
+              /></label>
+              <Button
+                @click="
+                  universityFilter = '';
+                  schoolFilter = '';
+                  stageFilter = '';
+                  foreignFilter = '';
+                  languageFilter = '';
+                "
+                >
+清除详细筛选
+</Button>
+            </div>
+          </details>
           <Tabs v-model:active-key="view" class="journey-workspace-tabs">
             <Tabs.TabPane key="questions" tab="过去问专区">
               <QuestionLibrary v-if="view === 'questions'" />
@@ -214,6 +318,23 @@ const { page, pageSize, total, paged } = usePagination(visible, [query]);
         <ExplorerIcon name="plus" />选择想考研究室
       </Button>
     </section>
+    <ProfileExportDialog
+      v-model:open="reportOpen"
+      scope="favorites"
+      :targets="targets"
+      :initial-ids="exportInitialIds"
+      >
+<template #extra>
+<Button
+          @click="
+            reportOpen = false;
+            openExport();
+          "
+          >
+自选字段Excel
+</Button>
+</template>
+</ProfileExportDialog>
     <JourneyExportDialog
       v-model:open="exportOpen"
       :targets="targets"
@@ -321,5 +442,41 @@ const { page, pageSize, total, paged } = usePagination(visible, [query]);
 
 .journey-comparison-year .ant-select {
   min-width: 220px;
+}
+</style>
+
+<style scoped>
+.journey-fine-filters {
+  padding: 16px 0;
+  margin: 12px 0 20px;
+  border-top: 1px solid var(--jg-line);
+  border-bottom: 1px solid var(--jg-line);
+}
+
+.journey-fine-filters summary {
+  font-size: 13px;
+  color: var(--jg-accent-text);
+  cursor: pointer;
+}
+
+.journey-fine-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: end;
+  margin-top: 16px;
+}
+
+.journey-fine-filter-grid label {
+  display: grid;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--jg-muted);
+}
+
+@media (max-width: 740px) {
+  .journey-fine-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

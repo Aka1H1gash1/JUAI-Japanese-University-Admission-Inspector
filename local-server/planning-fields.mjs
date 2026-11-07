@@ -285,6 +285,35 @@ export function planningError(data) {
   }
   for (const lab of data.labs ?? []) {
     if (
+      lab.foreignStudentStatus !== undefined &&
+      !['', 'no', 'unknown', 'yes'].includes(lab.foreignStudentStatus)
+    )
+      return '外国人学生状态请选择有、无或待确认。';
+    if (
+      lab.foreignStudentSource !== undefined &&
+      !text(lab.foreignStudentSource, 2048)
+    )
+      return '外国人学生信息来源过长。';
+    if (lab.foreignStudentSource) {
+      try {
+        const u = new URL(lab.foreignStudentSource);
+        if (
+          !['http:', 'https:'].includes(u.protocol) ||
+          u.username ||
+          u.password
+        )
+          return '信息来源请填写有效HTTP链接。';
+      } catch {
+        return '信息来源请填写有效HTTP链接。';
+      }
+    }
+    if (
+      lab.foreignStudentNotes !== undefined &&
+      !text(lab.foreignStudentNotes, 4000)
+    )
+      return '外国人学生说明过长。';
+
+    if (
       lab.languageRequirements !== undefined &&
       !text(lab.languageRequirements, 4000)
     )

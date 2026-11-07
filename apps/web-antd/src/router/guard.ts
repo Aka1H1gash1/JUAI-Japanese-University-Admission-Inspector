@@ -6,6 +6,8 @@ import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
+import { serverMode } from '#/views/japan-grad/runtime-capabilities';
+import { workspaceDestination } from '#/views/japan-grad/workspace-routing';
 
 import { generateAccess } from './access';
 
@@ -37,6 +39,17 @@ function setupCommonGuard(router: Router) {
  */
 function setupAccessGuard(router: Router) {
   router.beforeEach(async (to, from) => {
+    if (serverMode || import.meta.env.MODE === 'workspace') {
+      const destination = workspaceDestination(to.path, serverMode);
+      if (destination === '/login') {
+        window.location.replace('/login');
+        return false;
+      }
+      if (destination) return { path: destination, replace: true };
+      // Unknown JUAI URLs retain the JUAI 404 instead of entering framework auth.
+      return true;
+    }
+
     const accessStore = useAccessStore();
     const userStore = useUserStore();
     const authStore = useAuthStore();
