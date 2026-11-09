@@ -40,6 +40,8 @@ export interface CollectedAdmissions {
   fields: CollectedField[];
 }
 export interface CollectedAdmissionRecord {
+  owner?: { kind: CollectionKind; id: string; name?: string };
+  legacyScope?: boolean;
   jobId: string;
   appliedAt: string;
   admissions: CollectedAdmissions;
@@ -100,6 +102,34 @@ export interface CollectionSource {
   warnings: string[];
   truncated: boolean;
 }
+export interface CollectionImportSelection {
+  entities: Partial<
+    Record<
+      CollectionKind,
+      {
+        action: 'create' | 'link';
+        id?: string;
+        fields?: Record<string, string>;
+      }
+    >
+  >;
+  includeProfessor?: boolean;
+  createOptions?: {
+    lab?: { wantApply: boolean };
+    university?: { logoId: string };
+  };
+  confirmedScopes?: string[];
+  resources?: {
+    exams?: {
+      candidateId: string;
+      year: string;
+      session: string;
+      fields: Record<string, string>;
+    }[];
+    documents?: { sourceId: string; kind: string; year: string }[];
+    admissions?: { fields: Record<string, string> }[];
+  };
+}
 export interface CollectionJob {
   experienceSearch?: import('./experience-posts').ExperienceSearch;
   searchMode?: 'auto' | 'off';
@@ -129,6 +159,10 @@ export interface CollectionJob {
   error: string;
   urls: string[];
   ruleVersion?: number;
+  importPolicy?: 'create_only';
+  reviewRevision?: number;
+  importPlan?: { selection: CollectionImportSelection };
+  savedAdmissionsOwner?: { kind: CollectionKind; id: string };
   purpose?: 'entity' | 'special_program';
   resultProgramId?: string;
   resultProgramName?: string;
@@ -180,5 +214,5 @@ export const COLLECTION_STATUS = {
   review: '待核对',
   failed: '未完成',
   cancelled: '已停止',
-  applied: '档案已生成',
+  applied: '已保存',
 };

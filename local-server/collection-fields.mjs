@@ -61,6 +61,9 @@ export const collectionFields = {
     ['languageRequirements', '语言要求', 4000],
     ['examNotes', '考试说明', 4000],
     ['applicationNotes', '申请说明', 4000],
+    ['foreignStudentStatus', '外国人学生情况', 120],
+    ['foreignStudentSource', '外国人学生信息来源', 2048],
+    ['foreignStudentNotes', '外国人学生情况说明', 4000],
   ],
   professor: [
     ['name', '姓名', 4000],
@@ -233,6 +236,7 @@ export function blankCollectionEntity(kind, id, parentId, labId) {
     Object.assign(item, {
       majorId: parentId,
       wantApply: false,
+      foreignStudentStatus: 'unknown',
       tasks: [],
       timeline: { events: [], hiddenSources: [] },
     });

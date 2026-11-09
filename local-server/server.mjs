@@ -661,6 +661,8 @@ export async function createLocalApp({
   });
   const collection = createCollectionService({
     browserAdapter: platform?.browser,
+    appendCollectionImport: (...args) =>
+      workspaceRepository.appendCollectionImport(...args),
     saveDocument,
     writeWorkspace,
     db,
@@ -1431,14 +1433,29 @@ export async function createLocalApp({
           status = 404;
           description = '本地文件未找到，请检查工作区文件夹。';
         }
-        json(res, { error: description }, status);
+        const importCodes = new Set([
+          'CREATE_ONLY_VIOLATION',
+          'DUPLICATE_RECORD',
+          'IMPORT_IN_PROGRESS',
+          'LEGACY_REVIEW_REQUIRED',
+          'PARENT_MISMATCH',
+          'RESOURCE_SCOPE_REQUIRED',
+          'REVIEW_STALE',
+          'SOURCE_CHANGED',
+        ]);
+        const code = importCodes.has(error.code) ? error.code : undefined;
+        if (code) {
+          status = error.status;
+          description = error.message;
+        }
+        json(res, { error: description, ...(code ? { code } : {}) }, status);
       }
     }
   };
   const server = createServer(handler);
   server.handleRequest = handler;
   server.activeTaskCount = () => {
-    let total = 0;
+    let total = collection.isImportBusy() ? 1 : 0;
     for (const table of [
       'collection_jobs',
       'admission_ai_runs',

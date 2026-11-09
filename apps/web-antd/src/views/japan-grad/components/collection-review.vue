@@ -7,7 +7,7 @@ import type {
   CollectionStatus,
 } from '../collection-types';
 
-import { computed, ref, watch } from 'vue';
+import { computed, nextTick, ref, watch } from 'vue';
 
 import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
 
@@ -37,11 +37,7 @@ const professorCandidate = computed(() =>
     (f) => f.field === 'name' && f.value.trim(),
   ),
 );
-const writable = (kind: CollectionKind) =>
-  kind === targetKind.value ||
-  (kind === 'professor' &&
-    targetKind.value === 'lab' &&
-    includeProfessor.value);
+const writable = (kind: CollectionKind) => !choices.value[kind];
 const activeKinds = computed(() => {
   const index = COLLECTION_KINDS.indexOf(
     targetKind.value === 'lab' && includeProfessor.value
@@ -53,7 +49,28 @@ const activeKinds = computed(() => {
 const professorEnabled = computed(() =>
   activeKinds.value.includes('professor'),
 );
-const hasMajor = computed(() => targetKind.value === 'major');
+const hasMajor = computed(
+  () => targetKind.value !== 'professor' && activeKinds.value.includes('major'),
+);
+const serverPlan = ref<{
+  state: string;
+  planId: string;
+  planHash: string;
+  baseRevision: number;
+  counts: { createdEntities: number; linkedEntities: number };
+  operations: { kind: CollectionKind; name: string; action: string }[];
+  requiredConfirmations: { key: string; message: string; value: string }[];
+  resources: Record<
+    string,
+    {
+      state: string;
+      year?: string;
+      title?: string;
+      owner?: { kind: CollectionKind; id: string };
+      record?: { year: string };
+    }[]
+  >;
+}>();
 const admissionRows = ref<Row[]>([]);
 const logoFailed = ref(false);
 const logoSelected = ref(false);
@@ -125,6 +142,17 @@ const current = (kind: CollectionKind) =>
   collection(kind).find((e) => e.id === choices.value[kind]);
 const pinned = (kind: CollectionKind) =>
   props.detail.job.parent ? props.detail.job.target?.ids[kind] : undefined;
+function entityPath(kind: CollectionKind) {
+  let result = `/japan-grad/universities/${choices.value.university}`;
+  if (kind === 'university') return result;
+  result += `/schools/${choices.value.school}`;
+  if (kind === 'school') return result;
+  result += `/majors/${choices.value.major}`;
+  if (kind === 'major') return result;
+  result += `/labs/${choices.value.lab}`;
+  if (kind === 'lab') return result;
+  return `${result}/professors/${choices.value.professor}`;
+}
 function options(kind: CollectionKind) {
   return collection(kind)
     .filter((e) => {
@@ -157,10 +185,11 @@ function resetRows(kind: CollectionKind) {
   const fields = props.detail.job.draft?.[kind] || [];
   const list = fields.map((f) => ({
     ...f,
-    edited: f.value,
+    edited:
+      rows.value[kind].find((r) => r.field === f.field && r.value === f.value)
+        ?.edited ?? f.value,
     selected:
-      (writable(kind) ||
-        (!entity && ['japaneseName', 'name'].includes(f.field))) &&
+      writable(kind) &&
       !f.requiresScopeConfirmation &&
       (!entity?.[f.field] || entity[f.field] === f.value),
   }));
@@ -177,6 +206,12 @@ function resetRows(kind: CollectionKind) {
   rows.value[kind] = list;
 }
 function initialKind(): 'unknown' | CollectionKind {
+  if (
+    props.detail.job.ruleVersion === 3 &&
+    props.detail.job.requestedKind &&
+    props.detail.job.requestedKind !== 'auto'
+  )
+    return props.detail.job.requestedKind;
   const child: Partial<Record<CollectionKind, CollectionKind>> = {
     university: 'school',
     school: 'major',
@@ -205,6 +240,7 @@ function initialKind(): 'unknown' | CollectionKind {
   return 'unknown';
 }
 function reset() {
+  serverPlan.value = undefined;
   sourceGeneration++;
   sourceOpen.value = false;
   errorMessage.value = '';
@@ -213,7 +249,7 @@ function reset() {
   acknowledged.value = allowReplace.value = wantApply.value = false;
   targetKind.value = initialKind();
   includeProfessor.value =
-    targetKind.value === 'lab' && !!professorCandidate.value;
+    props.detail.job.importPlan?.selection.includeProfessor ?? false;
   logoFailed.value = false;
   uploadedLogoId.value = '';
   choices.value = {
@@ -246,14 +282,34 @@ function reset() {
       }
       return '';
     })();
+    const savedChoice = props.detail.job.importPlan?.selection.entities[kind];
+    if (
+      savedChoice?.action === 'link' &&
+      available.some((option) => option.value === savedChoice.id)
+    )
+      choices.value[kind] = savedChoice.id || '';
+    if (savedChoice?.action === 'create' && !pinned(kind))
+      choices.value[kind] = '';
     resetRows(kind);
+    if (savedChoice?.action === 'create')
+      for (const row of rows.value[kind]) {
+        row.selected = Object.hasOwn(savedChoice.fields ?? {}, row.field);
+        row.edited = savedChoice.fields?.[row.field] ?? row.edited;
+      }
   }
   logoSelected.value =
     targetKind.value === 'university' &&
     !!props.detail.job.draft?.logo &&
+    !choices.value.university &&
     !current('university')?.logoId;
   admissionRows.value = (props.detail.job.draft?.admissions?.fields || []).map(
-    (f) => ({ ...f, edited: f.value, selected: !f.requiresScopeConfirmation }),
+    (f) => ({
+      ...f,
+      edited: f.value,
+      selected:
+        !f.requiresScopeConfirmation &&
+        props.detail.job.draft?.admissions?.status === 'found',
+    }),
   );
   exams.value = (props.detail.job.draft?.exams || []).map((e) => ({
     ...e,
@@ -279,6 +335,37 @@ function reset() {
       !!d.year &&
       props.detail.job.draft?.admissions?.status !== 'uncertain',
   }));
+  const saved = props.detail.job.importPlan?.selection;
+  if (saved) {
+    wantApply.value = saved.createOptions?.lab?.wantApply ?? false;
+    uploadedLogoId.value = saved.createOptions?.university?.logoId || '';
+    confirmedScopes.value = saved.confirmedScopes ?? [];
+    for (const doc of documents.value) {
+      const choice = saved.resources?.documents?.find(
+        (d) => d.sourceId === doc.sourceId && d.kind === doc.kind,
+      );
+      doc.selected = !!choice;
+      if (choice) doc.year = choice.year;
+    }
+    for (const exam of exams.value) {
+      const choice = saved.resources?.exams?.find(
+        (e) => e.candidateId === exam.id,
+      );
+      if (choice) {
+        exam.year = choice.year;
+        exam.session = choice.session;
+      }
+      for (const row of exam.rows) {
+        row.selected = !!choice && Object.hasOwn(choice.fields, row.field);
+        row.edited = choice?.fields[row.field] ?? row.edited;
+      }
+    }
+    for (const row of admissionRows.value) {
+      const fields = saved.resources?.admissions?.[0]?.fields ?? {};
+      row.selected = Object.hasOwn(fields, row.field);
+      row.edited = fields[row.field] ?? row.edited;
+    }
+  }
 }
 watch(
   [() => props.detail.job.id, () => JSON.stringify(props.detail.job.draft)],
@@ -305,6 +392,7 @@ function choose(kind: CollectionKind) {
   if (kind === 'university')
     logoSelected.value =
       !!props.detail.job.draft?.logo &&
+      !choices.value.university &&
       !current(kind)?.logoId &&
       !logoFailed.value;
   const i = COLLECTION_KINDS.indexOf(kind);
@@ -316,8 +404,7 @@ function choose(kind: CollectionKind) {
   confirmedScopes.value = [];
 }
 function changeTarget() {
-  includeProfessor.value =
-    targetKind.value === 'lab' && !!professorCandidate.value;
+  includeProfessor.value = false;
   if (targetKind.value !== 'university') logoSelected.value = false;
   for (const kind of COLLECTION_KINDS) resetRows(kind);
   acknowledged.value = false;
@@ -338,32 +425,7 @@ function edit(row: Row) {
   acknowledged.value = false;
   confirmedScopes.value = [];
 }
-const replacing = computed(
-  () =>
-    !!(logoSelected.value && current('university')?.logoId) ||
-    activeKinds.value.some(
-      (kind) =>
-        (kind !== 'professor' || professorEnabled.value) &&
-        rows.value[kind].some(
-          (r) =>
-            r.selected &&
-            current(kind)?.[r.field] &&
-            current(kind)[r.field] !== r.edited.trim(),
-        ),
-    ) ||
-    (hasMajor.value &&
-      exams.value.some((e) => {
-        const existing = current('major')?.examHistory?.find(
-          (r: any) => r.year === e.year && r.session === e.session,
-        );
-        return e.rows.some(
-          (r) =>
-            r.selected &&
-            existing?.[r.field] &&
-            existing[r.field] !== r.edited.trim(),
-        );
-      })),
-);
+const replacing = computed(() => false);
 const neededScopes = computed(() => [
   ...activeKinds.value.flatMap((kind) =>
     kind !== 'professor' || professorEnabled.value
@@ -389,7 +451,7 @@ const generationPlan = computed(() =>
       (r) => r.selected && r.edited.trim(),
     );
     let action = '自动新建';
-    if (choices.value[kind]) action = writable(kind) ? '更新本级' : '仅关联';
+    if (choices.value[kind]) action = '关联已有';
     return {
       kind,
       enabled: kind !== 'professor' || professorEnabled.value,
@@ -402,13 +464,16 @@ const generationPlan = computed(() =>
     };
   }),
 );
-const selectedExamCount = computed(() =>
-  hasMajor.value
-    ? exams.value.filter((e) => e.rows.some((r) => r.selected)).length
-    : 0,
+const plannedExamCount = computed(
+  () =>
+    serverPlan.value?.resources.exams?.filter((item) => item.state === 'new')
+      .length ?? 0,
 );
-const selectedDocumentCount = computed(
-  () => documents.value.filter((d) => d.selected).length,
+const plannedDocumentCount = computed(
+  () =>
+    serverPlan.value?.resources.documents?.filter(
+      (item) => item.state === 'new',
+    ).length ?? 0,
 );
 const generationIssues = computed(() => {
   const issues = generationPlan.value
@@ -446,14 +511,17 @@ const generationIssues = computed(() => {
 const canApply = computed(
   () =>
     !busy.value &&
+    !!serverPlan.value &&
+    ['needs_confirmation', 'ready'].includes(serverPlan.value.state) &&
     acknowledged.value &&
     (!replacing.value || allowReplace.value) &&
     generationIssues.value.length === 0,
 );
-function openGeneration() {
+async function openGeneration() {
   acknowledged.value = false;
   errorMessage.value = '';
   generateOpen.value = true;
+  await previewPlan();
 }
 function toggleScope(key: string) {
   confirmedScopes.value = confirmedScopes.value.includes(key)
@@ -481,13 +549,110 @@ async function showSource(e: CollectionEvidence) {
     if (version === sourceGeneration) sourceLoading.value = false;
   }
 }
-async function apply() {
-  if (!canApply.value) return;
+function selection(
+  manualConfirmations: { key: string; explanation: string }[] = [],
+) {
+  const owner = (kind: CollectionKind) =>
+    choices.value[kind]
+      ? { kind, id: choices.value[kind] }
+      : { kind, candidateKey: `${kind}:primary` };
+  let admissionOwner: CollectionKind = 'university';
+  if (targetKind.value === 'school') admissionOwner = 'school';
+  if (hasMajor.value) admissionOwner = 'major';
+  return {
+    manualConfirmations,
+    ruleVersion: 3,
+    revision: props.detail.revision,
+    entities: Object.fromEntries(
+      activeKinds.value.map((kind) => [
+        kind,
+        choices.value[kind]
+          ? { action: 'link', id: choices.value[kind] }
+          : {
+              action: 'create',
+              candidateKey: `${kind}:primary`,
+              fields: Object.fromEntries(
+                rows.value[kind]
+                  .filter((r) => r.selected && r.edited.trim())
+                  .map((r) => [r.field, r.edited.trim()]),
+              ),
+            },
+      ]),
+    ),
+    includeProfessor: targetKind.value === 'lab' && includeProfessor.value,
+    createOptions: {
+      ...(targetKind.value === 'lab' && !choices.value.lab
+        ? { lab: { wantApply: wantApply.value } }
+        : {}),
+      ...(logoSelected.value &&
+      !choices.value.university &&
+      uploadedLogoId.value
+        ? { university: { logoId: uploadedLogoId.value } }
+        : {}),
+    },
+    confirmedScopes: confirmedScopes.value,
+    resources: {
+      exams: (hasMajor.value ? exams.value : [])
+        .filter((e) => e.rows.some((r) => r.selected))
+        .map((e) => ({
+          candidateId: e.id,
+          owner: owner('major'),
+          year: e.year,
+          session: e.session,
+          fields: Object.fromEntries(
+            e.rows
+              .filter((r) => r.selected)
+              .map((r) => [r.field, r.edited.trim()]),
+          ),
+        })),
+      documents: documents.value
+        .filter((d) => d.selected)
+        .map((d) => ({
+          sourceId: d.sourceId,
+          kind: d.kind,
+          year: d.year,
+          owner: owner(d.kind === 'guidelines' ? 'major' : 'professor'),
+        })),
+      admissions:
+        admissionRows.value.some((r) => r.selected) &&
+        targetKind.value !== 'professor'
+          ? [
+              {
+                owner: owner(admissionOwner),
+                scope: props.detail.job.draft?.admissions?.scope || '',
+                fields: Object.fromEntries(
+                  admissionRows.value
+                    .filter((r) => r.selected)
+                    .map((r) => [r.field, r.edited.trim()]),
+                ),
+              },
+            ]
+          : [],
+    },
+  };
+}
+let planGeneration = 0;
+watch(
+  () => JSON.stringify(selection()),
+  () => {
+    serverPlan.value = undefined;
+    acknowledged.value = false;
+    planGeneration++;
+  },
+);
+async function previewPlan() {
+  let token = ++planGeneration;
   busy.value = true;
   errorMessage.value = '';
   try {
+    if (props.detail.job.ruleVersion !== 3) {
+      await localApi(
+        `/collection/jobs/${props.detail.job.id}/upgrade-review`,
+        jsonOptions('POST', { targetKind: targetKind.value }),
+      );
+    }
     if (
-      targetKind.value === 'university' &&
+      !choices.value.university &&
       logoSelected.value &&
       !uploadedLogoId.value
     ) {
@@ -566,75 +731,62 @@ async function apply() {
       });
       uploadedLogoId.value = uploaded.id;
     }
-    const entities = Object.fromEntries(
-      activeKinds.value.map((kind) => [
-        kind,
-        {
-          id: choices.value[kind] || undefined,
-          fields: Object.fromEntries(
-            rows.value[kind]
-              .filter(
-                (r) =>
-                  r.selected &&
-                  r.edited.trim() &&
-                  (writable(kind) ||
-                    (!choices.value[kind] &&
-                      ['japaneseName', 'name'].includes(r.field))),
-              )
-              .map((r) => [r.field, r.edited.trim()]),
-          ),
-        },
-      ]),
+    await nextTick();
+    token = ++planGeneration;
+    const plan = await localApi<NonNullable<typeof serverPlan.value>>(
+      `/collection/jobs/${props.detail.job.id}/import-plan`,
+      jsonOptions('POST', selection()),
     );
-    await localApi(
+    if (token === planGeneration) serverPlan.value = plan;
+  } catch (error) {
+    if (token === planGeneration)
+      errorMessage.value =
+        error instanceof Error ? error.message : '预览失败，草稿仍保留。';
+  } finally {
+    busy.value = false;
+  }
+}
+async function apply() {
+  if (!canApply.value || !serverPlan.value) return;
+  busy.value = true;
+  errorMessage.value = '';
+  try {
+    if (serverPlan.value.requiredConfirmations?.length) {
+      serverPlan.value = await localApi<NonNullable<typeof serverPlan.value>>(
+        `/collection/jobs/${props.detail.job.id}/import-plan`,
+        jsonOptions(
+          'POST',
+          selection(
+            serverPlan.value.requiredConfirmations.map((r) => ({
+              key: r.key,
+              explanation: '用户已逐项核对并确认页面上显示的修改值及真实归属。',
+            })),
+          ),
+        ),
+      );
+    }
+    const result = await localApi<{ job: { message: string } }>(
       `/collection/jobs/${props.detail.job.id}/apply`,
       jsonOptions('POST', {
+        ruleVersion: 3,
         confirm: true,
-        revision: props.detail.revision,
-        targetKind: targetKind.value,
-        includeProfessor: targetKind.value === 'lab' && includeProfessor.value,
-        logoId:
-          targetKind.value === 'university' && logoSelected.value
-            ? uploadedLogoId.value
-            : undefined,
-        entities,
-        confirmedScopes: confirmedScopes.value,
-        allowReplace: allowReplace.value,
-        wantApply: targetKind.value === 'lab' && wantApply.value,
-        admissions: Object.fromEntries(
-          admissionRows.value
-            .filter((r) => r.selected && r.edited.trim())
-            .map((r) => [r.field, r.edited.trim()]),
-        ),
-        exams: (hasMajor.value ? exams.value : [])
-          .filter((e) => e.rows.some((r) => r.selected))
-          .map((e) => ({
-            id: e.id,
-            year: e.year,
-            session: e.session,
-            fields: Object.fromEntries(
-              e.rows
-                .filter((r) => r.selected)
-                .map((r) => [r.field, r.edited.trim()]),
-            ),
-          })),
-        documents: documents.value
-          .filter((d) => d.selected)
-          .map((d) => ({ sourceId: d.sourceId, kind: d.kind, year: d.year })),
+        planId: serverPlan.value.planId,
+        planHash: serverPlan.value.planHash,
+        baseRevision: serverPlan.value.baseRevision,
       }),
     );
-    // The write has completed even if refreshing local navigation fails.
     generateOpen.value = false;
     try {
       await store.refresh();
     } catch {
-      message.info('档案已保存，刷新页面即可查看最新资料。');
+      message.info('保存已完成，刷新页面可查看结果。');
     }
-    message.success('所选档案已自动填好，并建立所属关系。');
+    message.success(result.job.message);
     emit('applied');
   } catch (error) {
+    serverPlan.value = undefined;
     errorMessage.value =
-      error instanceof Error ? error.message : '入库失败，草稿仍保留。';
+      error instanceof Error ? error.message : '保存失败，草稿仍保留。';
   } finally {
     busy.value = false;
   }
@@ -644,7 +796,7 @@ async function apply() {
   <section class="collection-review">
     <header class="collection-section-heading">
       <div>
-        <h2>核对 AI 草稿，再生成档案</h2>
+        <h2>核对来源，确认新增</h2>
         <p>
           下面的内容由 AI
           从官网整理，可能有错漏。请逐项对照来源，取消不对的字段，确认后再在页面底部生成档案。
@@ -655,13 +807,15 @@ async function apply() {
     <section class="collection-generation-preview" aria-label="将生成的档案">
       <div class="collection-generation-heading">
         <div>
-          <h3>这次会建立或更新以下档案</h3>
+          <h3>这次新增与关联的所属链</h3>
         </div>
       </div>
       <label class="collection-target-kind">主链接对应<Select
           v-accessible-select
           v-model:value="targetKind"
-          :disabled="busy || !!detail.job.parent"
+          :disabled="
+            busy || detail.job.ruleVersion === 3 || !!detail.job.parent
+          "
           :options="[
             { value: 'unknown', label: '请确认对象类型' },
             ...COLLECTION_KINDS.map((kind) => ({
@@ -672,7 +826,7 @@ async function apply() {
           @change="changeTarget"
       /></label>
       <p class="collection-help">
-        只更新当前对象的信息，已有上级仅建立关联，不修改资料。
+        已有档案仅关联，不覆盖、不补空；仅新建对象采用所选字段。
       </p>
       <Checkbox
         v-if="targetKind === 'lab' && professorCandidate"
@@ -711,7 +865,7 @@ async function apply() {
             ? '所选考试记录写入对应专攻，募集要项可归档到专攻资料库。'
             : '本次只创建所选层级及其上级；募集要项原件保留在本任务来源中。'
         }}
-        募集要项摘要会显示在主链接对应的档案页。
+        摘要按明确所有者保存，专攻要项可从所属专攻查看。
       </p>
     </section>
     <ul v-if="detail.job.draft?.warnings.length" class="collection-warnings">
@@ -720,7 +874,7 @@ async function apply() {
       </li>
     </ul>
     <section
-      v-if="targetKind === 'university' && detail.job.draft?.logo"
+      v-if="!choices.university && detail.job.draft?.logo"
       class="collection-entity collection-logo-candidate"
     >
       <div class="collection-logo-preview">
@@ -738,8 +892,8 @@ async function apply() {
         <h3>官网校徽候选</h3>
         <p class="collection-help">
           {{
-            detail.job.draft.logo.reason ||
-            detail.job.draft.logo.alt ||
+            detail.job.draft?.logo?.reason ||
+            detail.job.draft?.logo?.alt ||
             '请确认这是对应大学的校徽或官方校标。'
           }}
         </p>
@@ -754,7 +908,7 @@ async function apply() {
           已有校徽，替换时需确认。
         </p>
         <a
-          :href="detail.job.draft.logo.url"
+          :href="detail.job.draft?.logo?.url"
           target="_blank"
           rel="noopener noreferrer"
           >查看官网原图 ↗</a>
@@ -773,6 +927,17 @@ async function apply() {
           ADMISSION_STATUS_NAMES[detail.job.draft.admissions.status]
         }}</small>
       </header>
+      <p class="collection-help">
+        摘要保存到：{{
+          hasMajor
+            ? current('major')?.name ||
+              rows.major.find((r) => r.field === 'name')?.edited ||
+              '本次专攻'
+            : targetKind === 'school'
+              ? '本次研究科'
+              : '本次大学'
+        }}。仅保存已核实的适用范围。
+      </p>
       <p class="collection-help">
         {{
           detail.job.draft.admissions.scope ||
@@ -869,13 +1034,15 @@ async function apply() {
       <p v-if="pinned(kind)" class="collection-help">
         沿用当前新增位置的已有{{ COLLECTION_NAMES[kind] }}，仅在其下新增档案。
       </p>
+      <p v-if="choices[kind]" class="collection-help">
+        关联已有：{{ current(kind)?.name }}。当前资料保持不变。<a
+          :href="entityPath(kind)"
+          target="_blank"
+          >查看档案 ↗</a>
+      </p>
       <template v-if="kind !== 'professor' || professorEnabled">
         <div
-          v-for="row in rows[kind].filter(
-            (r) =>
-              writable(kind) ||
-              (!choices[kind] && ['name', 'japaneseName'].includes(r.field)),
-          )"
+          v-for="row in rows[kind].filter(() => writable(kind))"
           :key="row.field"
           class="collection-field"
         >
@@ -962,7 +1129,7 @@ async function apply() {
     <section v-if="exams.length && hasMajor" class="collection-entity">
       <header>
         <h3>考试信息</h3>
-        <small>按实际考试年份与批次写入专攻；同年份同批次会核对已有记录。</small>
+        <small>按实际考试年份与批次新增；同年同批次已有记录保持原样。</small>
       </header>
       <article v-for="exam in exams" :key="exam.id">
         <div class="collection-exam-meta">
@@ -1054,7 +1221,7 @@ async function apply() {
         {{ errorMessage }}
       </p>
       <Checkbox
-        v-if="targetKind === 'lab'"
+        v-if="targetKind === 'lab' && !choices.lab"
         v-model:checked="wantApply"
         :disabled="busy"
       >
@@ -1065,12 +1232,12 @@ async function apply() {
         :disabled="busy"
         @click="openGeneration"
       >
-        确认并生成档案
+        确认新增
       </Button>
     </footer>
     <Modal
       v-model:open="generateOpen"
-      title="确认并生成档案"
+      title="确认新增"
       :width="720"
       :footer="null"
       :closable="!busy"
@@ -1078,22 +1245,52 @@ async function apply() {
       :keyboard="!busy"
     >
       <p class="collection-generation-intro">
-        所选信息会自动填入以下档案，并建立所属关系。
+        新对象采用所选信息；已有对象保持原样。以下是服务器核对结果。
       </p>
-      <ul class="collection-generation-list">
-        <li
-          v-for="item in generationPlan.filter((p) => p.enabled)"
-          :key="item.kind"
-        >
-          <span>{{ COLLECTION_NAMES[item.kind] }}</span><strong>{{ item.name || '请补充名称' }}</strong><small>{{ item.action }} · {{ item.count }} 项</small>
+      <p v-if="serverPlan" class="collection-generation-intro">
+        新增 {{ serverPlan.counts.createdEntities }} 个档案，关联
+        {{ serverPlan.counts.linkedEntities }} 个已有档案。重复资源自动跳过。
+      </p>
+      <ul v-if="serverPlan" class="collection-generation-list">
+        <li v-for="item in serverPlan.operations" :key="item.kind">
+          <span>{{ COLLECTION_NAMES[item.kind] }}</span><strong>{{ item.name || '请补充名称' }}</strong><small>{{ item.action === 'created' ? '新增' : '关联已有' }}</small>
         </li>
       </ul>
       <p class="collection-generation-intro">
-        同时写入 {{ selectedExamCount }} 条考试记录，归档
-        {{ selectedDocumentCount }} 份资料{{
+        同时写入 {{ plannedExamCount }} 条考试记录，归档
+        {{ plannedDocumentCount }} 份资料{{
           wantApply ? '，并将研究室加入想考清单' : ''
         }}。
       </p>
+      <template v-if="serverPlan">
+        <div
+          v-for="group in [
+            { key: 'exams', label: '考试' },
+            { key: 'documents', label: '文件' },
+            { key: 'admissions', label: '摘要' },
+          ]"
+          :key="group.key"
+        >
+          <p
+            v-for="(resource, index) in serverPlan.resources[group.key] || []"
+            :key="index"
+            class="collection-help"
+          >
+            {{ group.label }} ·
+            {{ resource.owner ? COLLECTION_NAMES[resource.owner.kind] : '' }} ·
+            {{
+              resource.title ||
+              resource.year ||
+              resource.record?.year ||
+              '已核对范围'
+            }}
+            ·
+            {{
+              resource.state === 'new' ? '准备新增' : '重复，跳过并关联已有记录'
+            }}
+          </p>
+        </div>
+      </template>
       <ul v-if="generationIssues.length" class="collection-generation-issues">
         <li v-for="issue in generationIssues" :key="issue">{{ issue }}</li>
       </ul>
@@ -1101,6 +1298,10 @@ async function apply() {
         <p v-if="errorMessage" class="form-error" role="alert">
           {{ errorMessage }}
         </p>
+        <Button :disabled="busy" @click="emit('refresh')">
+          刷新归属，保留候选
+        </Button>
+        <Button :disabled="busy" @click="previewPlan">刷新保存预览</Button>
         <Checkbox
           v-if="replacing"
           v-model:checked="allowReplace"
@@ -1108,6 +1309,11 @@ async function apply() {
         >
           确认替换所选字段已有的内容
         </Checkbox>
+        <ul v-if="serverPlan?.requiredConfirmations?.length">
+          <li v-for="item in serverPlan.requiredConfirmations" :key="item.key">
+            {{ item.message }}：{{ item.value }}
+          </li>
+        </ul>
         <Checkbox v-model:checked="acknowledged" :disabled="busy">
           已核对名称、所属关系与所选资料，确认生成
         </Checkbox>
@@ -1120,7 +1326,7 @@ async function apply() {
             :disabled="!canApply"
             @click="apply"
           >
-            生成档案
+            确认新增
           </Button>
         </div>
       </div>

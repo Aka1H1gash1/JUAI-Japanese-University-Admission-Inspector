@@ -13,7 +13,12 @@ const specs = {
   special_programs: PROGRAM,
 };
 
-export function saveProjectedRecord(db, table, record) {
+export function saveProjectedRecord(
+  db,
+  table,
+  record,
+  { insertOnly = false } = {},
+) {
   if (table === 'documents') table = 'document_records';
   if (table === 'messages') table = 'mail_messages';
   const spec = specs[table];
@@ -60,10 +65,14 @@ export function saveProjectedRecord(db, table, record) {
   }
   const columns = Object.keys(row);
   db.prepare(
-    `INSERT INTO ${table} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')}) ON CONFLICT(id) DO UPDATE SET ${columns
-      .filter((field) => field !== 'id')
-      .map((field) => `${field}=excluded.${field}`)
-      .join(',')}`,
+    `INSERT INTO ${table} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})${
+      insertOnly
+        ? ''
+        : ` ON CONFLICT(id) DO UPDATE SET ${columns
+            .filter((field) => field !== 'id')
+            .map((field) => `${field}=excluded.${field}`)
+            .join(',')}`
+    }`,
   ).run(...columns.map((field) => row[field]));
 }
 

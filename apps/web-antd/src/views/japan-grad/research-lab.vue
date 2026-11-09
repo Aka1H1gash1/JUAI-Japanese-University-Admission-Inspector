@@ -194,6 +194,11 @@ function remove() {
       </div>
     </section>
     <CollectedAdmissions kind="lab" :id="target.lab.id" />
+    <CollectedAdmissions
+      kind="major"
+      :id="target.major.id"
+      title="所属专攻的募集要项（共享）"
+    />
     <Tabs v-model:active-key="tab" class="professor-workspace-tabs">
       <Tabs.TabPane key="teachers" :tab="`老师（${target.professors.length}）`">
         <ResearchLabTeachers

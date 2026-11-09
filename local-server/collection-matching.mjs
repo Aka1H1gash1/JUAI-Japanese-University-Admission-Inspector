@@ -83,6 +83,7 @@ export function matchCollectionEntities(data, job) {
       .filter((entity) => {
         if (anchor) return entity.id === anchor;
         if (
+          kind !== 'professor' &&
           [
             entity.website,
             entity.personalWebsite,

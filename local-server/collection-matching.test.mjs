@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import { once } from 'node:events';
 import { mkdtemp } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import test from 'node:test';
 
@@ -69,7 +71,9 @@ test('independent imports infer existing parents through unique children and sco
   assert.deepEqual(matchCollectionEntities(data, { draft }).major, ['m1']);
 });
 test('apply reuses existing ancestors and rejects duplicate parent creation for school, major and lab', async () => {
-  const workspace = await mkdtemp('/private/tmp/juai-parent-regression-');
+  const workspace = await mkdtemp(
+    path.join(os.tmpdir(), 'juai-parent-regression-'),
+  );
   const app = await createLocalApp({ workspace });
   app.listen(0, '127.0.0.1');
   await once(app, 'listening');
@@ -129,7 +133,9 @@ test('apply reuses existing ancestors and rejects duplicate parent creation for 
         id,
         createdAt: new Date().toISOString(),
         status: 'review',
-        ruleVersion: 2,
+        ruleVersion: 3,
+        importPolicy: 'create_only',
+        requestedKind: kind,
         urls: ['https://example.com/'],
         context: { admissionYear: 2027 },
         draft: { ...emptyDraft(), subject: { kind } },
@@ -151,7 +157,7 @@ test('apply reuses existing ancestors and rejects duplicate parent creation for 
           k,
           {
             id: v,
-            fields: { name: '不应覆盖的上级名称', notes: '不应覆盖上级说明' },
+            action: 'link',
           },
         ]),
       );
@@ -168,30 +174,53 @@ test('apply reuses existing ancestors and rejects duplicate parent creation for 
           JSON.stringify(job),
           id,
         );
-        entities.professor = { fields: { name: '负责人老师' } };
+        entities.professor = {
+          action: 'create',
+          candidateKey: 'professor:primary',
+          fields: { name: '负责人老师' },
+        };
       }
-      entities[kind] = { fields: { name: '新对象' } };
+      job.draft[kind] = [{ field: 'name', value: '新对象', evidence: [] }];
+      db.prepare('UPDATE collection_jobs SET data=? WHERE id=?').run(
+        JSON.stringify(job),
+        id,
+      );
+      entities[kind] = {
+        action: 'create',
+        candidateKey: `${kind}:primary`,
+        fields: { name: '新对象' },
+      };
       const payload = {
-        confirm: true,
+        ruleVersion: 3,
         revision: current.revision,
-        targetKind: kind,
         includeProfessor: kind === 'lab',
         entities,
-        documents: [],
-        exams: [],
+        resources: { documents: [], exams: [], admissions: [] },
         confirmedScopes: [],
       };
       const bad = structuredClone(payload);
-      bad.entities.university = { fields: { name: '重复大学' } };
+      bad.entities.university = {
+        action: 'create',
+        candidateKey: 'university:primary',
+        fields: { name: '重复大学' },
+      };
       assert.equal(
-        (await call(`/collection/jobs/${id}/apply`, 'POST', bad)).status,
+        (await call(`/collection/jobs/${id}/import-plan`, 'POST', bad)).status,
         409,
       );
-      const result = await call(
-        `/collection/jobs/${id}/apply`,
+      const preview = await call(
+        `/collection/jobs/${id}/import-plan`,
         'POST',
         payload,
       );
+      assert.equal(preview.status, 200, JSON.stringify(preview.data));
+      const result = await call(`/collection/jobs/${id}/apply`, 'POST', {
+        ruleVersion: 3,
+        confirm: true,
+        planId: preview.data.planId,
+        planHash: preview.data.planHash,
+        baseRevision: preview.data.baseRevision,
+      });
       assert.equal(result.status, 200, JSON.stringify(result.data));
       const saved = (await call('/workspace')).data.data;
       assert.equal(saved.universities.length, 1);

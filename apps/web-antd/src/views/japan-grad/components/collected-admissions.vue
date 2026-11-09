@@ -12,11 +12,13 @@ import { admissionItems } from '../admission-content';
 import {
   ADMISSION_STATUS_NAMES,
   ADMISSION_SUMMARY_NAMES,
+  COLLECTION_NAMES,
 } from '../collection-types';
 import { localApi } from '../local-api';
 const props = defineProps<{
   kind: 'special_program' | CollectionKind;
   id: string;
+  title?: string;
 }>();
 const errorMessage = ref('');
 const records = ref<CollectedAdmissionRecord[]>([]);
@@ -47,7 +49,7 @@ onBeforeUnmount(() => {
   <section v-if="records.length || errorMessage" class="collected-admissions">
     <header>
       <div>
-        <h2>对应募集要项</h2>
+        <h2>{{ title || '对应募集要项' }}</h2>
       </div>
       <RouterLink
         :to="{
@@ -67,6 +69,13 @@ onBeforeUnmount(() => {
           {{ ADMISSION_STATUS_NAMES[record.admissions.status] }} ·
           {{ new Date(record.appliedAt).toLocaleDateString() }}
         </summary>
+        <p v-if="record.owner" class="admissions-scope">
+          资料所有者：{{ COLLECTION_NAMES[record.owner.kind] }} ·
+          {{ record.owner.name }}
+        </p>
+        <p v-else-if="record.legacyScope" class="admissions-warning">
+          历史摘要：适用范围需结合原文核对。
+        </p>
         <p class="admissions-scope">
           {{ record.admissions.scope || '适用对象请结合原文核对。' }}
         </p>

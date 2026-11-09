@@ -309,7 +309,10 @@ export function createWorkspaceRepository({
     const child = (table, owner) =>
       (grouped[table].get(owner) ?? []).map((entry) => entry.object);
     for (const major of data.majors) {
-      if (present(['majors', major.id], 'examHistory'))
+      if (
+        present(['majors', major.id], 'examHistory') ||
+        child('exam_records', major.id).length > 0
+      )
         major.examHistory = child('exam_records', major.id);
       if (present(['majors', major.id], 'analysisHistory'))
         major.analysisHistory = child('major_analysis_history', major.id);
@@ -497,7 +500,103 @@ export function createWorkspaceRepository({
       return expectedRevision + 1;
     });
   }
+  // This deliberately accepts only new core objects. It never normalizes or
+  // projects retained objects back into SQL, and never invokes planner sync.
+  function appendCollectionImport(input, expectedRevision, resources = {}) {
+    const ownsTransaction = !db.isTransaction;
+    if (ownsTransaction) db.exec('BEGIN IMMEDIATE');
+    try {
+      const result = atomic(db, 'collection_append', () => {
+        const current = read();
+        if (current.revision !== expectedRevision)
+          fail('工作区已变化，请刷新核对后再入库。', 409);
+        if (Object.keys(input).some((name) => !collections.includes(name)))
+          fail('只新增接口不接受其他业务集合。', 400);
+        const additions = Object.fromEntries(
+          collections.map((name) => [name, input[name] ?? []]),
+        );
+        for (const name of collections) {
+          if (!Array.isArray(additions[name]))
+            fail('新增档案必须是数组。', 400);
+          const ids = new Set(current.data[name].map((item) => item.id));
+          for (const item of additions[name]) {
+            if (!item.id || ids.has(item.id))
+              fail('不能通过只新增接口修改已有档案。', 409);
+            ids.add(item.id);
+          }
+        }
+        validateExplorer({
+          ...current.data,
+          ...Object.fromEntries(
+            collections.map((name) => [
+              name,
+              [...current.data[name], ...additions[name]],
+            ]),
+          ),
+        });
+        const rows = flatten(additions);
+        let count = 0;
+        for (const [table, spec] of Object.entries(tableSpecs)) {
+          const offsets = new Map();
+          for (const row of rows[table]) {
+            const owner = spec.owner ? row[spec.owner] : '';
+            if (!offsets.has(owner)) {
+              const previous = db
+                .prepare(
+                  `SELECT MAX(position) AS position FROM ${table}${spec.owner ? ` WHERE ${spec.owner}=?` : ''}`,
+                )
+                .get(...(spec.owner ? [owner] : []));
+              offsets.set(owner, (previous.position ?? -1) + 1);
+            }
+            row.position = offsets.get(owner);
+            offsets.set(owner, row.position + 1);
+            const columns = Object.keys(row);
+            db.prepare(
+              `INSERT INTO ${table} (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`,
+            ).run(...columns.map((field) => row[field]));
+            count++;
+          }
+        }
+        for (const exam of resources.exams ?? []) {
+          if (exam.state !== 'new') continue;
+          const position = db
+            .prepare(
+              'SELECT COALESCE(MAX(position),-1)+1 AS next FROM exam_records WHERE major_id=?',
+            )
+            .get(exam.owner.id).next;
+          const row = {
+            major_id: exam.owner.id,
+            id: exam.id,
+            position,
+            ...encode(CHILDREN.exam_records, exam.record),
+          };
+          const columns = Object.keys(row);
+          db.prepare(
+            `INSERT INTO exam_records (${columns.join(',')}) VALUES (${columns.map(() => '?').join(',')})`,
+          ).run(...columns.map((key) => row[key]));
+          count++;
+        }
+        for (const document of resources.documents ?? []) {
+          saveProjectedRecord(db, 'documents', document, { insertOnly: true });
+          count++;
+        }
+        if (db.prepare('PRAGMA foreign_key_check').all().length > 0)
+          fail('新增档案的所属关系不完整。', 422);
+        if (count)
+          db.prepare(
+            'UPDATE workspace_state SET revision=revision+1, initialized=1 WHERE id=1',
+          ).run();
+        return expectedRevision + Number(count > 0);
+      });
+      if (ownsTransaction) db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      if (ownsTransaction && db.isTransaction) db.exec('ROLLBACK');
+      throw error;
+    }
+  }
   return {
+    appendCollectionImport,
     snapshot,
     replace,
     revision: () =>

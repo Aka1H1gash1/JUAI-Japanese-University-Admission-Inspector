@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button, Input } from 'ant-design-vue';
 
+import CollectedAdmissions from './components/collected-admissions.vue';
 import EntityCreateFlow from './components/entity-create-flow.vue';
 import EntityEditor from './components/entity-editor.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
@@ -325,6 +326,11 @@ const { page, pageSize, total, paged } = usePagination(visibleSchools, [
       </aside>
     </section>
 
+    <CollectedAdmissions
+      kind="university"
+      :id="university.id"
+      title="大学通用募集要项"
+    />
     <FileManager :university="university.id" guidelines-only />
     <header class="collection-heading">
       <div>

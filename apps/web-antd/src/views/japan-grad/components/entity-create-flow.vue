@@ -46,6 +46,12 @@ const errorMessage = ref('');
 const management = ref<AiManagement>();
 const mode = ref<'choose' | 'manual' | 'url'>('choose');
 const url = ref('');
+const level = ref('');
+const memberKind = ref('');
+const requestedKind = computed(() => {
+  if (props.kind === 'special_program') return 'special_program';
+  return level.value === 'member' ? memberKind.value : level.value;
+});
 const aiMode = ref<'agent' | 'api'>(serverMode ? 'api' : 'agent');
 const browserMode = ref('http');
 const searchMode = ref<'auto' | 'off'>('auto');
@@ -55,11 +61,13 @@ const notes = ref('');
 const importScope = ref('current');
 const selectedMajors = ref<string[]>([]);
 const year = ref(new Date().getFullYear() + 1);
-const kindName = computed(() =>
-  props.kind === 'special_program'
-    ? '特殊入学项目'
-    : COLLECTION_NAMES[props.kind],
-);
+const kindName = computed(() => {
+  if (props.kind === 'special_program') return '特殊入学项目';
+  const selected = requestedKind.value || props.kind;
+  return (
+    COLLECTION_NAMES[selected as EntityKind] || COLLECTION_NAMES[props.kind]
+  );
+});
 const modeConnections = computed(
   () =>
     management.value?.connections.filter(
@@ -120,6 +128,13 @@ watch(
     else if (props.urlOnly) mode.value = 'url';
     else mode.value = 'choose';
     url.value = '';
+    level.value = ['lab', 'professor'].includes(props.kind)
+      ? 'member'
+      : props.kind;
+    if (props.urlOnly) level.value = '';
+    memberKind.value = ['lab', 'professor'].includes(props.kind)
+      ? props.kind
+      : '';
     errorMessage.value = '';
     management.value = undefined;
     notes.value = '';
@@ -189,6 +204,8 @@ async function parse() {
         ))
     )
       throw new Error('请选择 1–3 个专攻，新名称按“研究科 / 专攻”填写。');
+    if (!requestedKind.value)
+      throw new Error('请先选择解析层级，老师／研究室需进一步选择类型。');
     const parentKind = (() => {
       if (props.kind === 'school') {
         return 'university';
@@ -224,14 +241,16 @@ async function parse() {
       jsonOptions('POST', {
         primaryUrl: url.value.trim(),
         supportingUrl: '',
-        targetKind: props.urlOnly ? 'auto' : props.kind,
+        targetKind: requestedKind.value,
+        ruleVersion: 3,
+        importPolicy: 'create_only',
         selectedPrograms:
           importScope.value === 'selected' ? selectedMajors.value : [],
         parent:
-          props.parentId && parentKind
+          props.parentId && parentKind && requestedKind.value === props.kind
             ? { kind: parentKind, id: props.parentId }
             : undefined,
-        seekGuidelines: true,
+        seekGuidelines: requestedKind.value !== 'professor',
         admissionYear: year.value,
         degree,
         identity: identity.value.trim(),
@@ -289,6 +308,36 @@ async function parse() {
       </button>
     </div>
     <form v-else class="create-url-form" @submit.prevent="parse">
+      <template v-if="kind !== 'special_program'">
+        <label>解析层级<Select
+            v-model:value="level"
+            :disabled="busy"
+            aria-label="解析层级"
+            :options="[
+              { value: '', label: '请选择层级' },
+              { value: 'university', label: '大学' },
+              { value: 'school', label: '研究科' },
+              { value: 'major', label: '专攻' },
+              { value: 'member', label: '老师／研究室' },
+            ]"
+        /></label>
+        <label v-if="level === 'member'">具体对象<Select
+            v-model:value="memberKind"
+            :disabled="busy"
+            aria-label="老师或研究室"
+            :options="[
+              { value: '', label: '请选择具体对象' },
+              { value: 'lab', label: '研究室' },
+              { value: 'professor', label: '老师' },
+            ]"
+        /></label>
+        <p class="create-parent">
+          大学主页选大学，研究科招生页选研究科，专攻案内选专攻；个人主页选老师，实验室主页选研究室。只新增缺失档案，已有对象只关联。
+        </p>
+        <p v-if="parentId && requestedKind !== kind" class="create-parent">
+          层级已改变，本次作为独立解析，不沿用原有上级。
+        </p>
+      </template>
       <label>{{ urlOnly ? '网页链接' : `${kindName}官网链接`
         }}<Input
           v-model:value="url"
@@ -350,13 +399,13 @@ async function parse() {
         v-if="officialSearch && searchMode === 'auto'"
         v-model:checked="searchExperiences"
         :disabled="busy"
-        >
-同时搜索经验帖（语言与平台不限，额外一次联网搜索，核对后收录）
-</Checkbox>
+      >
+        同时搜索经验帖（语言与平台不限，额外一次联网搜索，核对后收录）
+      </Checkbox>
       <p class="create-parent">
         {{
           urlOnly
-            ? '自动识别页面对应的大学、研究科、专攻或研究室，核对来源后再生成档案。'
+            ? '按所选层级整理所属链，核对来源后只新增缺失档案。'
             : '自动整理本层与所属上级，优先复用已有档案；找到的资料核对后再生成。'
         }}
       </p>
@@ -400,7 +449,7 @@ async function parse() {
           type="primary"
           html-type="submit"
           :loading="busy"
-          :disabled="!url.trim() || !selectedConnection"
+          :disabled="!url.trim() || !selectedConnection || !requestedKind"
         >
           解析并查询
         </Button>

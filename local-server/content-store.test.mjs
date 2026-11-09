@@ -157,13 +157,15 @@ test('importing a downloaded PDF links the collection-cache copy instead of copy
       id: 'dedupe-job',
       createdAt: new Date().toISOString(),
       status: 'review',
-      ruleVersion: 2,
+      ruleVersion: 3,
+      importPolicy: 'create_only',
+      requestedKind: 'major',
       urls: ['https://example.com/'],
       context: { admissionYear: 2027 },
       draft: {
         university: [],
         school: [],
-        major: [],
+        major: [{ field: 'name', value: '新专攻', evidence: [] }],
         lab: [],
         professor: [],
         exams: [],
@@ -189,19 +191,44 @@ test('importing a downloaded PDF links the collection-cache copy instead of copy
       job.createdAt,
       JSON.stringify(job),
     );
-    const result = await call('/collection/jobs/dedupe-job/apply', 'POST', {
-      confirm: true,
-      revision: current.revision,
-      targetKind: 'major',
-      includeProfessor: false,
-      entities: {
-        university: { id: 'u1', fields: {} },
-        school: { id: 's1', fields: {} },
-        major: { fields: { name: '新专攻' } },
+    const preview = await call(
+      '/collection/jobs/dedupe-job/import-plan',
+      'POST',
+      {
+        ruleVersion: 3,
+        revision: current.revision,
+        includeProfessor: false,
+        entities: {
+          university: { action: 'link', id: 'u1' },
+          school: { action: 'link', id: 's1' },
+          major: {
+            action: 'create',
+            candidateKey: 'major:primary',
+            fields: { name: '新专攻' },
+          },
+        },
+        resources: {
+          documents: [
+            {
+              sourceId: 'src1',
+              kind: 'guidelines',
+              year: '2027',
+              owner: { kind: 'major', candidateKey: 'major:primary' },
+            },
+          ],
+          exams: [],
+          admissions: [],
+        },
+        confirmedScopes: [],
       },
-      documents: [{ sourceId: 'src1', kind: 'guidelines', year: '2027' }],
-      exams: [],
-      confirmedScopes: [],
+    );
+    assert.equal(preview.status, 200, JSON.stringify(preview.data));
+    const result = await call('/collection/jobs/dedupe-job/apply', 'POST', {
+      ruleVersion: 3,
+      confirm: true,
+      planId: preview.data.planId,
+      planHash: preview.data.planHash,
+      baseRevision: preview.data.baseRevision,
     });
     assert.equal(result.status, 200, JSON.stringify(result.data));
     const archived = db

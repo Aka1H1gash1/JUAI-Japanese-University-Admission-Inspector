@@ -293,7 +293,7 @@ const generatedProfiles = computed(() => {
           aria-label="已生成的档案"
         >
           <header>
-            <RouterLink :to="resultLink">点击生成的档案</RouterLink>
+            <RouterLink :to="resultLink">查看保存结果</RouterLink>
           </header>
           <div class="collection-generated-grid">
             <RouterLink
@@ -338,7 +338,7 @@ const generatedProfiles = computed(() => {
             v-else-if="detail.job.status === 'applied'"
             :to="resultLink"
           >
-            查看生成的档案 ↗
+            查看关联的档案 ↗
           </RouterLink>
         </div>
         <p v-if="detail.job.error" class="form-error">
