@@ -589,3 +589,24 @@
     font-size: 28px;
   }
 }
+
+.collection-legacy-review {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 18px;
+  margin: 18px 0;
+  border: 1px solid var(--jg-line);
+  border-radius: 12px;
+}
+
+.collection-legacy-review h3,
+.collection-legacy-review p {
+  width: 100%;
+  margin: 0;
+}
+
+.collection-legacy-review .ant-select {
+  min-width: 180px;
+}

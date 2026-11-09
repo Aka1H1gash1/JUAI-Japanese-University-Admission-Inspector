@@ -305,31 +305,34 @@ test('ordinary create rejects omitted/auto type and old policy before model conf
 });
 test('old review cannot save; explicit source-preserving upgrade needs no model', async (t) => {
   const f = await fixture(t);
-  const { job, selection, save } = f.seed('legacy', 'university');
-  job.ruleVersion = 2;
-  delete job.importPolicy;
-  save();
-  assert.equal(
-    (await f.plan(job.id, selection)).data.code,
-    'LEGACY_REVIEW_REQUIRED',
-  );
-  assert.equal(
-    (
-      await f.call(`/collection/jobs/${job.id}/apply`, {
-        confirm: true,
-        allowReplace: true,
-      })
-    ).status,
-    400,
-  );
-  const upgraded = await f.call(`/collection/jobs/${job.id}/upgrade-review`, {
-    targetKind: 'university',
-  });
-  assert.equal(upgraded.status, 200);
-  assert.deepEqual(upgraded.data.job.draft, job.draft);
-  const p = await f.plan(job.id, selection);
-  assert.equal(p.status, 200);
-  assert.equal((await f.apply(job.id, p.data)).status, 200);
+  for (const status of ['review', 'failed', 'cancelled']) {
+    const { job, selection, save } = f.seed(`legacy-${status}`, 'university');
+    job.status = status;
+    job.ruleVersion = 2;
+    delete job.importPolicy;
+    save();
+    assert.equal(
+      (await f.plan(job.id, selection)).data.code,
+      'LEGACY_REVIEW_REQUIRED',
+    );
+    assert.equal(
+      (
+        await f.call(`/collection/jobs/${job.id}/apply`, {
+          confirm: true,
+          allowReplace: true,
+        })
+      ).status,
+      400,
+    );
+    const upgraded = await f.call(`/collection/jobs/${job.id}/upgrade-review`, {
+      targetKind: 'university',
+    });
+    assert.equal(upgraded.status, 200);
+    assert.deepEqual(upgraded.data.job.draft, job.draft);
+    const p = await f.plan(job.id, selection);
+    assert.equal(p.status, 200);
+    assert.equal((await f.apply(job.id, p.data)).status, 200);
+  }
 });
 test('user-edited real names require a value-bound confirmation and stale previews cannot save', async (t) => {
   const f = await fixture(t);

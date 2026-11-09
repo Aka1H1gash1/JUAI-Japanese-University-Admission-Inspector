@@ -2,6 +2,7 @@
 import type {
   CollectionDetail,
   CollectionJob,
+  CollectionKind,
   CollectionStatus,
 } from './collection-types';
 
@@ -60,6 +61,38 @@ function jobLabel(job: CollectionJob) {
 const detail = ref<CollectionDetail>();
 const busy = ref(false);
 const loading = ref(false);
+const legacyKind = ref<CollectionKind>();
+const needsLegacyReview = computed(
+  () =>
+    !!detail.value &&
+    detail.value.job.purpose !== 'special_program' &&
+    detail.value.job.ruleVersion !== 3 &&
+    ['cancelled', 'failed', 'review'].includes(detail.value.job.status),
+);
+watch(
+  () => detail.value?.job.id,
+  () => {
+    legacyKind.value = undefined;
+  },
+);
+async function upgradeLegacy() {
+  if (!detail.value || !legacyKind.value || busy.value) return;
+  busy.value = true;
+  errorMessage.value = '';
+  try {
+    await localApi(
+      `/collection/jobs/${detail.value.job.id}/upgrade-review`,
+      jsonOptions('POST', { targetKind: legacyKind.value }),
+    );
+    await view(detail.value.job.id);
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : '核对转换失败，来源仍保留。';
+  } finally {
+    busy.value = false;
+  }
+}
+
 const errorMessage = ref('');
 let generation = 0;
 let timer: ReturnType<typeof setTimeout> | undefined;
@@ -322,6 +355,7 @@ const generatedProfiles = computed(() => {
           <Button v-if="running" :loading="busy" @click="stop">停止解析</Button><Button
             v-else-if="['failed', 'cancelled'].includes(detail.job.status)"
             :loading="busy"
+            :disabled="needsLegacyReview"
             @click="retry(false)"
           >
             继续解析
@@ -331,6 +365,7 @@ const generatedProfiles = computed(() => {
               detail.job.sources?.some((s) => s.readPages.length)
             "
             :loading="busy"
+            :disabled="needsLegacyReview"
             @click="retry(true)"
           >
             用已读资料生成草稿
@@ -341,11 +376,42 @@ const generatedProfiles = computed(() => {
             查看关联的档案 ↗
           </RouterLink>
         </div>
+        <section v-if="needsLegacyReview" class="collection-legacy-review">
+          <h3>按只新增规则重新核对旧任务</h3>
+          <p class="collection-help">
+            先明确主层级，再复用已核验候选。此操作不重新调用
+            AI，也不写入档案；已有对象保持原样。缺少有效草稿或目标层级证据时，请新建明确任务，原来源继续保留。
+          </p>
+          <Select
+            v-accessible-select
+            v-model:value="legacyKind"
+            aria-label="旧任务主层级"
+            placeholder="请选择本次主层级"
+            :disabled="busy"
+            :options="
+              COLLECTION_KINDS.map((kind) => ({
+                value: kind,
+                label: COLLECTION_NAMES[kind],
+              }))
+            "
+          />
+          <Button
+            :disabled="busy || !legacyKind"
+            :loading="busy"
+            @click="upgradeLegacy"
+            >
+按只新增规则重新核对
+</Button>
+          <Button :disabled="busy" @click="createOpen = true">
+新建明确任务
+</Button>
+        </section>
         <p v-if="detail.job.error" class="form-error">
           {{ detail.job.error }}
         </p>
         <p
           v-if="
+            !needsLegacyReview &&
             ['failed', 'cancelled'].includes(detail.job.status) &&
             detail.job.sources?.length
           "
@@ -425,6 +491,7 @@ const generatedProfiles = computed(() => {
         />
         <CollectionReview
           v-if="
+            !needsLegacyReview &&
             detail.job.status === 'review' &&
             detail.job.draft &&
             config &&
