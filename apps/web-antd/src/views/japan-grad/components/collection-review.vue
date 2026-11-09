@@ -239,7 +239,11 @@ function initialKind(): 'unknown' | CollectionKind {
   }
   return 'unknown';
 }
+let rowsJobId = '';
 function reset() {
+  if (rowsJobId !== props.detail.job.id)
+    for (const kind of COLLECTION_KINDS) rows.value[kind] = [];
+  rowsJobId = props.detail.job.id;
   serverPlan.value = undefined;
   sourceGeneration++;
   sourceOpen.value = false;

@@ -1530,6 +1530,11 @@ export function createCollectionService({
           )
         )
           fail('其他专攻最多选择 3 个，按“研究科 / 专攻”填写。');
+        if (
+          input.targetKind === 'special_program' &&
+          selectedPrograms.length > 0
+        )
+          throw importError('特殊入学项目不能携带普通专攻子任务。');
         if (active.size >= 2) fail('已有两个解析任务在运行，请稍后。', 409);
         if (
           !['auto', 'browser', 'http'].includes(input.browserMode) ||
@@ -1716,6 +1721,7 @@ export function createCollectionService({
             id: randomUUID(),
             requestedKind: 'major',
             requestedProgram: selection,
+            seekGuidelines: true,
             parent: null,
             target: null,
             batchId: j.id,
