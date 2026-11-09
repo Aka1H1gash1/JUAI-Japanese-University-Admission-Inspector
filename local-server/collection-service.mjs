@@ -1863,6 +1863,8 @@ export function createCollectionService({
               409,
             );
           latest.legacyReview = {
+            previousStatus: latest.status,
+            previousError: latest.error || '',
             ruleVersion: latest.ruleVersion,
             targetKind: input.targetKind,
             at: now(),
@@ -1873,6 +1875,10 @@ export function createCollectionService({
           latest.reviewRevision = (latest.reviewRevision || 0) + 1;
           delete latest.importPlan;
           latest.status = 'review';
+          latest.error = '';
+          latest.phase = 'complete';
+          latest.updatedAt = now();
+          latest.message = '已按只新增规则准备核对，未重新调用 AI。';
           save(latest);
         });
         return reply({

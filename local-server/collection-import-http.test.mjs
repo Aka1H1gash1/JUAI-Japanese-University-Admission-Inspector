@@ -308,6 +308,7 @@ test('old review cannot save; explicit source-preserving upgrade needs no model'
   for (const status of ['review', 'failed', 'cancelled']) {
     const { job, selection, save } = f.seed(`legacy-${status}`, 'university');
     job.status = status;
+    job.error = '旧版失败信息';
     job.ruleVersion = 2;
     delete job.importPolicy;
     save();
@@ -328,6 +329,8 @@ test('old review cannot save; explicit source-preserving upgrade needs no model'
       targetKind: 'university',
     });
     assert.equal(upgraded.status, 200);
+    assert.equal(upgraded.data.job.error, '');
+    assert.equal(upgraded.data.job.legacyReview.previousStatus, status);
     assert.deepEqual(upgraded.data.job.draft, job.draft);
     const p = await f.plan(job.id, selection);
     assert.equal(p.status, 200);
