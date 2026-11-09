@@ -1,8 +1,8 @@
 import { createHash, randomUUID } from 'node:crypto';
 import {
-  mkdir,
   readdir,
   readFile,
+  realpath,
   rename,
   unlink,
   writeFile,
@@ -26,6 +26,7 @@ export function createCollectionImportWriter({
   view,
   appendCollectionImport,
   safeFile,
+  ensureDirectory,
   workspace,
 }) {
   const attempts = new Map();
@@ -46,6 +47,11 @@ export function createCollectionImportWriter({
   const manifestDirectory = path.join(workspace, 'collection-import-attempts');
   // Recovery only touches paths proved to be owned by an expired attempt.
   async function recover() {
+    const root = await realpath(workspace);
+    const directory = await realpath(manifestDirectory).catch(() => null);
+    if (!directory) return;
+    if (!directory.startsWith(`${root}${path.sep}`))
+      throw importError('导入清单目录超出工作区。');
     for (const filename of await readdir(manifestDirectory).catch(() => [])) {
       if (!/^[a-f0-9-]{36}\.json$/.test(filename)) continue;
       const manifestPath = path.join(manifestDirectory, filename);
@@ -70,8 +76,13 @@ export function createCollectionImportWriter({
           )
         )
           continue;
-        if (!records.some((d) => d.path === relative))
-          await unlink(path.join(workspace, relative)).catch(() => {});
+        if (!records.some((d) => d.path === relative)) {
+          const actual = await realpath(path.join(workspace, relative)).catch(
+            () => null,
+          );
+          if (actual === path.join(root, relative))
+            await unlink(actual).catch(() => {});
+        }
       }
       await unlink(manifestPath).catch(() => {});
     }
@@ -135,7 +146,7 @@ export function createCollectionImportWriter({
           chosenPlan.planHash !== input.planHash
         )
           throw importError('请先刷新保存预览。', 'REVIEW_STALE', 409);
-        await mkdir(manifestDirectory, { recursive: true });
+        await ensureDirectory('collection-import-attempts');
         const usedSources = new Set(
           chosenPlan.resources.documents.map((d) => d.sourceId),
         );
@@ -200,7 +211,7 @@ export function createCollectionImportWriter({
             );
             await rename(`${manifestPath}.tmp`, manifestPath);
             const target = path.join(workspace, relative);
-            await mkdir(path.dirname(target), { recursive: true });
+            await ensureDirectory(path.posix.dirname(relative));
             await storeContent({
               db,
               workspace,

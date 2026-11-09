@@ -1408,6 +1408,7 @@ export function createCollectionService({
     view,
     appendCollectionImport,
     workspace,
+    ensureDirectory,
     safeFile,
   });
   function createImportPlan(id, input) {

@@ -621,3 +621,58 @@ test('restart recovery removes only expired proven orphans and retains committed
     '%PDF-1.4',
   );
 });
+test('archive directories cannot escape the user workspace through a symlink', async (t) => {
+  const f = await fixture(t);
+  const { job, selection, save } = f.seed('path-boundary', 'major');
+  const { symlink, readdir } = await import('node:fs/promises');
+  const outside = await mkdtemp(path.join(os.tmpdir(), 'juai-other-user-'));
+  await mkdir(path.join(f.workspace, 'documents'), { recursive: true });
+  await symlink(
+    outside,
+    path.join(f.workspace, 'documents/collection-imports'),
+  );
+  const bytes = Buffer.from('%PDF-1.4\ncontrolled fixture');
+  const relative = 'collection-cache/path/source.pdf';
+  await mkdir(path.join(f.workspace, 'collection-cache/path'), {
+    recursive: true,
+  });
+  await writeFile(path.join(f.workspace, relative), bytes);
+  f.db.prepare('INSERT INTO collection_sources VALUES(?,?,?)').run(
+    'path-source',
+    job.id,
+    JSON.stringify({
+      id: 'path-source',
+      jobId: job.id,
+      kind: 'pdf',
+      path: relative,
+      url: 'https://example.edu/document.pdf',
+      sha256: createHash('sha256').update(bytes).digest('hex'),
+      pages: [],
+    }),
+  );
+  job.draft.documents = [
+    {
+      sourceId: 'path-source',
+      kind: 'guidelines',
+      year: '2028',
+      title: '原件',
+    },
+  ];
+  save();
+  selection.resources.documents = [
+    {
+      sourceId: 'path-source',
+      kind: 'guidelines',
+      year: '2028',
+      owner: { kind: 'major', id: 'm1' },
+    },
+  ];
+  const p = await f.plan(job.id, selection);
+  assert.equal(p.status, 200);
+  assert.equal((await f.apply(job.id, p.data)).status, 403);
+  assert.deepEqual(await readdir(outside), []);
+  assert.equal(
+    f.db.prepare('SELECT COUNT(*) n FROM document_records').get().n,
+    0,
+  );
+});
