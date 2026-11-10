@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed } from 'vue';
+
 import { Radio, Select } from 'ant-design-vue';
+
 import { useExplorerStore } from '../explorer';
 const props = defineProps<{ schoolId?: string }>();
 const scope = defineModel<string>('scope', { default: 'current' });
@@ -19,39 +21,36 @@ const options = computed(() =>
 <template>
   <fieldset class="import-scope">
     <legend>导入哪些专攻？</legend>
-    <Radio.Group v-model:value="scope"
-      ><Radio value="current">仅本专攻</Radio
-      ><Radio value="selected">同时导入其他专攻</Radio></Radio.Group
-    >
-    <template v-if="scope === 'selected'"
-      ><Select
+    <Radio.Group v-model:value="scope">
+      <Radio value="current">仅本专攻</Radio><Radio value="selected">同时导入其他专攻</Radio>
+    </Radio.Group>
+    <template v-if="scope === 'selected'">
+      <Select
         v-model:value="selections"
         mode="tags"
         :options="options"
         :max-tag-count="3"
         placeholder="选择专攻，或输入 研究科 / 专攻 后按回车"
         aria-label="选择导入的研究科与专攻"
-      /><small
-        >最多另选 3 个。新名称请按“研究科 /
-        专攻”填写；系统分别分析、建档，信息需核对后采纳。</small
-      ></template
-    >
+      /><small>最多另选 3 个。新名称请按“研究科 /
+        专攻”填写；系统分别分析、建档，信息需核对后采纳。</small>
+    </template>
   </fieldset>
 </template>
 <style scoped>
 .import-scope {
   display: grid;
-  gap: 12px;
-  padding: 16px;
-  margin: 18px 0;
+  gap: 10px;
+  padding: 14px;
+  margin: 15px 0;
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .import-scope legend {
   width: auto;
-  padding: 0 6px;
-  font-size: 13px;
+  padding: 0 5px;
+  font-size: 11px;
 }
 
 .import-scope :deep(.ant-select) {
@@ -59,7 +58,7 @@ const options = computed(() =>
 }
 
 .import-scope small {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }

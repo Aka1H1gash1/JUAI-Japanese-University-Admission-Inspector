@@ -230,50 +230,50 @@ async function download(format: 'pdf' | 'xlsx') {
 .profile-export-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
-  margin: 12px 0;
+  gap: 14px;
+  margin: 10px 0;
 }
 
 .profile-export-options label {
   display: grid;
   flex: 1;
-  gap: 6px;
-  min-width: 190px;
+  gap: 5px;
+  min-width: 162px;
 }
 
 .export-hint {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .profile-export-selection {
-  margin: 16px 0;
+  margin: 14px 0;
 }
 
 .profile-export-selection > div {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  margin-bottom: 12px;
-  font-size: 12px;
+  margin-bottom: 10px;
+  font-size: 11px;
 }
 
 .profile-export-selection > section {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  max-height: 220px;
+  gap: 7px;
+  max-height: 187px;
   overflow: auto;
 }
 
 .profile-export-selection label {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: start;
-  padding: 10px;
+  padding: 8px;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .profile-export-selection small {
@@ -283,40 +283,40 @@ async function download(format: 'pdf' | 'xlsx') {
 }
 
 .profile-export-preview {
-  padding: 24px;
+  padding: 20px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .profile-export-preview header {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .profile-export-preview h3 {
-  margin: 16px 0 8px;
-  font-size: 20px;
+  margin: 14px 0 7px;
+  font-size: 17px;
 }
 
 .profile-export-preview p {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .profile-export-preview h4 {
-  margin: 20px 0 10px;
-  font-size: 14px;
+  margin: 17px 0 8px;
+  font-size: 12px;
 }
 
 .profile-export-preview dl {
   display: grid;
-  grid-template-columns: 130px minmax(0, 1fr);
-  gap: 8px 16px;
-  font-size: 12px;
+  grid-template-columns: 110px minmax(0, 1fr);
+  gap: 7px 14px;
+  font-size: 11px;
   line-height: 1.8;
 }
 
@@ -333,10 +333,10 @@ async function download(format: 'pdf' | 'xlsx') {
 .profile-export-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  margin-top: 20px;
+  margin-top: 17px;
 }
 
 .profile-export-footer > span {
@@ -346,7 +346,7 @@ async function download(format: 'pdf' | 'xlsx') {
 
 .profile-export-footer > div {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 @media (max-width: 640px) {
@@ -355,7 +355,7 @@ async function download(format: 'pdf' | 'xlsx') {
   }
 
   .profile-export-preview {
-    padding: 16px;
+    padding: 14px;
   }
 
   .profile-export-preview dl {
@@ -364,7 +364,7 @@ async function download(format: 'pdf' | 'xlsx') {
   }
 
   .profile-export-preview dd {
-    margin-bottom: 8px;
+    margin-bottom: 7px;
   }
 }
 </style>

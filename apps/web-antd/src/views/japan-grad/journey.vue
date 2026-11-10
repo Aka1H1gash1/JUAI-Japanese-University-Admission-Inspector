@@ -47,10 +47,10 @@ function manageContact(id: string, professorId?: string) {
 }
 const query = ref('');
 const foreignFilter = ref('');
-  const languageFilter = ref('');
-  const schoolFilter = ref('');
-  const stageFilter = ref('');
-  const universityFilter = ref('');
+const languageFilter = ref('');
+const schoolFilter = ref('');
+const stageFilter = ref('');
+const universityFilter = ref('');
 const filterSchools = computed(() =>
   store.schools.filter(
     (s) => !universityFilter.value || s.universityId === universityFilter.value,
@@ -262,9 +262,9 @@ const { page, pageSize, total, paged } = usePagination(visible, [
                   foreignFilter = '';
                   languageFilter = '';
                 "
-                >
-清除详细筛选
-</Button>
+              >
+                清除详细筛选
+              </Button>
             </div>
           </details>
           <Tabs v-model:active-key="view" class="journey-workspace-tabs">
@@ -323,18 +323,18 @@ const { page, pageSize, total, paged } = usePagination(visible, [
       scope="favorites"
       :targets="targets"
       :initial-ids="exportInitialIds"
-      >
-<template #extra>
-<Button
+    >
+      <template #extra>
+        <Button
           @click="
             reportOpen = false;
             openExport();
           "
-          >
-自选字段Excel
-</Button>
-</template>
-</ProfileExportDialog>
+        >
+          自选字段Excel
+        </Button>
+      </template>
+    </ProfileExportDialog>
     <JourneyExportDialog
       v-model:open="exportOpen"
       :targets="targets"
@@ -412,49 +412,49 @@ const { page, pageSize, total, paged } = usePagination(visible, [
 }
 
 .journey-export-note {
-  margin: 12px 0 16px;
-  font-size: 12px;
+  margin: 10px 0 14px;
+  font-size: 11px;
   color: var(--jg-muted);
   text-align: right;
 }
 
 .journey-toolbar-year {
   display: inline-flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
   white-space: nowrap;
 }
 
 .journey-toolbar-year .ant-select {
-  min-width: 170px;
+  min-width: 144px;
 }
 
 .journey-comparison-year {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  margin: 14px 0 18px;
-  font-size: 12px;
+  margin: 12px 0 15px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .journey-comparison-year .ant-select {
-  min-width: 220px;
+  min-width: 187px;
 }
 </style>
 
 <style scoped>
 .journey-fine-filters {
-  padding: 16px 0;
-  margin: 12px 0 20px;
+  padding: 14px 0;
+  margin: 10px 0 17px;
   border-top: 1px solid var(--jg-line);
   border-bottom: 1px solid var(--jg-line);
 }
 
 .journey-fine-filters summary {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-accent-text);
   cursor: pointer;
 }
@@ -462,15 +462,15 @@ const { page, pageSize, total, paged } = usePagination(visible, [
 .journey-fine-filter-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 14px;
+  gap: 12px;
   align-items: end;
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .journey-fine-filter-grid label {
   display: grid;
-  gap: 6px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 

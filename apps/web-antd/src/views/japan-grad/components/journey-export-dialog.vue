@@ -457,14 +457,14 @@ async function download() {
 
 <style scoped>
 .export-intro {
-  margin: 8px 0 20px;
+  margin: 7px 0 17px;
   color: var(--jg-muted);
 }
 
 .export-content {
   min-width: 0;
   max-height: 66vh;
-  padding: 0 8px 0 0;
+  padding: 0 7px 0 0;
   margin: 0;
   overflow: auto;
   border: 0;
@@ -472,8 +472,8 @@ async function download() {
 
 .export-config-grid {
   display: grid;
-  grid-template-columns: minmax(220px, 300px) minmax(0, 1fr);
-  gap: 24px;
+  grid-template-columns: minmax(187px, 255px) minmax(0, 1fr);
+  gap: 20px;
 }
 
 .export-rooms,
@@ -485,56 +485,56 @@ async function download() {
 .export-field-group header,
 .export-room-actions {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   justify-content: space-between;
 }
 
 .export-section-heading {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .export-section-heading h3,
 .export-field-group h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--jg-text);
 }
 
 .export-section-heading h3 span,
 .export-section-heading > span {
-  margin-left: 6px;
-  font-size: 12px;
+  margin-left: 5px;
+  font-size: 11px;
   font-weight: 400;
   color: var(--jg-muted);
 }
 
 .export-rooms > .ant-select {
   display: block;
-  margin: 10px 0;
+  margin: 8px 0;
 }
 
 .export-room-actions {
-  margin: 12px 0;
-  font-size: 12px;
+  margin: 10px 0;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .export-room-list {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   align-content: start;
-  max-height: 440px;
+  max-height: 374px;
   overflow-y: auto;
 }
 
 .export-room.ant-checkbox-wrapper {
   align-items: flex-start;
-  padding: 12px;
+  padding: 10px;
   margin: 0;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .export-room.is-selected {
@@ -568,40 +568,40 @@ async function download() {
 .export-presets {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .export-presets > span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .export-field-groups {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .export-field-group {
-  padding-top: 10px;
+  padding-top: 8px;
   border-top: 1px solid var(--jg-line);
 }
 
 .export-field-group header {
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 
 .export-field-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 16px;
+  gap: 8px 14px;
 }
 
 .export-field-grid .ant-checkbox-wrapper {
   align-items: flex-start;
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .export-field-grid :deep(.ant-checkbox) {
@@ -609,34 +609,34 @@ async function download() {
 }
 
 .export-hint {
-  margin: 10px 0 0;
-  font-size: 12px;
+  margin: 8px 0 0;
+  font-size: 11px;
   line-height: 1.7;
   color: var(--jg-muted);
 }
 
 .export-options {
-  padding: 16px;
-  margin: 24px 0;
+  padding: 14px;
+  margin: 20px 0;
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .export-options > label {
-  margin-right: 12px;
+  margin-right: 10px;
   font-weight: 600;
 }
 
 .export-options > .ant-select {
-  width: 235px;
+  width: 200px;
   max-width: 100%;
 }
 
 .export-extra-sheets {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 16px;
-  margin-top: 16px;
+  gap: 8px 14px;
+  margin-top: 14px;
 }
 
 .export-extra-sheets .ant-checkbox-wrapper {
@@ -645,25 +645,25 @@ async function download() {
 
 .export-preview-scroll {
   width: 100%;
-  max-height: 260px;
+  max-height: 221px;
   overflow: auto;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .export-preview table {
   width: max-content;
   min-width: 100%;
-  font-size: 12px;
+  font-size: 11px;
   text-align: left;
   border-collapse: collapse;
 }
 
 .export-preview th,
 .export-preview td {
-  min-width: 140px;
+  min-width: 119px;
   max-width: 220px;
-  padding: 12px;
+  padding: 10px;
   vertical-align: top;
   color: var(--jg-text);
   border-bottom: 1px solid var(--jg-line);
@@ -690,42 +690,42 @@ async function download() {
 }
 
 .export-empty {
-  padding: 24px 12px;
+  padding: 20px 10px;
   color: var(--jg-muted);
   text-align: center;
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .export-footer {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding-top: 16px;
-  margin-top: 20px;
+  padding-top: 14px;
+  margin-top: 17px;
   border-top: 1px solid var(--jg-line);
 }
 
 .export-footer > span {
   flex: 1;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .export-footer .ant-btn-primary {
   display: inline-flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
 }
 
 @media (max-width: 720px) {
   .export-config-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 20px;
+    gap: 17px;
   }
 
   .export-room-list {
-    max-height: 220px;
+    max-height: 187px;
   }
 
   .export-footer {

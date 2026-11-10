@@ -15,8 +15,8 @@ const labs = computed(() =>
     <header>
       <h2>专攻招生信息</h2>
       <RouterLink :to="`/japan-grad/analysis/${majorId}`">
-智能导入募集要项 ↗
-</RouterLink>
+        智能导入募集要项 ↗
+      </RouterLink>
     </header>
     <div class="table-scroll">
       <table>
@@ -89,26 +89,26 @@ const labs = computed(() =>
 </template>
 <style scoped>
 .admission-table-panel {
-  padding: 22px;
-  margin: 28px 0;
+  padding: 19px;
+  margin: 24px 0;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 header {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   justify-content: space-between;
 }
 
 h2 {
-  font-size: 21px;
+  font-size: 18px;
 }
 
 a {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
@@ -118,15 +118,15 @@ a {
 
 table {
   width: 100%;
-  margin-top: 16px;
-  font-size: 13px;
+  margin-top: 14px;
+  font-size: 11px;
   border-collapse: collapse;
 }
 
 th,
 td {
-  min-width: 100px;
-  padding: 14px;
+  min-width: 85px;
+  padding: 12px;
   vertical-align: top;
   text-align: left;
   white-space: pre-wrap;
@@ -139,9 +139,9 @@ th {
 
 dl > div {
   display: grid;
-  grid-template-columns: 100px 1fr;
-  padding: 12px 0;
-  font-size: 13px;
+  grid-template-columns: 85px 1fr;
+  padding: 10px 0;
+  font-size: 11px;
   border-bottom: 1px solid var(--jg-line);
 }
 
@@ -151,7 +151,7 @@ dd {
 }
 
 .lab-requirement {
-  padding: 12px 0;
-  font-size: 13px;
+  padding: 10px 0;
+  font-size: 11px;
 }
 </style>

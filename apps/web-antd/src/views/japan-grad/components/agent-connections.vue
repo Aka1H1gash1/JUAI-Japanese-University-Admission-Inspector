@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+
 import { App, Button, Checkbox, Input, Modal, Select } from 'ant-design-vue';
+
 import { useExplorerStore } from '../explorer';
 import { jsonOptions, localApi } from '../local-api';
 import { vAccessibleSelect } from '../select-accessibility';
@@ -21,8 +23,8 @@ interface Config {
   env: Record<string, string>;
 }
 const open = defineModel<boolean>('open', { default: false });
-const store = useExplorerStore(),
-  { message } = App.useApp();
+const store = useExplorerStore();
+const { message } = App.useApp();
 const access = ref('write');
 const writableKinds = ref<string[]>(['major', 'lab']);
 const kindOptions = [
@@ -32,14 +34,14 @@ const kindOptions = [
   { value: 'school', label: '研究科资料（影响所有关联专攻）' },
   { value: 'university', label: '大学资料、预算与住宿（影响所有关联专攻）' },
 ];
-const name = ref('我的 Agent'),
-  ids = ref<string[]>([]),
-  rows = ref<Connection[]>([]),
-  config = ref<Config>(),
-  generatedConnection = ref<Connection>(),
-  kind = ref('json'),
-  busy = ref(false),
-  feedback = ref('');
+const busy = ref(false);
+const config = ref<Config>();
+const feedback = ref('');
+const generatedConnection = ref<Connection>();
+const ids = ref<string[]>([]);
+const kind = ref('json');
+const name = ref('我的 Agent');
+const rows = ref<Connection[]>([]);
 const majors = computed(() =>
   store.majors.map((m) => {
     const s = store.schools.find((s) => s.id === m.schoolId);
@@ -49,22 +51,21 @@ const majors = computed(() =>
     };
   }),
 );
-const text = computed(() =>
-  !config.value
-    ? ''
-    : kind.value === 'json'
-      ? JSON.stringify({ mcpServers: { juai: config.value } }, null, 2)
-      : `[mcp_servers.juai]\ncommand = ${JSON.stringify(config.value.command)}\nargs = ${JSON.stringify(config.value.args)}\n\n[mcp_servers.juai.env]\n${Object.entries(
-          config.value.env,
-        )
-          .map(([key, value]) => `${key} = ${JSON.stringify(value)}`)
-          .join('\n')}\n`,
-);
+const text = computed(() => {
+  if (!config.value) return '';
+  if (kind.value === 'json')
+    return JSON.stringify({ mcpServers: { juai: config.value } }, null, 2);
+  return `[mcp_servers.juai]\ncommand = ${JSON.stringify(config.value.command)}\nargs = ${JSON.stringify(config.value.args)}\n\n[mcp_servers.juai.env]\n${Object.entries(
+    config.value.env,
+  )
+    .map(([key, value]) => `${key} = ${JSON.stringify(value)}`)
+    .join('\n')}\n`;
+});
 async function load() {
   try {
     rows.value = await localApi<Connection[]>('/analysis/connections');
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '连接读取失败。';
+  } catch (error) {
+    feedback.value = error instanceof Error ? error.message : '连接读取失败。';
   }
 }
 watch(open, (value) => {
@@ -96,8 +97,8 @@ async function create() {
     generatedConnection.value = result.connection;
     await load();
     message.success('已创建连接，请保存下方配置。');
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '创建失败。';
+  } catch (error) {
+    feedback.value = error instanceof Error ? error.message : '创建失败。';
   } finally {
     busy.value = false;
   }
@@ -110,8 +111,8 @@ async function revoke(id: string) {
     config.value = undefined;
     await load();
     message.success('连接已撤销');
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '撤销失败。';
+  } catch (error) {
+    feedback.value = error instanceof Error ? error.message : '撤销失败。';
   } finally {
     busy.value = false;
   }
@@ -173,8 +174,9 @@ async function downloadBundle() {
       new Blob([new Uint8Array(bytes).buffer], { type: 'application/zip' }),
       'JUAI-Agent-配置包.zip',
     );
-  } catch (e) {
-    feedback.value = e instanceof Error ? e.message : '配置包生成失败。';
+  } catch (error) {
+    feedback.value =
+      error instanceof Error ? error.message : '配置包生成失败。';
   }
 }
 async function copy() {
@@ -203,8 +205,7 @@ async function copy() {
         JUAI，可查看前后对照和撤销记录。
       </p>
       <div class="field">
-        <label for="agent-name">连接名称</label
-        ><Input
+        <label for="agent-name">连接名称</label><Input
           id="agent-name"
           v-model:value="name"
           :maxlength="100"
@@ -212,8 +213,7 @@ async function copy() {
         />
       </div>
       <div class="field agent-major-scope">
-        <label>授权专攻</label
-        ><Checkbox.Group
+        <label>授权专攻</label><Checkbox.Group
           v-model:value="ids"
           :options="majors"
           :disabled="busy"
@@ -235,8 +235,7 @@ async function copy() {
         />
       </div>
       <div v-if="access === 'write'" class="field agent-major-scope">
-        <label>允许编辑的资料类型</label
-        ><Checkbox.Group
+        <label>允许编辑的资料类型</label><Checkbox.Group
           v-model:value="writableKinds"
           :options="kindOptions"
           :disabled="busy"
@@ -262,8 +261,9 @@ async function copy() {
           (access === 'write' && !writableKinds.length)
         "
         @click="create"
-        >创建连接配置</Button
       >
+        创建连接配置
+      </Button>
       <section v-if="config" class="agent-generated">
         <header>
           <h3>保存连接配置</h3>
@@ -275,8 +275,7 @@ async function copy() {
               { value: 'toml', label: 'Codex config.toml' },
             ]"
             aria-label="连接配置格式"
-          /><Button @click="copy">复制配置</Button
-          ><Button
+          /><Button @click="copy">复制配置</Button><Button
             @click="
               download(
                 text,
@@ -286,8 +285,9 @@ async function copy() {
                 'text/plain;charset=utf-8',
               )
             "
-            >下载配置</Button
           >
+            下载配置
+          </Button>
         </header>
         <p>
           令牌仅在本次窗口显示，保存到 Agent
@@ -303,10 +303,11 @@ async function copy() {
               'text/markdown;charset=utf-8',
             )
           "
-          >下载 Agent 使用说明</Button
-        ><Button class="agent-guide-download" @click="downloadBundle"
-          >下载完整配置包</Button
         >
+          下载 Agent 使用说明
+</Button><Button class="agent-guide-download" @click="downloadBundle">
+          下载完整配置包
+        </Button>
         <Input.TextArea
           :value="text"
           readonly
@@ -321,16 +322,14 @@ async function copy() {
         </header>
         <div v-for="row in rows" :key="row.id" class="agent-existing-row">
           <div>
-            <strong>{{ row.name }}</strong
-            ><small>{{
+            <strong>{{ row.name }}</strong><small>{{
               row.majorIds
                 .map(
                   (id) =>
                     majors.find((m) => m.value === id)?.label || '已删除专攻',
                 )
                 .join('、')
-            }}</small
-            ><small>{{
+            }}</small><small>{{
               row.revokedAt
                 ? '已撤销'
                 : row.informationAccess === 'write'
@@ -339,21 +338,18 @@ async function copy() {
                     ? '只读信息文件，可提交分析草稿'
                     : '原有分析权限，未开放信息编辑'
             }}</small>
-            <small v-if="!row.revokedAt && !row.lastUsedAt"
-              >等待 Agent 首次连接</small
-            >
-            <small v-if="row.lastUsedAt"
-              >最近使用：{{
+            <small v-if="!row.revokedAt && !row.lastUsedAt">等待 Agent 首次连接</small>
+            <small v-if="row.lastUsedAt">最近使用：{{
                 new Date(row.lastUsedAt).toLocaleString('zh-CN')
-              }}</small
-            >
+              }}</small>
           </div>
           <Button
             danger
             :disabled="busy || !!row.revokedAt"
             @click="revoke(row.id)"
-            >撤销连接</Button
           >
+            撤销连接
+          </Button>
         </div>
         <p v-if="!rows.length">尚未创建 Agent 连接。</p>
       </section>
@@ -361,81 +357,93 @@ async function copy() {
       <p v-if="feedback" class="form-error" role="alert">{{ feedback }}</p>
     </div>
     <div class="form-footer">
-      <span>本地 STDIO 接入 · 信息权限由 JUAI 服务校验</span
-      ><Button :disabled="busy" @click="open = false">关闭</Button>
+      <span>本地 STDIO 接入 · 信息权限由 JUAI 服务校验</span><Button :disabled="busy" @click="open = false">关闭</Button>
     </div>
   </Modal>
 </template>
 <style scoped>
 .agent-connection-body {
   max-height: 68vh;
+  padding-right: 7px;
   overflow: auto;
-  padding-right: 8px;
 }
+
 .agent-connection-body > .field {
-  margin: 16px 0;
+  margin: 14px 0;
 }
+
 .agent-major-scope :deep(.ant-checkbox-group) {
   display: grid;
-  justify-items: start;
+  gap: 8px;
   align-self: stretch;
-  gap: 10px;
-  max-height: 220px;
+  justify-items: start;
+  max-height: 187px;
   overflow: auto;
 }
+
 .agent-major-scope :deep(.ant-checkbox-wrapper) {
   justify-content: flex-start;
   margin: 0;
   text-align: left;
 }
+
 .agent-generated,
 .agent-existing {
-  margin-top: 24px;
-  padding-top: 20px;
+  padding-top: 17px;
+  margin-top: 20px;
   border-top: 1px solid var(--jg-line);
 }
+
 .agent-generated header {
   display: flex;
-  gap: 12px;
   flex-wrap: wrap;
+  gap: 10px;
   align-items: center;
 }
+
 .agent-generated h3 {
-  margin: 0;
   flex: 1;
+  margin: 0;
 }
+
 .agent-generated .ant-select {
-  width: 200px;
+  width: 170px;
 }
+
 .agent-generated p,
 .agent-existing p {
+  font-size: 11px;
   color: var(--jg-muted);
-  font-size: 13px;
 }
+
 .agent-guide-download {
-  margin: 12px 0;
+  margin: 10px 0;
 }
+
 .agent-generated textarea {
   font-family: ui-monospace, monospace;
-  font-size: 12px;
+  font-size: 11px;
 }
+
 .agent-existing-heading {
   display: flex;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
 }
+
 .agent-existing-row {
   display: flex;
+  gap: 14px;
   justify-content: space-between;
-  gap: 16px;
-  padding: 14px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--jg-line);
 }
+
 .agent-existing-row small {
   display: block;
+  margin-top: 3px;
   color: var(--jg-muted);
-  margin-top: 4px;
   overflow-wrap: anywhere;
 }
 </style>

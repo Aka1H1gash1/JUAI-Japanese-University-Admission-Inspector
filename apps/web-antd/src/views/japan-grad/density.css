@@ -1,0 +1,22 @@
+/* Keep the newly compact controls in native CSS coordinates: menus, dialogs,
+   sticky tables and PDF overlays must all share the browser's normal scale. */
+@media (min-width: 768px) {
+  .university-explorer :is(.jg-main, .jg-masthead-inner, .jg-crumbs) {
+    max-width: 1440px;
+  }
+}
+
+@media (max-width: 767px) {
+  .university-explorer .jg-main {
+    padding: 14px 14px 28px;
+  }
+
+  .university-explorer :is(.workspace-page-heading, .page-heading) {
+    margin-bottom: 18px;
+  }
+
+  /* Preserve easy touch targets while reducing surrounding whitespace. */
+  .university-explorer :is(.ant-btn:not(.ant-btn-sm), .jg-menu-button) {
+    min-height: 40px;
+  }
+}

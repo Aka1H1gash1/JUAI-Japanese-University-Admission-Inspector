@@ -85,28 +85,28 @@ const hint = computed(() => {
 </template>
 <style scoped>
 .collection-stage-progress {
-  padding: 24px;
-  margin: 22px 0;
+  padding: 20px;
+  margin: 19px 0;
   background: var(--jg-surface);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .collection-stage-progress header {
   display: flex;
-  gap: 18px;
+  gap: 15px;
   align-items: flex-start;
   justify-content: space-between;
 }
 
 .collection-stage-progress strong {
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .collection-stage-progress header p {
-  margin: 8px 0 0;
-  font-size: 12px;
+  margin: 7px 0 0;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
@@ -119,11 +119,11 @@ const hint = computed(() => {
 }
 
 .collection-stage-track {
-  height: 5px;
-  margin: 22px 0 18px;
+  height: 4px;
+  margin: 19px 0 15px;
   overflow: hidden;
   background: var(--jg-subtle);
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .collection-stage-track > div {
@@ -136,7 +136,7 @@ const hint = computed(() => {
 .collection-stage-progress ol {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
+  gap: 10px;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -144,9 +144,9 @@ const hint = computed(() => {
 
 .collection-stage-progress li {
   display: flex;
-  gap: 9px;
+  gap: 8px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.6;
   color: var(--jg-muted);
 }
@@ -155,8 +155,8 @@ const hint = computed(() => {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--jg-muted);
@@ -165,8 +165,8 @@ const hint = computed(() => {
 }
 
 .collection-stage-marker svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .collection-stage-progress li.complete,
@@ -219,18 +219,18 @@ const hint = computed(() => {
 
 @media (max-width: 650px) {
   .collection-stage-progress {
-    padding: 18px;
+    padding: 15px;
   }
 
   .collection-stage-progress li {
     flex-direction: column;
-    gap: 8px;
+    gap: 7px;
     font-size: 11px;
     text-align: center;
   }
 
   .collection-stage-progress ol {
-    gap: 7px;
+    gap: 6px;
   }
 }
 

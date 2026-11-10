@@ -210,8 +210,8 @@ async function save() {
 <style scoped>
 .admission-date-hint {
   display: block;
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 5px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 

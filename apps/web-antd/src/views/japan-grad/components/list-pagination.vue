@@ -30,14 +30,14 @@ const pageSize = defineModel<number>('pageSize', { required: true });
 .list-pagination {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0;
+  padding: 14px 0;
 }
 
 .list-pagination-count {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted, #64748b);
 }
 
@@ -48,7 +48,7 @@ const pageSize = defineModel<number>('pageSize', { required: true });
 
   .list-pagination :deep(.ant-pagination-options) {
     display: inline-block;
-    margin: 8px 0;
+    margin: 7px 0;
   }
 
   .list-pagination :deep(.ant-pagination-options-quick-jumper) {

@@ -111,19 +111,19 @@ const blocks = computed(() => {
 </template>
 <style scoped>
 .assistant-answer {
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.9;
   overflow-wrap: anywhere;
 }
 
 .assistant-answer p {
-  margin: 0 0 10px !important;
+  margin: 0 0 8px !important;
   white-space: pre-wrap;
 }
 
 .assistant-answer h4 {
-  margin: 16px 0 8px !important;
-  font-size: 14px;
+  margin: 14px 0 7px !important;
+  font-size: 12px;
   font-weight: 650;
 }
 
@@ -132,27 +132,27 @@ const blocks = computed(() => {
 }
 
 .assistant-answer ul {
-  padding-left: 20px;
-  margin: 8px 0 14px;
+  padding-left: 17px;
+  margin: 7px 0 12px;
 }
 
 .assistant-answer li + li {
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 .assistant-answer code {
-  padding: 1px 4px;
-  font-size: 12px;
+  padding: 1px 3px;
+  font-size: 11px;
   background: var(--jg-subtle);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .assistant-answer pre {
-  padding: 12px;
+  padding: 10px;
   overflow: auto;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 7px;
+  border-radius: 6px;
 }
 
 .assistant-answer pre code {
@@ -162,7 +162,7 @@ const blocks = computed(() => {
 
 .assistant-citation {
   display: inline;
-  padding: 1px 5px;
+  padding: 1px 4px;
   margin-inline: 3px;
   font-size: 10px;
   font-weight: 650;
@@ -171,6 +171,6 @@ const blocks = computed(() => {
   cursor: pointer;
   background: var(--jg-accent-soft);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 </style>

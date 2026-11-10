@@ -483,36 +483,36 @@ function goToMajor() {
 </template>
 <style scoped>
 .analysis-setup {
-  padding: 20px;
-  margin: 20px 0;
+  padding: 17px;
+  margin: 17px 0;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .analysis-setup h3,
 .analysis-jobs h3 {
-  margin: 0 0 12px;
-  font-size: 16px;
+  margin: 0 0 10px;
+  font-size: 14px;
 }
 
 .analysis-setup p,
 .analysis-setup > small {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .analysis-context-fields {
   display: grid;
-  grid-template-columns: 140px 160px minmax(180px, 1fr);
-  gap: 16px;
-  margin: 18px 0;
+  grid-template-columns: 119px 136px minmax(153px, 1fr);
+  gap: 14px;
+  margin: 15px 0;
 }
 
 .analysis-context-fields label {
   display: grid;
-  gap: 8px;
-  font-size: 13px;
+  gap: 7px;
+  font-size: 11px;
 }
 
 .analysis-context-fields :is(.ant-select, .ant-input-number) {
@@ -521,14 +521,14 @@ function goToMajor() {
 
 .analysis-setup .detail-actions {
   justify-content: flex-start;
-  margin: 16px 0;
+  margin: 14px 0;
 }
 
 .analysis-document-list {
   display: grid;
-  gap: 12px;
-  max-height: 250px;
-  margin-top: 16px;
+  gap: 10px;
+  max-height: 212px;
+  margin-top: 14px;
   overflow: auto;
 }
 
@@ -540,7 +540,7 @@ function goToMajor() {
 .analysis-document-list small,
 .analysis-proposals small {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--jg-muted);
 }
 
@@ -549,28 +549,28 @@ function goToMajor() {
 }
 
 .analysis-agent-actions {
-  padding: 20px 0;
+  padding: 17px 0;
 }
 
 .analysis-agent-actions p {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .analysis-package-link {
   display: inline-block;
-  margin-right: 16px;
+  margin-right: 14px;
   color: var(--jg-accent-text);
   text-decoration: underline;
 }
 
 .analysis-import {
   position: relative;
-  padding: 24px;
+  padding: 20px;
   text-align: center;
   background: var(--jg-subtle);
   border: 1px dashed var(--jg-border);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .analysis-import label {
@@ -594,31 +594,31 @@ function goToMajor() {
 
 .analysis-proposals {
   display: grid;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .analysis-proposals article {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   justify-content: space-between;
-  padding: 18px;
+  padding: 15px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .analysis-proposals small {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .analysis-accepted {
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .analysis-accepted > article {
-  padding: 16px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--jg-line);
 }
 
@@ -628,7 +628,7 @@ function goToMajor() {
 }
 
 .analysis-accepted details {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -637,8 +637,8 @@ function goToMajor() {
 }
 
 .analysis-accepted blockquote {
-  padding-left: 12px;
-  margin: 12px 0;
+  padding-left: 10px;
+  margin: 10px 0;
   border-left: 2px solid var(--jg-accent-line);
 }
 

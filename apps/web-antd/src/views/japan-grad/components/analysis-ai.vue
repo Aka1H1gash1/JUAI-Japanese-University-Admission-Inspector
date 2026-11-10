@@ -351,22 +351,22 @@ async function stop() {
 <style scoped>
 .ai-managed-connection {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 0 0;
+  padding: 14px 0 0;
 }
 
 .ai-managed-connection strong {
   display: block;
-  margin-bottom: 5px;
-  font-size: 14px;
+  margin-bottom: 4px;
+  font-size: 12px;
   color: var(--jg-text);
 }
 
 .ai-managed-connection a {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-accent-text);
   text-decoration: underline;
 }
@@ -379,18 +379,18 @@ async function stop() {
 }
 
 .analysis-ai {
-  margin: 12px 0 24px;
+  margin: 10px 0 20px;
   overflow: hidden;
   background: var(--jg-surface);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .ai-heading {
   display: flex;
-  gap: 20px;
+  gap: 17px;
   justify-content: space-between;
-  padding: 24px 24px 18px;
+  padding: 20px 20px 15px;
   background: var(--jg-accent-soft);
 }
 
@@ -402,15 +402,15 @@ async function stop() {
 }
 
 .ai-heading h3 {
-  margin: 7px 0 6px;
-  font-size: 21px;
+  margin: 6px 0 5px;
+  font-size: 18px;
   color: var(--jg-text);
   letter-spacing: -0.03em;
 }
 
 .ai-heading p {
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -422,44 +422,44 @@ async function stop() {
 }
 
 .ai-step i {
-  margin: 0 8px;
+  margin: 0 7px;
   font-style: normal;
   opacity: 0.5;
 }
 
 .analysis-ai > .form-error {
-  margin: 16px 24px;
+  margin: 14px 20px;
 }
 
 .analysis-ai > p {
-  padding: 0 24px;
+  padding: 0 20px;
 }
 
 .ai-model-options {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   padding: 0;
-  margin: 20px 24px 0;
+  margin: 17px 20px 0;
   border: 0;
 }
 
 .ai-model-options legend {
-  margin-bottom: 10px;
-  font-size: 12px;
+  margin-bottom: 8px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .ai-model-options label {
   display: flex;
-  gap: 9px;
+  gap: 8px;
   align-items: flex-start;
   min-width: 0;
-  padding: 14px 12px;
+  padding: 12px 10px;
   cursor: pointer;
   border: 1px solid var(--jg-line);
-  border-radius: 9px;
+  border-radius: 8px;
 }
 
 .ai-model-options label.selected {
@@ -474,21 +474,21 @@ async function stop() {
 
 .ai-model-options strong {
   display: block;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-text);
 }
 
 .ai-model-options small {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   font-size: 11px;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
 }
 
 .ai-connection {
-  margin: 14px 24px 18px;
-  font-size: 12px;
+  margin: 12px 20px 15px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -498,26 +498,26 @@ async function stop() {
 
 .ai-connection > small {
   display: block;
-  margin-top: 8px;
+  margin-top: 7px;
   font-size: 11px;
 }
 
 .ai-inline {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .ai-inline > .ant-select {
   flex: 1;
-  min-width: 180px;
+  min-width: 153px;
 }
 
 .ai-reading-options {
-  padding-top: 14px;
-  margin: 0 24px 18px;
-  font-size: 12px;
+  padding-top: 12px;
+  margin: 0 20px 15px;
+  font-size: 11px;
   border-top: 1px solid var(--jg-line);
 }
 
@@ -527,32 +527,32 @@ async function stop() {
 }
 
 .ai-reading-options summary > span {
-  margin-left: 10px;
+  margin-left: 8px;
   color: var(--jg-muted);
 }
 
 .ai-reading-options p {
-  margin: 8px 0;
+  margin: 7px 0;
   line-height: 1.7;
   color: var(--jg-muted);
 }
 
 .ai-ranges {
   display: grid;
-  gap: 12px;
-  margin: 16px 0;
+  gap: 10px;
+  margin: 14px 0;
 }
 
 .ai-ranges > label {
   display: grid;
-  grid-template-columns: 1fr minmax(140px, 240px);
-  gap: 12px;
+  grid-template-columns: 1fr minmax(119px, 204px);
+  gap: 10px;
   align-items: center;
 }
 
 .ai-ranges small {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   font-size: 11px;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
@@ -564,34 +564,34 @@ async function stop() {
 
 .ai-scan-label {
   display: grid;
-  gap: 7px;
+  gap: 6px;
   max-width: 480px;
 }
 
 .ai-start {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 24px;
+  padding: 14px 20px;
   border-top: 1px solid var(--jg-line);
 }
 
 .ai-start strong {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   overflow-wrap: anywhere;
 }
 
 .ai-start small {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .ai-run {
-  padding: 18px 24px;
+  padding: 15px 20px;
   background: var(--jg-subtle);
   border-top: 1px solid var(--jg-line);
 }
@@ -599,12 +599,12 @@ async function stop() {
 .ai-run-title {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }
 
 .ai-run-title strong {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
@@ -615,24 +615,24 @@ async function stop() {
 }
 
 .ai-run p {
-  margin: 8px 0;
-  font-size: 12px;
+  margin: 7px 0;
+  font-size: 11px;
 }
 
 .ai-run .ai-inline {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .ai-run progress {
   width: 100%;
-  height: 5px;
-  margin-top: 12px;
+  height: 4px;
+  margin-top: 10px;
   accent-color: var(--jg-accent);
 }
 
 .ai-history {
-  margin-top: 14px;
-  font-size: 12px;
+  margin-top: 12px;
+  font-size: 11px;
 }
 
 .ai-history summary {
@@ -642,10 +642,10 @@ async function stop() {
 
 .ai-history article {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 0;
+  padding: 8px 0;
   border-bottom: 1px solid var(--jg-line);
 }
 
@@ -655,18 +655,18 @@ async function stop() {
 
 .ai-api-form {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .ai-api-form label:not(.ant-checkbox-wrapper) {
   display: grid;
-  gap: 6px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 11px;
 }
 
 .ai-api-form p,
 .ai-api-form > small {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.7;
   color: var(--jg-muted);
 }
@@ -678,7 +678,7 @@ async function stop() {
 @media (max-width: 760px) {
   .ai-heading {
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
   .ai-step {

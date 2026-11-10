@@ -468,8 +468,8 @@ async function parse() {
 </template>
 <style scoped>
 .create-parent {
-  margin: 8px 0 16px;
-  font-size: 12px;
+  margin: 7px 0 14px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
@@ -477,22 +477,22 @@ async function parse() {
 .create-methods {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin: 20px 0 12px;
+  gap: 14px;
+  margin: 17px 0 10px;
 }
 
 .create-methods button {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   align-items: flex-start;
-  padding: 24px 20px;
+  padding: 20px 17px;
   color: var(--jg-text);
   text-align: left;
   cursor: pointer;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .create-methods button:hover,
@@ -502,34 +502,34 @@ async function parse() {
 }
 
 .create-methods svg {
-  width: 25px;
-  height: 25px;
+  width: 21px;
+  height: 21px;
   color: var(--jg-accent-text);
 }
 
 .create-methods strong {
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .create-methods span {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .create-url-form label {
   display: grid;
-  gap: 8px;
-  margin: 16px 0;
-  font-size: 12px;
+  gap: 7px;
+  margin: 14px 0;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .create-application-context {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
 }
 
 .create-application-context .ant-input-number,
@@ -539,9 +539,9 @@ async function parse() {
 
 .create-url-form footer {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 17px;
 }
 
 @media (max-width: 500px) {

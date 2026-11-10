@@ -607,7 +607,7 @@ async function importTemplates() {
 }
 
 .checklist-eyebrow {
-  margin: 0 0 8px !important;
+  margin: 0 0 7px !important;
   font-size: 10px !important;
   color: var(--jg-accent-text) !important;
   letter-spacing: 0.14em;
@@ -616,7 +616,7 @@ async function importTemplates() {
 .checklist-primary-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .smart-import-button {
@@ -629,52 +629,52 @@ async function importTemplates() {
 }
 
 .checklist-row.todo .planner-task-content h3 {
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 
 .checklist-date {
   display: inline-flex;
   width: fit-content;
-  padding: 4px 8px;
-  margin-top: 8px;
+  padding: 3px 7px;
+  margin-top: 7px;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--jg-accent-text);
   background: var(--jg-subtle);
-  border-radius: 999px;
+  border-radius: 849px;
 }
 
 .checklist-empty > svg {
-  width: 28px;
-  height: 28px;
-  margin-bottom: 10px;
+  width: 24px;
+  height: 24px;
+  margin-bottom: 8px;
   color: var(--jg-accent-text);
 }
 
 .checklist-empty > div {
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .smart-import-panel > header {
   display: flex;
-  gap: 13px;
+  gap: 11px;
   align-items: flex-start;
-  padding: 16px;
+  padding: 14px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .smart-import-panel > header > span {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   color: var(--jg-on-accent);
   background: var(--jg-accent);
-  border-radius: 9px;
+  border-radius: 8px;
 }
 
 .smart-import-panel h3,
@@ -684,29 +684,29 @@ async function importTemplates() {
 
 .smart-import-panel header p,
 .smart-import-missing p {
-  margin-top: 5px;
-  font-size: 12px;
+  margin-top: 4px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .smart-import-options {
   display: grid;
-  gap: 8px;
-  max-height: 360px;
-  padding: 14px 0;
+  gap: 7px;
+  max-height: 306px;
+  padding: 12px 0;
   overflow: auto;
 }
 
 .smart-import-option {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
-  gap: 12px;
+  gap: 10px;
   align-items: flex-start;
-  padding: 12px 14px;
+  padding: 10px 12px;
   cursor: pointer;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .smart-import-option:hover {
@@ -715,11 +715,11 @@ async function importTemplates() {
 
 .smart-import-option span {
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 
 .smart-import-option strong {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--jg-text);
 }
@@ -730,32 +730,32 @@ async function importTemplates() {
 }
 
 .smart-import-missing {
-  padding: 32px 18px;
-  margin: 14px 0;
+  padding: 27px 15px;
+  margin: 12px 0;
   text-align: center;
   border: 1px dashed var(--jg-border);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .smart-import-missing a {
   display: inline-block;
-  margin: 14px 10px 0;
+  margin: 12px 8px 0;
   color: var(--jg-accent-text);
 }
 
 .smart-import-skipped {
-  margin: 10px 0 0;
-  font-size: 12px;
+  margin: 8px 0 0;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .smart-import-panel > footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: flex-end;
-  padding-top: 14px;
+  padding-top: 12px;
   border-top: 1px solid var(--jg-line);
 }
 

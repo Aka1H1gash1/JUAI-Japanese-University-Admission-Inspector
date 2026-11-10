@@ -246,56 +246,56 @@ async function apply() {
 </template>
 <style scoped>
 .special-review {
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .special-review header h2 {
-  margin: 0 0 10px;
-  font-size: 23px;
+  margin: 0 0 8px;
+  font-size: 20px;
 }
 
 .special-review header p,
 .special-review-scope {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .special-review-warnings {
-  padding: 16px 30px;
-  font-size: 12px;
+  padding: 14px 26px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .special-review > section {
-  padding: 22px;
-  margin: 18px 0;
+  padding: 19px;
+  margin: 15px 0;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .special-review h3 {
-  margin: 0 0 18px;
-  font-size: 18px;
+  margin: 0 0 15px;
+  font-size: 15px;
 }
 
 .special-review-field {
   display: grid;
-  grid-template-columns: 150px minmax(0, 1fr);
-  gap: 18px;
-  padding: 15px 0;
+  grid-template-columns: 128px minmax(0, 1fr);
+  gap: 15px;
+  padding: 13px 0;
   border-top: 1px solid var(--jg-line);
 }
 
 .special-review-citations {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
-  margin: 9px 0;
+  gap: 7px 10px;
+  margin: 8px 0;
 }
 
 .special-review-citations a {
@@ -305,11 +305,11 @@ async function apply() {
 
 .special-review footer {
   display: grid;
-  gap: 15px;
-  padding: 22px;
+  gap: 13px;
+  padding: 19px;
   background: var(--jg-accent-soft);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .special-review footer > .ant-btn {
@@ -319,7 +319,7 @@ async function apply() {
 @media (max-width: 650px) {
   .special-review-field {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 7px;
   }
 }
 </style>

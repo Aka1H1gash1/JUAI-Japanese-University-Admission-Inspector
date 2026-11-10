@@ -30,7 +30,7 @@
   flex-direction: column;
   width: 100%;
   height: 100dvh;
-  min-height: 360px;
+  min-height: 306px;
   overflow: hidden;
   background: var(--jg-bg);
 }
@@ -42,10 +42,10 @@
 .reader-heading {
   display: flex;
   flex: none;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
-  min-height: 70px;
-  padding: 12px 20px;
+  min-height: 60px;
+  padding: 10px 17px;
   background: var(--jg-surface);
   border-bottom: 1px solid var(--jg-line);
 }
@@ -54,11 +54,11 @@
   display: grid;
   flex: none;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 31px;
+  height: 31px;
   color: var(--jg-secondary) !important;
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .reader-document-title {
@@ -79,7 +79,7 @@
   margin-top: 2px !important;
   overflow: hidden;
   text-overflow: ellipsis;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 650;
   line-height: 1.5;
   white-space: nowrap;
@@ -88,57 +88,57 @@
 .reader-heading-actions {
   display: flex;
   flex: none;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .reader-file-badge {
-  padding: 3px 6px;
+  padding: 3px 5px;
   font-size: 10px;
   font-weight: 650;
   color: var(--jg-muted);
   border: 1px solid var(--jg-line);
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
 .reader-toolbar {
   display: flex;
   flex: none;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  min-height: 49px;
-  padding: 6px 20px;
+  min-height: 42px;
+  padding: 5px 17px;
   background: var(--jg-surface);
   border-bottom: 1px solid var(--jg-line);
 }
 
 .reader-toolbar-group {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
 }
 
 .reader-tool-button {
   display: inline-flex;
   flex: none;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   justify-content: center;
-  min-width: 30px;
-  height: 30px;
-  padding: 0 6px;
-  font-size: 12px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 5px;
+  font-size: 11px;
   color: var(--jg-secondary);
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .reader-tool-button svg {
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
 }
 
 .reader-tool-button[aria-pressed='true'] {
@@ -153,44 +153,44 @@
 
 .reader-toolbar-divider {
   width: 1px;
-  height: 18px;
-  margin: 0 6px;
+  height: 15px;
+  margin: 0 5px;
   background: var(--jg-line);
 }
 
 .reader-page-input {
   display: flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   font-variant-numeric: tabular-nums;
   color: var(--jg-muted);
 }
 
 .reader-page-input input {
-  width: 40px;
-  height: 28px;
-  padding: 0 4px;
+  width: 34px;
+  height: 24px;
+  padding: 0 3px;
   color: var(--jg-text);
   text-align: center;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
 .reader-toolbar select {
   max-width: 112px;
-  padding: 5px 4px;
-  font-size: 12px;
+  padding: 4px 3px;
+  font-size: 11px;
   color: var(--jg-secondary);
   cursor: pointer;
   background: var(--jg-surface);
   border: 0;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .reader-position-status {
-  margin-right: 10px;
+  margin-right: 8px;
   font-size: 11px;
   color: var(--jg-muted);
 }
@@ -211,7 +211,7 @@
   display: flex;
   flex: none;
   flex-direction: column;
-  width: 190px;
+  width: 162px;
   min-width: 0;
   background: var(--jg-surface);
   border-right: 1px solid var(--jg-line);
@@ -221,27 +221,27 @@
 .reader-side-tabs {
   display: flex;
   flex: none;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
-  min-height: 48px;
-  padding: 6px 12px;
+  min-height: 41px;
+  padding: 5px 10px;
   border-bottom: 1px solid var(--jg-line);
 }
 
 .reader-nav-tabs button,
 .reader-side-tabs button {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   justify-content: center;
-  min-height: 32px;
-  padding: 5px 10px;
-  font-size: 12px;
+  min-height: 27px;
+  padding: 4px 8px;
+  font-size: 11px;
   color: var(--jg-secondary);
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .reader-nav-tabs button.is-active,
@@ -253,8 +253,8 @@
 
 .reader-nav-tabs svg,
 .reader-side-tabs svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .reader-nav-tabs .reader-mobile-close {
@@ -265,7 +265,7 @@
 .reader-pages-list {
   flex: 1;
   min-height: 0;
-  padding: 8px 0 24px;
+  padding: 7px 0 20px;
   overflow: auto;
   scrollbar-width: thin;
 }
@@ -273,8 +273,8 @@
 .reader-outline > button {
   display: block;
   width: 100%;
-  padding: 10px 14px;
-  font-size: 12px;
+  padding: 8px 12px;
+  font-size: 11px;
   line-height: 1.7;
   color: var(--jg-secondary);
   text-align: left;
@@ -287,11 +287,11 @@
 
 .reader-pages-list > button {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   width: 100%;
-  padding: 13px 18px;
-  font-size: 12px;
+  padding: 11px 15px;
+  font-size: 11px;
   color: var(--jg-secondary);
   text-align: left;
   cursor: pointer;
@@ -311,11 +311,11 @@
 }
 
 .reader-pages-list > button > small {
-  padding: 0 5px;
+  padding: 0 4px;
   margin-left: auto;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .reader-pages-list > button.is-active {
@@ -327,17 +327,17 @@
 .reader-nav-empty {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 40px 20px;
-  font-size: 12px;
+  padding: 34px 17px;
+  font-size: 11px;
   color: var(--jg-muted);
   text-align: center;
 }
 
 .reader-nav-empty > svg {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
   color: var(--jg-accent-text);
 }
 
@@ -370,7 +370,7 @@
   position: relative;
   box-sizing: content-box;
   padding: 0;
-  margin: 24px auto 0;
+  margin: 20px auto 0;
 }
 
 .reader-pdf-sheet {
@@ -390,15 +390,15 @@
 }
 
 .reader-pdf-page figcaption {
-  height: 27px;
-  padding-top: 7px;
+  height: 23px;
+  padding-top: 6px;
   font-size: 10px;
   color: var(--jg-muted);
   text-align: center;
 }
 
 .reader-pdf-page:last-child {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .reader-overlay {
@@ -454,10 +454,10 @@
   z-index: 4;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   justify-content: center;
-  font-size: 13px;
+  font-size: 11px;
   color: #5f646c;
   background: white;
 }
@@ -467,18 +467,18 @@
 }
 
 .reader-page-error {
-  padding: 24px;
+  padding: 20px;
   text-align: center;
 }
 
 .reader-page-error button {
-  padding: 8px 12px;
-  margin-top: 10px;
+  padding: 7px 10px;
+  margin-top: 8px;
   color: #2f4a8a;
   cursor: pointer;
   background: #eae8f1;
   border: 1px solid #c3c6dc;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .reader-notes-pane {
@@ -493,9 +493,9 @@
 
 .reader-notes-resizer {
   position: absolute;
-  inset: 0 auto 0 -4px;
+  inset: 0 auto 0 -3px;
   z-index: 14;
-  width: 8px;
+  width: 7px;
   touch-action: none;
   cursor: col-resize;
 }
@@ -506,7 +506,7 @@
 }
 
 .reader-side-tabs .reader-close-notes {
-  padding-inline: 6px;
+  padding-inline: 5px;
   margin-left: auto;
 }
 
@@ -520,39 +520,39 @@
 .reader-notes-heading {
   display: flex;
   flex: none;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  padding: 22px 20px 18px;
+  padding: 19px 17px 15px;
 }
 
 .reader-notes-heading h2 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 650;
 }
 
 .reader-notes-heading h2 > span {
-  margin-left: 5px;
-  font-size: 12px;
+  margin-left: 4px;
+  font-size: 11px;
   font-weight: 400;
   color: var(--jg-muted);
 }
 
 .reader-notes-heading p {
-  margin-top: 5px !important;
+  margin-top: 4px !important;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .reader-notes-heading svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .reader-notes-scroll {
   flex: 1;
   min-height: 0;
-  padding: 0 20px 24px;
+  padding: 0 17px 20px;
   overflow: auto;
   overscroll-behavior: contain;
   scrollbar-width: thin;
@@ -560,22 +560,22 @@
 
 .reader-note-tools {
   display: grid;
-  gap: 9px;
-  margin-bottom: 18px;
+  gap: 8px;
+  margin-bottom: 15px;
 }
 
 .reader-note-tools .ant-input-affix-wrapper {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .reader-note-tools svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .reader-note-tools > div:last-child {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: space-between;
 }
 
@@ -590,16 +590,16 @@
 
 .reader-note-list {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .reader-note-card {
   min-width: 0;
-  padding: 14px;
+  padding: 12px;
   background: var(--jg-card-header);
   border: 1px solid var(--jg-line);
   border-left: 3px solid #cfae3f;
-  border-radius: 9px;
+  border-radius: 8px;
 }
 
 .reader-note-card.note-green {
@@ -625,10 +625,10 @@
 
 .reader-note-card header {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .reader-note-card header > span {
@@ -638,7 +638,7 @@
 
 .reader-note-locator {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
   padding: 0;
   font-size: 11px;
@@ -654,13 +654,13 @@
 }
 
 .reader-note-locator svg {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
 }
 
 .reader-note-card h3 {
-  margin-bottom: 8px !important;
-  font-size: 13px;
+  margin-bottom: 7px !important;
+  font-size: 11px;
   font-weight: 650;
   overflow-wrap: anywhere;
 }
@@ -668,10 +668,10 @@
 .reader-note-quote {
   display: -webkit-box;
   width: 100%;
-  padding: 0 0 0 10px;
+  padding: 0 0 0 8px;
   overflow: hidden;
   -webkit-line-clamp: 7;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
   text-align: left;
@@ -688,8 +688,8 @@
 }
 
 .reader-note-body {
-  margin-top: 12px !important;
-  font-size: 13px;
+  margin-top: 10px !important;
+  font-size: 11px;
   line-height: 1.85;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -697,9 +697,9 @@
 
 .reader-note-card footer {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .reader-note-card time {
@@ -720,41 +720,41 @@
 .reader-notes-empty {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 35px 8px;
+  padding: 30px 7px;
   text-align: center;
 }
 
 .reader-notes-empty > svg {
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   color: var(--jg-accent-text);
 }
 
 .reader-notes-empty h3 {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .reader-notes-empty p {
   max-width: 28ch;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-muted);
 }
 
 .reader-notes-empty > .ant-btn {
-  margin-top: 6px;
+  margin-top: 5px;
 }
 
 .reader-notes-footer {
   display: flex;
   flex: none;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   justify-content: space-between;
-  padding: 13px 20px;
+  padding: 11px 17px;
   font-size: 11px;
   border-top: 1px solid var(--jg-line);
 }
@@ -762,7 +762,7 @@
 .reader-notes-footer > span,
 .reader-notes-footer a {
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
 }
 
@@ -775,29 +775,29 @@
 }
 
 .reader-notes-footer svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .reader-note-composer {
   display: grid;
-  gap: 12px;
-  padding: 14px;
-  margin: 0 0 20px;
+  gap: 10px;
+  padding: 12px;
+  margin: 0 0 17px;
   background: var(--jg-card-header);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .reader-composer-label {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: baseline;
   justify-content: space-between;
 }
 
 .reader-composer-label strong {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .reader-composer-label > span {
@@ -806,11 +806,11 @@
 }
 
 .reader-note-composer blockquote {
-  max-height: 180px;
-  padding: 8px 10px;
+  max-height: 153px;
+  padding: 7px 8px;
   margin: 0;
   overflow: auto;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
   white-space: pre-wrap;
@@ -819,32 +819,32 @@
 
 .reader-note-composer blockquote > span {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   font-size: 10px;
   color: var(--jg-accent-text);
 }
 
 .reader-note-composer textarea {
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.9;
 }
 
 .reader-composer-actions {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   justify-content: flex-end;
 }
 
 .reader-color-options {
   display: flex;
-  gap: 10px;
+  gap: 8px;
 }
 
 .reader-color-options button {
   display: grid;
   place-items: center;
-  width: 23px;
-  height: 23px;
+  width: 20px;
+  height: 20px;
   padding: 0;
   color: #27364a;
   cursor: pointer;
@@ -858,8 +858,8 @@
 }
 
 .reader-color-options svg {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
 }
 
 .color-yellow {
@@ -880,33 +880,33 @@
 
 .reader-warning,
 .reader-version-banner {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-warning);
 }
 
 .reader-version-banner {
   flex: none;
-  padding: 6px 20px;
+  padding: 5px 17px;
   background: var(--jg-surface);
   border-bottom: 1px solid var(--jg-line);
 }
 
 .reader-legacy-note {
-  padding: 18px 0 0;
-  margin-top: 22px;
+  padding: 15px 0 0;
+  margin-top: 19px;
   border-top: 1px solid var(--jg-line);
 }
 
 .reader-legacy-note h3 {
-  margin-bottom: 8px !important;
+  margin-bottom: 7px !important;
   font-size: 11px;
   font-weight: 500;
   color: var(--jg-muted);
 }
 
 .reader-legacy-note p {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
@@ -921,10 +921,10 @@
   gap: 3px;
   align-items: center;
   max-width: calc(100vw - 24px);
-  padding: 5px;
+  padding: 4px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-border);
-  border-radius: 9px;
+  border-radius: 8px;
   box-shadow: var(--jg-overlay-shadow);
 }
 
@@ -946,10 +946,10 @@
 .reader-citation-banner {
   display: flex;
   flex: none;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   justify-content: space-between;
-  padding: 4px 14px;
+  padding: 3px 12px;
   font-size: 11px;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
@@ -957,26 +957,26 @@
 }
 
 .reader-citation-banner .reader-tool-button {
-  height: 24px;
+  height: 20px;
 }
 
 .reader-selection-menu button {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
-  min-height: 32px;
-  padding: 5px 9px;
-  font-size: 12px;
+  min-height: 27px;
+  padding: 4px 8px;
+  font-size: 11px;
   color: var(--jg-text);
   cursor: pointer;
   background: transparent;
   border: 0;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .reader-selection-menu svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .reader-loading,
@@ -985,18 +985,18 @@
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   justify-content: center;
-  min-height: 300px;
-  padding: 36px;
+  min-height: 255px;
+  padding: 31px;
   text-align: center;
 }
 
 .reader-loading h2,
 .reader-error h2,
 .reader-download-preview h2 {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
 }
 
@@ -1004,15 +1004,15 @@
 .reader-error p,
 .reader-download-preview p {
   max-width: 50ch;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
 }
 
 .reader-error > svg,
 .reader-download-preview > svg {
-  width: 40px;
-  height: 40px;
+  width: 34px;
+  height: 34px;
   color: var(--jg-accent-text);
 }
 
@@ -1024,7 +1024,7 @@
 .reader-scan-notice,
 .reader-format-notice {
   flex: none;
-  padding: 7px 16px;
+  padding: 6px 14px;
   font-size: 11px;
   color: var(--jg-secondary);
   background: var(--jg-subtle);
@@ -1034,19 +1034,19 @@
 .reader-search-panel {
   flex: 1;
   min-height: 0;
-  padding: 16px 12px;
+  padding: 14px 10px;
   overflow: auto;
 }
 
 .reader-search-panel > .ant-input-affix-wrapper {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .reader-search-summary {
   display: flex;
   gap: 0;
   align-items: center;
-  margin: 10px 0;
+  margin: 8px 0;
   font-size: 10px;
   color: var(--jg-muted);
 }
@@ -1056,23 +1056,23 @@
 }
 
 .reader-search-summary .reader-tool-button {
-  width: 22px;
-  min-width: 22px;
+  width: 19px;
+  min-width: 19px;
   padding: 0;
 }
 
 .reader-search-result {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
   width: 100%;
-  padding: 12px 8px;
-  margin-bottom: 7px;
+  padding: 10px 7px;
+  margin-bottom: 6px;
   text-align: left;
   cursor: pointer;
   background: var(--jg-card-header);
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .reader-search-result.is-active {
@@ -1098,38 +1098,38 @@
 }
 
 .reader-search-empty {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-muted);
 }
 
 .reader-document-details {
-  padding: 24px;
+  padding: 20px;
   overflow: auto;
 }
 
 .reader-document-details h2 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 650;
 }
 
 .reader-document-details dl {
-  margin: 24px 0;
+  margin: 20px 0;
 }
 
 .reader-document-details dl > div {
-  margin-bottom: 20px;
+  margin-bottom: 17px;
 }
 
 .reader-document-details dt {
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .reader-document-details dd {
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.9;
   overflow-wrap: anywhere;
 }
@@ -1141,26 +1141,26 @@
 
 .reader-inline-link {
   display: flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
-  margin-top: 16px;
-  font-size: 12px;
+  margin-top: 14px;
+  font-size: 11px;
   color: var(--jg-accent-text) !important;
 }
 
 .reader-inline-link svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .reader-related-documents {
   display: grid;
-  gap: 10px;
-  margin: 24px 0;
+  gap: 8px;
+  margin: 20px 0;
 }
 
 .reader-related-documents h3 {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1168,11 +1168,11 @@
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 5px;
-  padding: 12px 28px 12px 12px;
+  gap: 4px;
+  padding: 10px 24px 10px 10px;
   background: var(--jg-card-header);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .reader-related-documents a span {
@@ -1181,40 +1181,40 @@
 }
 
 .reader-related-documents a strong {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   overflow-wrap: anywhere;
 }
 
 .reader-related-documents a svg {
   position: absolute;
-  top: calc(50% - 7px);
-  right: 8px;
-  width: 14px;
-  height: 14px;
+  top: calc(50% - 6px);
+  right: 7px;
+  width: 12px;
+  height: 12px;
   color: var(--jg-accent-text);
 }
 
 .reader-text-document {
   max-width: 920px;
-  padding: 48px clamp(24px, 5vw, 72px);
-  margin: 24px auto;
+  padding: 41px clamp(20px, 5vw, 61px);
+  margin: 20px auto;
   background: var(--jg-surface);
   box-shadow: var(--jg-shadow);
 }
 
 .reader-text-document article + article {
-  margin-top: 32px;
+  margin-top: 27px;
 }
 
 .reader-text-document article > header {
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .reader-text-content {
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.95;
   color: var(--jg-text);
   overflow-wrap: anywhere;
@@ -1231,8 +1231,8 @@
   flex: none;
   align-items: center;
   justify-content: center;
-  width: 50px;
-  min-height: 70px;
+  width: 42px;
+  min-height: 60px;
   overflow: hidden;
   background: white;
   border: 1px solid var(--jg-line);
@@ -1385,12 +1385,12 @@
 
 @media (max-width: 1100px) {
   .reader-navigation {
-    width: 165px;
+    width: 140px;
   }
 
   .reader-notes-heading,
   .reader-notes-scroll {
-    padding-inline: 16px;
+    padding-inline: 14px;
   }
 
   .reader-position-status {
@@ -1400,13 +1400,13 @@
 
 @media (max-width: 900px) {
   .reader-heading {
-    gap: 10px;
-    min-height: 64px;
-    padding: 10px 12px;
+    gap: 8px;
+    min-height: 54px;
+    padding: 8px 10px;
   }
 
   .reader-heading-actions {
-    gap: 5px;
+    gap: 4px;
   }
 
   .reader-heading-actions .reader-file-badge,
@@ -1415,8 +1415,8 @@
   }
 
   .reader-toolbar {
-    gap: 4px;
-    padding-inline: 10px;
+    gap: 3px;
+    padding-inline: 8px;
   }
 
   .reader-navigation,
@@ -1430,17 +1430,17 @@
 
   .reader-navigation {
     left: 0;
-    width: 230px;
+    width: 196px;
   }
 
   .reader-notes-pane {
     right: 0;
-    width: min(390px, 100%) !important;
+    width: min(332px, 100%) !important;
   }
 
   .reader-nav-tabs .reader-mobile-close {
     display: flex;
-    padding-inline: 4px;
+    padding-inline: 3px;
     margin-left: auto;
   }
 
@@ -1458,14 +1458,14 @@
   }
 
   .reader-text-document {
-    padding: 28px 22px;
-    margin: 16px;
+    padding: 24px 19px;
+    margin: 14px;
   }
 }
 
 @media (max-width: 520px) {
   .reader-document-title h1 {
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .reader-heading-actions {
@@ -1479,14 +1479,14 @@
   .reader-toolbar {
     flex-wrap: wrap;
     justify-content: flex-start;
-    min-height: 48px;
+    min-height: 41px;
   }
 
   .reader-zoom-tools {
     justify-content: center;
     order: 3;
     width: 100%;
-    padding-top: 4px;
+    padding-top: 3px;
     border-top: 1px solid var(--jg-line);
   }
 
@@ -1499,11 +1499,11 @@
   }
 
   .reader-text-content {
-    font-size: 15px;
+    font-size: 13px;
   }
 
   .reader-notes-heading {
-    padding-top: 18px;
+    padding-top: 15px;
   }
 }
 

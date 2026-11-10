@@ -13,7 +13,7 @@ const props = defineProps<{
 }>();
 
 const sortedHistory = computed(() =>
-  [...props.history].sort(
+  props.history.toSorted(
     (a, b) => new Date(b.adoptedAt).getTime() - new Date(a.adoptedAt).getTime(),
   ),
 );
@@ -29,7 +29,7 @@ function formatDate(isoString: string) {
 
 function formatPages(pages: number[]) {
   if (!pages || pages.length === 0) return '';
-  const sorted = [...pages].sort((a, b) => a - b);
+  const sorted = pages.toSorted((a, b) => a - b);
   if (sorted.length === 1) return `p.${sorted[0]}`;
   if (sorted.length <= 3) return `p.${sorted.join(', ')}`;
   return `p.${sorted[0]}-${sorted[sorted.length - 1]}`;
@@ -105,68 +105,68 @@ function getFieldLabel(key: string) {
 
 <style scoped>
 .analysis-history {
-  padding: 20px;
-  margin-top: 24px;
+  padding: 17px;
+  margin-top: 20px;
   background: var(--color-bg-container);
   border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .section-header h3 {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .empty-state {
-  padding: 32px 20px;
+  padding: 27px 17px;
   color: var(--color-text-tertiary);
   text-align: center;
 }
 
 .history-timeline {
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .history-item {
-  padding-bottom: 8px;
+  padding-bottom: 7px;
 }
 
 .history-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 
 .history-header strong {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--color-text);
 }
 
 .history-date {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--color-text-tertiary);
 }
 
 .history-fields {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .field-badge {
   display: inline-flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
-  padding: 2px 8px;
-  font-size: 12px;
+  padding: 2px 7px;
+  font-size: 11px;
   color: var(--color-text-secondary);
   background: var(--color-bg-layout);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .field-badge small {

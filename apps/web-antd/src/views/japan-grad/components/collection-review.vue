@@ -1368,7 +1368,7 @@ async function apply() {
 <style scoped>
 .collection-logo-candidate {
   display: flex;
-  gap: 22px;
+  gap: 19px;
   align-items: center;
 }
 
@@ -1376,14 +1376,14 @@ async function apply() {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 100px;
-  height: 100px;
-  padding: 12px;
+  width: 85px;
+  height: 85px;
+  padding: 10px;
   font-size: 11px;
   color: #5f646c;
   background: white;
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .collection-logo-preview img {
@@ -1394,22 +1394,22 @@ async function apply() {
 
 .collection-logo-candidate a {
   display: inline-block;
-  margin-top: 12px;
+  margin-top: 10px;
   font-size: 11px;
   color: var(--jg-accent-text);
 }
 
 .collection-target-kind {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  margin: 20px 0 10px;
-  font-size: 12px;
+  margin: 17px 0 8px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .collection-target-kind .ant-select {
-  min-width: 180px;
+  min-width: 153px;
 }
 
 .collection-admissions-review {
@@ -1417,17 +1417,17 @@ async function apply() {
 }
 
 .collection-generation-preview {
-  padding: 24px;
-  margin: 22px 0;
+  padding: 20px;
+  margin: 19px 0;
   background: var(--jg-accent-soft);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 14px;
+  border-radius: 12px;
 }
 
 .collection-generation-heading {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   justify-content: space-between;
 }
@@ -1439,28 +1439,28 @@ async function apply() {
 }
 
 .collection-generation-heading h3 {
-  margin: 8px 0 0;
-  font-size: 22px;
+  margin: 7px 0 0;
+  font-size: 19px;
   letter-spacing: -0.035em;
 }
 
 .collection-generation-chain {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
-  gap: 10px;
-  margin: 22px 0 16px;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px;
+  margin: 19px 0 14px;
 }
 
 .collection-generation-chain a {
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  padding: 16px 14px;
+  gap: 8px;
+  padding: 14px 12px;
   color: var(--jg-text);
   overflow-wrap: anywhere;
   background: var(--jg-surface);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .collection-generation-chain a:hover,
@@ -1472,14 +1472,14 @@ async function apply() {
 .collection-generation-chain span,
 .collection-generation-preview > p,
 .collection-generation-intro {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .collection-generation-chain strong {
   flex: 1;
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -1493,24 +1493,24 @@ async function apply() {
 
 .collection-generation-list {
   padding: 0;
-  margin: 18px 0;
+  margin: 15px 0;
   list-style: none;
 }
 
 .collection-generation-list li {
   display: grid;
-  grid-template-columns: 65px minmax(0, 1fr) 105px;
-  gap: 14px;
+  grid-template-columns: 55px minmax(0, 1fr) 89px;
+  gap: 12px;
   align-items: start;
-  padding: 14px 0;
-  font-size: 13px;
+  padding: 12px 0;
+  font-size: 11px;
   overflow-wrap: anywhere;
   border-bottom: 1px solid var(--jg-line);
 }
 
 .collection-generation-list li > span,
 .collection-generation-list small {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1519,34 +1519,34 @@ async function apply() {
 }
 
 .collection-generation-issues {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-warning);
 }
 
 .collection-generation-confirm {
   display: grid;
-  gap: 14px;
-  margin-top: 22px;
+  gap: 12px;
+  margin-top: 19px;
 }
 
 .collection-generation-confirm > div {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-end;
 }
 
 .collection-exam-meta {
   display: flex;
-  gap: 14px;
-  margin: 16px 0;
+  gap: 12px;
+  margin: 14px 0;
 }
 
 .collection-exam-meta label {
   display: grid;
-  gap: 6px;
+  gap: 5px;
   min-width: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1555,9 +1555,9 @@ async function apply() {
 }
 
 .collection-source-quote {
-  padding: 12px 16px;
-  margin: 12px 0;
-  font-size: 13px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-text);
   white-space: pre-wrap;
@@ -1566,29 +1566,29 @@ async function apply() {
 }
 
 .collection-entity {
-  padding: 20px;
-  margin: 16px 0;
+  padding: 17px;
+  margin: 14px 0;
   scroll-margin-top: 90px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .collection-entity > header {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .collection-entity h3 {
   margin: 0;
-  font-size: 17px;
+  font-size: 14px;
 }
 
 .collection-entity > header > .ant-select {
-  min-width: 200px;
+  min-width: 170px;
   margin-left: auto;
 }
 
@@ -1599,16 +1599,16 @@ async function apply() {
 
 .collection-field {
   display: grid;
-  grid-template-columns: minmax(110px, 190px) minmax(0, 1fr);
-  gap: 16px;
-  padding: 14px 0;
+  grid-template-columns: minmax(94px, 162px) minmax(0, 1fr);
+  gap: 14px;
+  padding: 12px 0;
   border-top: 1px solid var(--jg-line);
 }
 
 .collection-field-label small {
   display: block;
-  max-height: 100px;
-  margin: 7px 0 0;
+  max-height: 85px;
+  margin: 6px 0 0;
   overflow: auto;
   line-height: 1.6;
   overflow-wrap: anywhere;
@@ -1618,8 +1618,8 @@ async function apply() {
 .collection-citations {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
-  margin-top: 7px;
+  gap: 6px;
+  margin-top: 6px;
 }
 
 .collection-citations button {
@@ -1634,48 +1634,48 @@ async function apply() {
 }
 
 .collection-scope {
-  padding: 8px 12px;
-  margin-top: 10px;
-  font-size: 12px;
+  padding: 7px 10px;
+  margin-top: 8px;
+  font-size: 11px;
   color: var(--jg-warning);
   background: var(--jg-subtle);
   border-left: 3px solid var(--jg-warning);
 }
 
 .collection-scope p {
-  margin: 0 0 8px;
+  margin: 0 0 7px;
   white-space: pre-wrap;
 }
 
 .collection-document {
   display: flex;
-  gap: 18px;
+  gap: 15px;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0;
+  padding: 10px 0;
   border-top: 1px solid var(--jg-line);
 }
 
 .collection-document small {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
 }
 
 .collection-document label {
   display: grid;
   flex: 0 0 100px;
-  gap: 5px;
+  gap: 4px;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .collection-apply {
   display: grid;
-  gap: 14px;
-  padding: 20px;
+  gap: 12px;
+  padding: 17px;
   background: var(--jg-accent-soft);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .collection-apply > .ant-btn {
@@ -1687,55 +1687,55 @@ async function apply() {
 }
 
 .collection-source-text {
-  max-height: 550px;
-  padding: 16px;
+  max-height: 468px;
+  padding: 14px;
   overflow: auto;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.8;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .collection-pdf {
   display: block;
   width: 100%;
-  height: 480px;
-  margin: 14px 0;
+  height: 408px;
+  margin: 12px 0;
   border: 1px solid var(--jg-line);
 }
 
 .collection-warnings {
-  padding: 14px 28px;
-  font-size: 12px;
+  padding: 12px 24px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .collection-help {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .collection-section-heading {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   justify-content: space-between;
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .collection-section-heading h2 {
-  margin: 0 0 6px;
-  font-size: 22px;
+  margin: 0 0 5px;
+  font-size: 19px;
 }
 
 .collection-section-heading p {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1745,11 +1745,11 @@ async function apply() {
   }
 
   .collection-generation-preview {
-    padding: 18px;
+    padding: 15px;
   }
 
   .collection-generation-list li {
-    grid-template-columns: 55px minmax(0, 1fr);
+    grid-template-columns: 47px minmax(0, 1fr);
   }
 
   .collection-generation-list small {
@@ -1759,7 +1759,7 @@ async function apply() {
 
   .collection-field {
     grid-template-columns: 1fr;
-    gap: 8px;
+    gap: 7px;
   }
 
   .collection-entity > header > .ant-select {
@@ -1777,7 +1777,7 @@ async function apply() {
   }
 
   .collection-entity {
-    padding: 16px;
+    padding: 14px;
   }
 }
 </style>

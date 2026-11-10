@@ -67,7 +67,7 @@ const kindOptions = computed(() =>
 const original = computed(() =>
   props.event?.entryId
     ? target.value?.lab.timeline?.events.find(
-        (e) => e.id === props.event!.entryId,
+        (e) => e.id === props.event?.entryId,
       )
     : undefined,
 );
@@ -82,14 +82,10 @@ const sourceLink = computed(() => {
   ) {
     const person = primaryProfessor(target.value);
     if (!person) return undefined;
-    const suffix =
-      form.value.kind === 'contact'
-        ? form.value.complete
-          ? 'sent'
-          : 'planned'
-        : form.value.kind === 'consent'
-          ? 'consent'
-          : 'interview';
+    let suffix = 'interview';
+    if (form.value.kind === 'consent') suffix = 'consent';
+    if (form.value.kind === 'contact')
+      suffix = form.value.complete ? 'sent' : 'planned';
     return {
       person,
       suffix,
@@ -128,7 +124,7 @@ watch(open, (value) => {
   selectedLabId.value =
     event?.labId ||
     props.labId ||
-    (props.targets.length === 1 ? props.targets[0]!.lab.id : '');
+    (props.targets.length === 1 ? props.targets[0]?.lab.id || '' : '');
   const entry = event?.entryId
     ? props.targets
         .find((t) => t.lab.id === event.labId)
@@ -373,7 +369,7 @@ function remove() {
 
 .explorer-form {
   max-height: 76vh;
-  padding-right: 6px;
+  padding-right: 5px;
   overflow-y: auto;
 }
 </style>

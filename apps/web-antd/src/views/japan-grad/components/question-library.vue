@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+
 import { Select } from 'ant-design-vue';
+
 import { useExplorerStore } from '../explorer';
 import DocumentArchive from './document-archive.vue';
 const store = useExplorerStore();
@@ -80,8 +82,8 @@ watch(schoolId, () => {
 .question-filters {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 12px;
-  margin: 20px 0;
+  gap: 10px;
+  margin: 17px 0;
 }
 
 @media (max-width: 640px) {

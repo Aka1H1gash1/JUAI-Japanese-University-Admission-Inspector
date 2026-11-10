@@ -319,43 +319,43 @@ function openExport() {
 .overview-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
 }
 
 .overview-actions > a {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
 .overview-toolbar {
-  margin: 20px 0;
+  margin: 17px 0;
 }
 
 .overview-toolbar > .ant-select {
-  min-width: 150px;
+  min-width: 128px;
 }
 
 .overview-toolbar > .ant-input-affix-wrapper {
   flex: 1;
-  min-width: 220px;
+  min-width: 187px;
 }
 
 .overview-view-switch {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
 
 .overview-caption {
-  margin: 14px 0;
-  font-size: 12px;
+  margin: 12px 0;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .overview-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 15px;
   align-items: start;
 }
 
@@ -363,30 +363,30 @@ function openExport() {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 22px;
+  padding: 19px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 16px;
+  border-radius: 14px;
 }
 
 .overview-card header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .overview-stage {
-  padding: 4px 8px;
+  padding: 3px 7px;
   font-size: 11px;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .overview-card h2 {
-  margin: 0 0 10px;
-  font-size: 20px;
+  margin: 0 0 8px;
+  font-size: 17px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -397,13 +397,13 @@ function openExport() {
 
 .overview-teacher-lab,
 .overview-affiliation {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .overview-card section {
-  margin: 12px 0;
+  margin: 10px 0;
 }
 
 .overview-card h3,
@@ -422,10 +422,10 @@ function openExport() {
 
 .overview-research {
   display: -webkit-box;
-  margin: 7px 0;
+  margin: 6px 0;
   overflow: hidden;
   -webkit-line-clamp: 3;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.8;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -434,12 +434,12 @@ function openExport() {
 
 .overview-card dl {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .overview-card dd {
-  margin: 5px 0 0;
-  font-size: 13px;
+  margin: 4px 0 0;
+  font-size: 11px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -452,8 +452,8 @@ function openExport() {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 16px;
-  margin-top: 16px;
+  padding-top: 14px;
+  margin-top: 14px;
   border-top: 1px solid var(--jg-line);
 }
 
@@ -463,15 +463,15 @@ function openExport() {
 
 .overview-row-table {
   width: 100%;
-  min-width: 1080px;
-  font-size: 12px;
+  min-width: 918px;
+  font-size: 11px;
   table-layout: fixed;
   border-collapse: collapse;
 }
 
 .overview-row-table th,
 .overview-row-table td {
-  padding: 16px 12px;
+  padding: 14px 10px;
   line-height: 1.8;
   vertical-align: top;
   text-align: left;
@@ -485,7 +485,7 @@ function openExport() {
 }
 
 .overview-row-table th:first-child {
-  width: 56px;
+  width: 48px;
 }
 
 .overview-row-table th:nth-child(2) {
@@ -501,7 +501,7 @@ function openExport() {
 }
 
 .overview-row-table th:last-child {
-  width: 110px;
+  width: 94px;
 }
 
 .overview-row-table small {
@@ -529,7 +529,7 @@ function openExport() {
   }
 
   .overview-actions {
-    gap: 10px;
+    gap: 8px;
   }
 }
 </style>

@@ -16,7 +16,7 @@ html[data-japangrad-theme] {
 .university-explorer {
   min-height: 100dvh;
   font-family: var(--jg-font);
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.6;
   color: var(--jg-text);
   background: var(--jg-bg);
@@ -52,43 +52,43 @@ html[data-japangrad-theme] {
 
 .skip-to-content {
   position: fixed;
-  top: -80px;
-  left: 24px;
+  top: -68px;
+  left: 20px;
   z-index: 1500;
-  padding: 12px 18px;
+  padding: 10px 15px;
   color: var(--jg-text);
   background: var(--jg-elevated);
   border: 1px solid var(--jg-border);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .skip-to-content:focus {
-  top: 12px;
+  top: 10px;
 }
 
 .workspace-info {
   display: grid;
-  gap: 18px;
-  padding-top: 8px;
+  gap: 15px;
+  padding-top: 7px;
   color: var(--jg-secondary);
 }
 
 .workspace-info p {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.8;
 }
 
 .workspace-info code {
-  padding: 14px;
-  font-size: 12px;
+  padding: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-text);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .workspace-info > .ant-btn {
@@ -97,8 +97,8 @@ html[data-japangrad-theme] {
 
 .storage-alert,
 .workspace-notice {
-  padding: 14px 20px;
-  font-size: 13px;
+  padding: 12px 17px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-error);
   background: var(--jg-error-bg);
@@ -106,23 +106,23 @@ html[data-japangrad-theme] {
 }
 
 .storage-alert .text-button {
-  margin-left: 16px;
+  margin-left: 14px;
 }
 
 .workspace-notice {
-  margin-bottom: 20px !important;
+  margin-bottom: 17px !important;
   color: var(--jg-secondary);
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .page-heading {
   display: flex;
-  gap: 24px;
+  gap: 20px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: 24px;
 }
 
 .page-heading > div:first-child {
@@ -131,7 +131,7 @@ html[data-japangrad-theme] {
 
 .page-heading h1 {
   font-family: var(--jg-font);
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 650;
   line-height: 1.35;
   letter-spacing: -0.7px;
@@ -144,8 +144,8 @@ html[data-japangrad-theme] {
 
 .page-description {
   max-width: 65ch;
-  margin-top: 8px !important;
-  font-size: 13px;
+  margin-top: 7px !important;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
@@ -153,10 +153,10 @@ html[data-japangrad-theme] {
 .explorer-breadcrumb {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  margin-bottom: 22px;
-  font-size: 12px;
+  margin-bottom: 19px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
@@ -171,37 +171,37 @@ html[data-japangrad-theme] {
 }
 
 .explorer-breadcrumb svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 .detail-heading {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .detail-heading h1 {
-  font-size: 28px;
+  font-size: 24px;
 }
 
 .detail-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
 }
 
 .icon-button {
   display: inline-flex !important;
   flex-shrink: 0;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
   justify-content: center;
   white-space: nowrap;
 }
 
 .icon-button svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .university-explorer .ant-btn,
@@ -230,18 +230,18 @@ html[data-japangrad-theme] {
 }
 
 .university-explorer .ant-btn-lg {
-  height: 40px;
-  padding: 0 17px;
-  font-size: 13px;
+  height: 34px;
+  padding: 0 14px;
+  font-size: 11px;
 }
 
 .text-button {
   display: inline-flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
   padding: 0;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.7;
   color: var(--jg-accent-text);
   text-align: left;
@@ -256,8 +256,8 @@ html[data-japangrad-theme] {
 }
 
 .text-button svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .text-button:disabled {
@@ -268,49 +268,49 @@ html[data-japangrad-theme] {
 .list-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .explorer-search {
   flex: 1;
-  min-width: 160px;
+  min-width: 136px;
   max-width: 540px;
-  min-height: 38px;
+  min-height: 32px;
 }
 
 .explorer-search .ant-input-prefix {
-  margin-right: 7px;
+  margin-right: 6px;
   color: var(--jg-muted);
 }
 
 .explorer-search svg {
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
 }
 
 .sort-select {
-  width: 138px;
+  width: 117px;
   margin-left: auto;
 }
 
 .sort-select .ant-select-selector {
   align-items: center;
-  min-height: 38px;
+  min-height: 32px;
 }
 
 .list-toolbar > .ant-btn {
-  height: 38px;
-  font-size: 12px;
+  height: 32px;
+  font-size: 11px;
 }
 
 .list-caption {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   justify-content: space-between;
-  margin: 18px 0 12px;
-  font-size: 12px;
+  margin: 15px 0 10px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -319,7 +319,7 @@ html[data-japangrad-theme] {
 .professor-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .university-card,
@@ -328,7 +328,7 @@ html[data-japangrad-theme] {
   min-width: 0;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
   isolation: isolate;
   transition:
     border-color 0.15s,
@@ -339,8 +339,8 @@ html[data-japangrad-theme] {
 .university-card {
   display: flex;
   flex-direction: column;
-  gap: 17px;
-  padding: 22px;
+  gap: 14px;
+  padding: 19px;
 }
 
 .university-card:hover,
@@ -365,7 +365,7 @@ html[data-japangrad-theme] {
 
 .university-card-header {
   display: flex;
-  gap: 13px;
+  gap: 11px;
   align-items: center;
 }
 
@@ -376,7 +376,7 @@ html[data-japangrad-theme] {
 
 .university-card-identity h2 {
   font-family: var(--jg-font);
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 650;
   line-height: 1.45;
   letter-spacing: -0.35px;
@@ -384,8 +384,8 @@ html[data-japangrad-theme] {
 }
 
 .university-card-identity p {
-  margin-top: 4px;
-  font-size: 12px;
+  margin-top: 3px;
+  font-size: 11px;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
 }
@@ -394,7 +394,7 @@ html[data-japangrad-theme] {
   position: relative;
   z-index: 2;
   align-self: start;
-  padding: 5px 0 5px 6px;
+  padding: 4px 0 4px 5px;
   font-size: 11px;
   color: var(--jg-muted);
 }
@@ -402,22 +402,22 @@ html[data-japangrad-theme] {
 .university-card-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: 7px 10px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .university-card-location {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
   overflow-wrap: anywhere;
 }
 
 .university-card-location svg {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
 }
 
 .university-card-rank {
@@ -439,7 +439,7 @@ html[data-japangrad-theme] {
   display: -webkit-box;
   overflow: hidden;
   -webkit-line-clamp: 2;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
@@ -448,10 +448,10 @@ html[data-japangrad-theme] {
 
 .university-card-footer {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  padding-top: 15px;
+  padding-top: 13px;
   margin-top: auto;
   border-top: 1px solid var(--jg-line);
 }
@@ -459,15 +459,15 @@ html[data-japangrad-theme] {
 .university-content-count {
   display: flex;
   flex-wrap: wrap;
-  gap: 13px;
+  gap: 11px;
   align-items: center;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .university-content-count strong {
-  margin-right: 5px;
-  font-size: 14px;
+  margin-right: 4px;
+  font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: var(--jg-text);
@@ -477,41 +477,41 @@ html[data-japangrad-theme] {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 27px;
-  height: 27px;
+  width: 23px;
+  height: 23px;
   color: var(--jg-muted);
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .university-card-arrow svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .category-label,
 .dormitory-status,
 .archive-kind {
   display: inline-block;
-  padding: 3px 7px;
+  padding: 3px 6px;
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
   color: var(--jg-secondary);
   background: var(--jg-subtle);
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .favorite-count {
   display: inline-flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
   color: var(--jg-accent-text);
 }
 
 .favorite-count svg {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
 }
 
 .university-logo,
@@ -519,23 +519,23 @@ html[data-japangrad-theme] {
   display: inline-grid;
   flex-shrink: 0;
   place-items: center;
-  width: 44px;
-  height: 44px;
+  width: 37px;
+  height: 37px;
   overflow: hidden;
   color: var(--jg-muted);
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .university-logo svg,
 .entity-symbol svg {
-  width: 21px;
-  height: 21px;
+  width: 18px;
+  height: 18px;
 }
 
 .university-logo.has-logo {
-  padding: 5px;
+  padding: 4px;
   background: #fff;
   border-color: var(--jg-line);
 }
@@ -548,27 +548,27 @@ html[data-japangrad-theme] {
 }
 
 .university-logo-large {
-  width: 60px;
-  height: 60px;
-  padding: 6px;
-  border-radius: 12px;
+  width: 51px;
+  height: 51px;
+  padding: 5px;
+  border-radius: 10px;
 }
 
 .university-logo-large svg {
-  width: 27px;
-  height: 27px;
+  width: 23px;
+  height: 23px;
 }
 
 .university-heading-title {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .university-identity {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
 }
 
@@ -579,37 +579,37 @@ html[data-japangrad-theme] {
 .university-website-link,
 .icon-link {
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-accent-text) !important;
 }
 
 .university-website-link {
-  margin-right: 6px;
+  margin-right: 5px;
 }
 
 .university-website-link svg,
 .icon-link svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .university-dashboard {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
-  gap: 20px;
+  gap: 17px;
   align-items: start;
-  margin-bottom: 34px;
+  margin-bottom: 29px;
 }
 
 .university-profile-panel,
 .university-fee-panel {
   min-width: 0;
-  padding: 24px;
+  padding: 20px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .university-fee-panel {
@@ -620,24 +620,24 @@ html[data-japangrad-theme] {
 .university-panel-heading {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 22px;
+  margin-bottom: 19px;
 }
 
 .university-panel-heading h2 {
   display: inline-flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .university-panel-heading h2 svg {
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
   color: var(--jg-muted);
 }
 
@@ -649,41 +649,41 @@ html[data-japangrad-theme] {
 }
 
 .university-panel-heading .text-button {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .university-panel-heading .text-button svg {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
 }
 
 .university-facts {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 24px;
+  gap: 17px 20px;
   margin: 0;
 }
 
 .university-facts dt {
-  margin-bottom: 6px;
-  font-size: 12px;
+  margin-bottom: 5px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .university-facts dd {
   display: flex;
-  gap: 5px;
+  gap: 4px;
   align-items: baseline;
   margin: 0;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 500;
   overflow-wrap: anywhere;
 }
 
 .university-facts dd svg {
   align-self: center;
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
   color: var(--jg-muted);
 }
 
@@ -694,36 +694,36 @@ html[data-japangrad-theme] {
 }
 
 .university-dashboard .is-missing {
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .university-dormitory-info {
-  padding: 14px 16px;
-  margin-top: 22px;
+  padding: 12px 14px;
+  margin-top: 19px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .university-dormitory-heading {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
 }
 
 .university-dormitory-heading h3 {
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
 }
 
 .university-dormitory-heading svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .dormitory-available {
@@ -732,8 +732,8 @@ html[data-japangrad-theme] {
 }
 
 .university-dormitory-info > p {
-  margin-top: 9px;
-  font-size: 12px;
+  margin-top: 8px;
+  font-size: 11px;
   line-height: 1.9;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -742,29 +742,29 @@ html[data-japangrad-theme] {
 .university-dormitory-info > a,
 .university-dormitory-info > button {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
-  margin-top: 9px;
-  font-size: 12px;
+  margin-top: 8px;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
 .university-dormitory-info > a svg,
 .university-dormitory-info > button svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 .university-preparation,
 .university-notebook {
-  padding-top: 20px;
-  margin-top: 22px;
+  padding-top: 17px;
+  margin-top: 19px;
   border-top: 1px solid var(--jg-line);
 }
 
 .university-preparation h3,
 .university-notebook h3 {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--jg-muted);
 }
@@ -772,8 +772,8 @@ html[data-japangrad-theme] {
 .university-progress-counts {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 .university-progress-counts > div {
@@ -783,7 +783,7 @@ html[data-japangrad-theme] {
 }
 
 .university-progress-counts strong {
-  font-size: 25px;
+  font-size: 21px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
@@ -791,15 +791,15 @@ html[data-japangrad-theme] {
 
 .university-progress-counts span {
   display: inline-flex;
-  gap: 4px;
+  gap: 3px;
   align-items: center;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .university-progress-counts svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 .university-favorite-stat strong {
@@ -809,20 +809,20 @@ html[data-japangrad-theme] {
 .university-research-areas {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
-  margin-top: 16px;
+  margin-top: 14px;
 }
 
 .university-research-areas > span {
   max-width: 100%;
-  padding: 4px 8px;
+  padding: 3px 7px;
   font-size: 11px;
   line-height: 1.6;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
   background: var(--jg-subtle);
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .university-research-areas small {
@@ -831,49 +831,49 @@ html[data-japangrad-theme] {
 }
 
 .university-notebook > p {
-  margin-top: 8px;
-  font-size: 13px;
+  margin-top: 7px;
+  font-size: 11px;
   line-height: 1.9;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
 .university-notebook .text-button {
-  margin-top: 9px;
-  font-size: 12px;
+  margin-top: 8px;
+  font-size: 11px;
 }
 
 .university-fee-items {
   display: grid;
-  gap: 20px;
+  gap: 17px;
   margin: 0;
 }
 
 .university-fee-items > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
+  gap: 7px 10px;
   align-items: center;
   justify-content: space-between;
 }
 
 .university-fee-items dt {
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .university-fee-items dt small {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .university-fee-items dd {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: baseline;
   margin: 0;
-  font-size: 25px;
+  font-size: 21px;
   font-weight: 550;
   font-variant-numeric: tabular-nums;
   line-height: 1.4;
@@ -882,7 +882,7 @@ html[data-japangrad-theme] {
 }
 
 .university-fee-items dd > span {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 400;
   color: var(--jg-muted);
 }
@@ -895,30 +895,30 @@ html[data-japangrad-theme] {
 }
 
 .university-fee-items .university-living-divider {
-  padding-top: 20px;
+  padding-top: 17px;
   border-top: 1px solid var(--jg-line);
 }
 
 .university-fee-totals {
   display: grid;
-  gap: 10px;
-  padding: 18px 16px;
-  margin-top: 22px;
+  gap: 8px;
+  padding: 15px 14px;
+  margin-top: 19px;
   background: var(--jg-accent-soft);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .university-fee-totals > div {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 14px;
+  gap: 5px 12px;
   align-items: baseline;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .university-fee-totals strong {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -929,34 +929,34 @@ html[data-japangrad-theme] {
 
 .university-budget-incomplete {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: start;
-  padding: 10px 12px;
-  margin-top: 15px !important;
-  font-size: 12px;
+  padding: 8px 10px;
+  margin-top: 13px !important;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .university-budget-incomplete svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   margin-top: 3px;
 }
 
 .university-fee-caption {
-  margin-top: 13px !important;
+  margin-top: 11px !important;
   font-size: 11px;
   line-height: 1.9;
   color: var(--jg-muted);
 }
 
 .university-fee-notes {
-  padding-top: 14px;
-  margin-top: 14px !important;
-  font-size: 12px;
+  padding-top: 12px;
+  margin-top: 12px !important;
+  font-size: 11px;
   line-height: 1.9;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -965,11 +965,11 @@ html[data-japangrad-theme] {
 
 .university-fee-fill {
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
-  padding: 8px 0 0;
-  margin-top: 8px;
-  font-size: 12px;
+  padding: 7px 0 0;
+  margin-top: 7px;
+  font-size: 11px;
   color: var(--jg-accent-text);
   cursor: pointer;
   background: none;
@@ -977,26 +977,26 @@ html[data-japangrad-theme] {
 }
 
 .university-fee-fill svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .collection-heading,
 .archive-heading {
   display: flex;
-  gap: 20px;
+  gap: 17px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .collection-heading h2,
 .archive-heading h2 {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 8px;
   align-items: center;
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.5;
   letter-spacing: -0.25px;
@@ -1006,39 +1006,39 @@ html[data-japangrad-theme] {
 .archive-heading h2 > span,
 .archive-collection-heading h3 > span,
 .archive-answer-heading h3 > span {
-  padding: 2px 7px;
+  padding: 2px 6px;
   font-size: 11px;
   font-weight: 500;
   line-height: 1.5;
   color: var(--jg-muted);
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .collection-heading p,
 .archive-heading > div > p:last-child {
   max-width: 65ch;
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 5px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .section-search {
   max-width: 430px;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .school-card {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 22px;
+  padding: 19px;
   color: var(--jg-text);
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
   transition:
     border-color 0.15s,
     box-shadow 0.15s,
@@ -1055,48 +1055,48 @@ html[data-japangrad-theme] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .school-card-top > svg {
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
   color: var(--jg-muted);
 }
 
 .school-card h3 {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
 .secondary-name {
-  margin-top: 5px !important;
-  font-size: 12px;
+  margin-top: 4px !important;
+  font-size: 11px;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
 }
 
 .school-research {
-  margin-top: 14px !important;
-  font-size: 13px;
+  margin-top: 12px !important;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
 }
 
 .school-card .card-notes {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .school-card-bottom {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px 14px;
+  gap: 8px 12px;
   align-items: center;
-  padding-top: 16px;
-  margin-top: 20px;
+  padding-top: 14px;
+  margin-top: 17px;
   font-size: 11px;
   color: var(--jg-muted);
   border-top: 1px solid var(--jg-line);
@@ -1108,25 +1108,25 @@ html[data-japangrad-theme] {
 }
 
 .entity-overview {
-  padding: 18px 22px;
-  margin-bottom: 28px;
+  padding: 15px 19px;
+  margin-bottom: 24px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .overview-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 20px;
+  gap: 10px 17px;
   align-items: center;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .overview-meta > span,
 .overview-meta > a {
   display: inline-flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -1139,19 +1139,19 @@ html[data-japangrad-theme] {
 }
 
 .overview-meta svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .overview-meta a svg:last-child {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 .overview-notes {
-  padding-top: 14px;
-  margin-top: 14px !important;
-  font-size: 13px;
+  padding-top: 12px;
+  margin-top: 12px !important;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
@@ -1162,17 +1162,17 @@ html[data-japangrad-theme] {
 .teacher-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .favorite-filter {
   display: inline-flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   margin-left: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -1192,10 +1192,10 @@ html[data-japangrad-theme] {
 
 .professor-card-top {
   display: flex;
-  gap: 9px;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 22px 14px;
+  padding: 17px 19px 12px;
 }
 
 .professor-card .heart-toggle,
@@ -1205,7 +1205,7 @@ html[data-japangrad-theme] {
 }
 
 .professor-avatar {
-  font-size: 17px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
@@ -1214,15 +1214,15 @@ html[data-japangrad-theme] {
 
 .heart-toggle {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
-  padding: 6px 8px;
+  padding: 5px 7px;
   font-size: 11px;
   color: var(--jg-muted);
   cursor: pointer;
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .heart-toggle:hover {
@@ -1235,28 +1235,28 @@ html[data-japangrad-theme] {
 }
 
 .heart-toggle svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .professor-name-button {
-  padding: 0 22px;
+  padding: 0 19px;
   color: var(--jg-text);
 }
 
 .professor-name-button h3 {
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 600;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
 .professor-card > .secondary-name {
-  margin: 5px 22px 0 !important;
+  margin: 4px 19px 0 !important;
 }
 
 .professor-research {
-  margin: 16px 22px 0;
+  margin: 14px 19px 0;
 }
 
 .professor-research > span {
@@ -1265,8 +1265,8 @@ html[data-japangrad-theme] {
 }
 
 .professor-research p {
-  margin-top: 5px;
-  font-size: 13px;
+  margin-top: 4px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
@@ -1274,44 +1274,44 @@ html[data-japangrad-theme] {
 
 .professor-lab {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: start;
-  margin: 12px 22px 0 !important;
-  font-size: 12px;
+  margin: 10px 19px 0 !important;
+  font-size: 11px;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
 }
 
 .professor-lab svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   margin-top: 2px;
 }
 
 .professor-card > .card-notes {
-  margin: 12px 22px 18px;
+  margin: 10px 19px 15px;
 }
 
 .professor-card-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 9px 16px 9px 22px;
+  padding: 8px 14px 8px 19px;
   margin-top: auto;
   border-top: 1px solid var(--jg-line);
 }
 
 .professor-card-summary {
   display: inline-flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .professor-card-summary svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .edit-teacher-button {
@@ -1320,15 +1320,15 @@ html[data-japangrad-theme] {
 
 .professor-page-identity {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
 }
 
 .professor-page-identity > .entity-symbol {
-  width: 60px;
-  height: 60px;
-  font-size: 25px;
-  border-radius: 12px;
+  width: 51px;
+  height: 51px;
+  font-size: 21px;
+  border-radius: 10px;
 }
 
 .professor-page-identity > div {
@@ -1346,32 +1346,32 @@ html[data-japangrad-theme] {
 }
 
 .professor-page-content {
-  padding: 24px;
+  padding: 20px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .detail-affiliation {
-  margin: 0 0 14px !important;
-  font-size: 12px;
+  margin: 0 0 12px !important;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .professor-workspace-tabs {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .professor-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0 30px;
-  margin: 8px 0 0;
+  gap: 0 26px;
+  margin: 7px 0 0;
 }
 
 .professor-fields > div {
   min-width: 0;
-  padding: 16px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--jg-line);
 }
 
@@ -1381,14 +1381,14 @@ html[data-japangrad-theme] {
 }
 
 .professor-fields dt {
-  margin-bottom: 7px;
-  font-size: 12px;
+  margin-bottom: 6px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .professor-fields dd {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.9;
   color: var(--jg-text);
   overflow-wrap: anywhere;
@@ -1405,8 +1405,8 @@ html[data-japangrad-theme] {
 .major-admissions,
 .exam-history,
 .document-archive {
-  margin-top: 30px;
-  margin-bottom: 32px;
+  margin-top: 26px;
+  margin-bottom: 27px;
 }
 
 .professor-workspace-tabs .document-archive {
@@ -1415,22 +1415,22 @@ html[data-japangrad-theme] {
 }
 
 .document-archive + .collection-heading {
-  margin-top: 32px;
+  margin-top: 27px;
 }
 
 .admission-overview-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.4fr);
-  gap: 18px;
+  gap: 15px;
 }
 
 .admission-period,
 .admission-materials {
   min-width: 0;
-  padding: 22px;
+  padding: 19px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .admission-period {
@@ -1440,17 +1440,17 @@ html[data-japangrad-theme] {
 .major-admissions .admission-period h3,
 .major-admissions .admission-materials h3 {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  margin-bottom: 18px;
-  font-size: 14px;
+  margin-bottom: 15px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .admission-period h3 svg,
 .admission-materials h3 svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   color: var(--jg-muted);
 }
 
@@ -1464,7 +1464,7 @@ html[data-japangrad-theme] {
 .admission-period-range {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-  gap: 13px;
+  gap: 11px;
   align-items: center;
 }
 
@@ -1474,13 +1474,13 @@ html[data-japangrad-theme] {
 
 .admission-period-range > div > span {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: 6px;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .admission-period-range strong {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.8;
   color: var(--jg-text);
@@ -1489,15 +1489,15 @@ html[data-japangrad-theme] {
 }
 
 .admission-period-separator {
-  margin-top: 17px;
-  font-size: 12px;
+  margin-top: 14px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .admission-materials ul {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px 20px;
+  gap: 8px 17px;
   padding: 0;
   margin: 0;
   list-style: none;
@@ -1505,25 +1505,25 @@ html[data-japangrad-theme] {
 
 .admission-materials li {
   position: relative;
-  padding-left: 13px;
-  font-size: 13px;
+  padding-left: 11px;
+  font-size: 11px;
   line-height: 1.8;
   overflow-wrap: anywhere;
 }
 
 .admission-materials li::before {
   position: absolute;
-  top: 9px;
+  top: 8px;
   left: 0;
-  width: 4px;
-  height: 4px;
+  width: 3px;
+  height: 3px;
   content: '';
   background: var(--jg-muted);
   border-radius: 1px;
 }
 
 .admission-materials-empty {
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-muted);
 }
@@ -1531,7 +1531,7 @@ html[data-japangrad-theme] {
 .exam-history-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .exam-history-table-wrap,
@@ -1539,16 +1539,16 @@ html[data-japangrad-theme] {
   overflow: auto;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .exam-history-table-wrap {
-  max-height: 560px;
+  max-height: 476px;
 }
 
 .exam-history-table {
   width: 100%;
-  min-width: 1120px;
+  min-width: 952px;
   table-layout: fixed;
   border-spacing: 0;
   border-collapse: separate;
@@ -1578,8 +1578,8 @@ html[data-japangrad-theme] {
   position: sticky;
   top: 0;
   z-index: 2;
-  padding: 13px 16px;
-  font-size: 12px;
+  padding: 11px 14px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--jg-secondary);
   text-align: left;
@@ -1594,8 +1594,8 @@ html[data-japangrad-theme] {
 }
 
 .exam-history-table tbody :is(td, th) {
-  padding: 16px;
-  font-size: 13px;
+  padding: 14px;
+  font-size: 11px;
   font-weight: 400;
   line-height: 1.9;
   vertical-align: top;
@@ -1622,7 +1622,7 @@ html[data-japangrad-theme] {
 
 .exam-history-year strong {
   display: block;
-  font-size: 19px;
+  font-size: 16px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1.4;
@@ -1630,15 +1630,15 @@ html[data-japangrad-theme] {
 
 .exam-history-year > span {
   display: block;
-  margin-top: 7px;
+  margin-top: 6px;
   font-size: 11px;
   line-height: 1.7;
   color: var(--jg-muted);
 }
 
 .exam-history-context {
-  margin-top: 9px;
-  font-size: 12px;
+  margin-top: 8px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -1649,26 +1649,26 @@ html[data-japangrad-theme] {
 }
 
 .exam-history-context p {
-  margin-top: 7px;
+  margin-top: 6px;
   line-height: 1.8;
 }
 
 .exam-history-source {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
-  margin-top: 8px;
+  margin-top: 7px;
   font-size: 11px;
   color: var(--jg-accent-text) !important;
 }
 
 .exam-history-source svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 .exam-history-legacy {
-  padding: 9px 10px;
+  padding: 8px;
   background: var(--jg-subtle);
   border-left: 2px solid var(--jg-border);
 }
@@ -1682,78 +1682,78 @@ html[data-japangrad-theme] {
 .exam-history-actions .ant-btn {
   display: grid;
   place-items: center;
-  width: 28px;
-  height: 28px;
-  padding: 4px;
+  width: 24px;
+  height: 24px;
+  padding: 3px;
 }
 
 .exam-history-actions svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .exam-history-table .exam-table-empty {
-  padding: 32px;
+  padding: 27px;
   color: var(--jg-muted);
   text-align: center;
 }
 
 .exam-table-empty svg {
   display: block;
-  width: 25px;
-  height: 25px;
-  margin: 0 auto 11px;
+  width: 21px;
+  height: 21px;
+  margin: 0 auto 9px;
 }
 
 .exam-table-empty strong {
   display: block;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--jg-text);
 }
 
 .exam-table-empty p {
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 7px;
+  font-size: 11px;
 }
 
 .exam-legacy-editor {
-  padding: 14px;
+  padding: 12px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .exam-legacy-editor small {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .exam-batch-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 8px;
   align-items: center;
   min-width: 0;
-  padding: 14px 16px;
-  margin: 0 0 14px;
+  padding: 12px 14px;
+  margin: 0 0 12px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .exam-batch-controls label {
-  margin-right: 4px;
-  font-size: 13px;
+  margin-right: 3px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .exam-batch-controls > .ant-input {
-  width: 88px;
+  width: 75px;
 }
 
 .exam-batch-controls > span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1762,8 +1762,8 @@ html[data-japangrad-theme] {
 }
 
 .exam-batch-paste {
-  padding: 10px 0 14px;
-  font-size: 13px;
+  padding: 8px 0 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -1772,31 +1772,31 @@ html[data-japangrad-theme] {
 }
 
 .exam-batch-paste p {
-  margin: 10px 0;
-  font-size: 12px;
+  margin: 8px 0;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .exam-batch-paste > .ant-btn {
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .exam-batch-notice {
-  margin: 0 0 14px;
-  font-size: 12px;
+  margin: 0 0 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
 }
 
 .exam-batch-table-wrap {
-  max-height: 370px;
-  border-radius: 8px;
+  max-height: 314px;
+  border-radius: 7px;
 }
 
 .exam-batch-table {
   width: 100%;
-  min-width: 1200px;
+  min-width: 1020px;
   table-layout: fixed;
   border-spacing: 0;
   border-collapse: separate;
@@ -1806,8 +1806,8 @@ html[data-japangrad-theme] {
   position: sticky;
   top: 0;
   z-index: 1;
-  padding: 12px;
-  font-size: 12px;
+  padding: 10px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--jg-secondary);
   text-align: left;
@@ -1816,15 +1816,15 @@ html[data-japangrad-theme] {
 }
 
 .exam-batch-table th:first-child {
-  width: 145px;
+  width: 123px;
 }
 
 .exam-batch-table th:last-child {
-  width: 55px;
+  width: 47px;
 }
 
 .exam-batch-table td {
-  padding: 12px;
+  padding: 10px;
   vertical-align: top;
   background: var(--jg-surface);
 }
@@ -1834,36 +1834,36 @@ html[data-japangrad-theme] {
 }
 
 .exam-batch-table td:first-child > .ant-input + .ant-input {
-  margin-top: 6px;
+  margin-top: 5px;
 }
 
 .exam-batch-row-number {
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .exam-batch-table textarea {
-  min-height: 93px;
-  font-size: 13px;
+  min-height: 79px;
+  font-size: 11px;
 }
 
 .exam-batch-table td:last-child .ant-btn {
-  padding: 4px;
+  padding: 3px;
 }
 
 .exam-batch-table td:last-child svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .exam-batch-add {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .exam-batch-empty {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-muted);
   text-align: center;
 }
@@ -1873,13 +1873,13 @@ html[data-japangrad-theme] {
 }
 
 .document-archive .archive-heading {
-  margin-bottom: 20px;
+  margin-bottom: 17px;
 }
 
 .archive-toolbar {
   display: flex;
-  gap: 10px;
-  margin-bottom: 18px;
+  gap: 8px;
+  margin-bottom: 15px;
 }
 
 .archive-toolbar > .ant-input-affix-wrapper {
@@ -1889,39 +1889,39 @@ html[data-japangrad-theme] {
 
 .archive-toolbar > .ant-select {
   flex-shrink: 0;
-  width: 146px;
+  width: 124px;
 }
 
 .archive-collection + .archive-collection {
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .archive-collection-heading h3 {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .archive-selection-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 14px;
 }
 
 .archive-selection-card {
   display: flex;
   flex-direction: column;
   min-width: 0;
-  padding: 20px;
+  padding: 17px;
   font-family: inherit;
   color: var(--jg-text);
   text-align: left;
   cursor: pointer;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
   transition:
     border-color 0.15s,
     box-shadow 0.15s;
@@ -1934,25 +1934,25 @@ html[data-japangrad-theme] {
 
 .archive-selection-top {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .archive-selection-top .entity-symbol {
-  width: 38px;
-  height: 38px;
-  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
 }
 
 .archive-selection-top .entity-symbol svg {
-  width: 19px;
-  height: 19px;
+  width: 16px;
+  height: 16px;
 }
 
 .archive-selection-year {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   line-height: 1.25;
@@ -1962,21 +1962,21 @@ html[data-japangrad-theme] {
 
 .archive-selection-year small {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   font-size: 11px;
   font-weight: 400;
   color: var(--jg-muted);
 }
 
 .archive-selection-card h3 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   line-height: 1.7;
   overflow-wrap: anywhere;
 }
 
 .archive-selection-file {
-  margin-top: 7px !important;
+  margin-top: 6px !important;
   font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
@@ -1985,10 +1985,10 @@ html[data-japangrad-theme] {
 
 .archive-selection-notes {
   display: -webkit-box;
-  margin-top: 12px !important;
+  margin-top: 10px !important;
   overflow: hidden;
   -webkit-line-clamp: 2;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
@@ -1998,11 +1998,11 @@ html[data-japangrad-theme] {
 .archive-selection-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  padding-top: 14px;
-  margin-top: 16px;
+  padding-top: 12px;
+  margin-top: 14px;
   font-size: 11px;
   color: var(--jg-muted);
   border-top: 1px solid var(--jg-line);
@@ -2010,67 +2010,67 @@ html[data-japangrad-theme] {
 
 .archive-selection-footer > span:last-child {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
   color: var(--jg-accent-text);
 }
 
 .archive-selection-footer svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .archive-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 27px 20px;
+  padding: 23px 17px;
   color: var(--jg-muted);
   text-align: center;
   background: var(--jg-subtle);
   border: 1px dashed var(--jg-border);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .archive-empty > svg {
-  width: 24px;
-  height: 24px;
-  margin-bottom: 10px;
+  width: 20px;
+  height: 20px;
+  margin-bottom: 8px;
 }
 
 .archive-empty h3 {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--jg-secondary);
 }
 
 .archive-empty p {
-  margin-top: 7px;
-  font-size: 12px;
+  margin-top: 6px;
+  font-size: 11px;
   line-height: 1.8;
 }
 
 .archive-detail-heading .entity-symbol {
   display: block;
-  padding: 10px;
-  margin-bottom: 14px;
+  padding: 8px;
+  margin-bottom: 12px;
 }
 
 .archive-detail-heading .archive-kind {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .archive-detail-heading h2 {
   margin: 0;
-  font-size: 23px;
+  font-size: 20px;
   font-weight: 600;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
 
 .archive-detail-heading > p {
-  margin: 8px 0 0;
-  font-size: 12px;
+  margin: 7px 0 0;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -2080,29 +2080,29 @@ html[data-japangrad-theme] {
 }
 
 .archive-native-reader {
-  padding: 18px;
-  margin-top: 24px;
+  padding: 15px;
+  margin-top: 20px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .archive-native-reader p {
-  margin: 0 0 12px;
-  font-size: 12px;
+  margin: 0 0 10px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .archive-reader-link {
   display: inline-flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
-  padding: 9px 13px;
-  font-size: 13px;
+  padding: 8px 11px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--jg-on-accent) !important;
   background: var(--jg-accent);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .archive-reader-link:hover {
@@ -2110,28 +2110,28 @@ html[data-japangrad-theme] {
 }
 
 .archive-reader-link svg {
-  width: 15px;
-  height: 15px;
+  width: 13px;
+  height: 13px;
 }
 
 .archive-detail-fields {
-  margin: 22px 0;
+  margin: 19px 0;
 }
 
 .archive-detail-fields > div {
-  padding: 15px 0;
+  padding: 13px 0;
   border-bottom: 1px solid var(--jg-line);
 }
 
 .archive-detail-fields dt {
-  margin-bottom: 7px;
-  font-size: 12px;
+  margin-bottom: 6px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .archive-detail-fields dd {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.9;
   overflow-wrap: anywhere;
 }
@@ -2143,58 +2143,58 @@ html[data-japangrad-theme] {
 }
 
 .archive-answer-details {
-  margin-top: 26px;
+  margin-top: 22px;
 }
 
 .archive-answer-heading {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
 }
 
 .archive-answer-heading h3 {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
 }
 
 .archive-answer-heading p,
 .archive-answer-empty {
-  margin: 7px 0 0;
-  font-size: 12px;
+  margin: 6px 0 0;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .answer-list {
-  padding: 16px;
-  margin-top: 15px;
+  padding: 14px;
+  margin-top: 13px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .answer-detail-card + .answer-detail-card {
-  padding-top: 16px;
-  margin-top: 16px;
+  padding-top: 14px;
+  margin-top: 14px;
   border-top: 1px solid var(--jg-line);
 }
 
 .answer-detail-card h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
 
 .answer-detail-card > p {
-  margin: 7px 0 0;
-  font-size: 12px;
+  margin: 6px 0 0;
+  font-size: 11px;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
 }
@@ -2203,44 +2203,44 @@ html[data-japangrad-theme] {
 .archive-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  margin-top: 18px;
+  margin-top: 15px;
 }
 
 .archive-link {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-accent-text) !important;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 .archive-notes {
-  margin-top: 10px !important;
-  font-size: 12px;
+  margin-top: 8px !important;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-secondary);
 }
 
 .archive-form-note {
-  margin-top: 15px;
-  font-size: 12px;
+  margin-top: 13px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .explorer-form {
-  padding-top: 8px;
+  padding-top: 7px;
   font-family: var(--jg-font);
   color: var(--jg-text);
 }
 
 .form-context {
-  margin: 0 0 20px;
-  font-size: 13px;
+  margin: 0 0 17px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
 }
@@ -2248,13 +2248,13 @@ html[data-japangrad-theme] {
 .form-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px 16px;
+  gap: 15px 14px;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 6px;
   min-width: 0;
 }
 
@@ -2263,7 +2263,7 @@ html[data-japangrad-theme] {
 }
 
 .field label {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   line-height: 1.6;
   color: var(--jg-secondary);
@@ -2275,18 +2275,18 @@ html[data-japangrad-theme] {
 
 .field .ant-input,
 .field .ant-select-selector {
-  min-height: 37px;
+  min-height: 31px;
 }
 
 .field small {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .form-error {
-  margin: 16px 0 0;
-  font-size: 13px;
+  margin: 14px 0 0;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-error);
 }
@@ -2294,17 +2294,17 @@ html[data-japangrad-theme] {
 .form-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 9px;
+  gap: 8px;
   align-items: center;
   justify-content: flex-end;
-  padding-top: 18px;
-  margin-top: 24px;
+  padding-top: 15px;
+  margin-top: 20px;
   border-top: 1px solid var(--jg-line);
 }
 
 .form-footer > span {
   flex: 1;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
@@ -2316,14 +2316,14 @@ html[data-japangrad-theme] {
 .explorer-form
   :is(input[type='number'], input[type='date'], input[type='datetime-local']) {
   width: 100%;
-  min-height: 37px;
-  padding: 6px 11px;
+  min-height: 31px;
+  padding: 5px 9px;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 12px;
   color: var(--jg-text);
   background: var(--jg-surface);
   border: 1px solid var(--jg-border);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .explorer-form
@@ -2344,12 +2344,12 @@ html[data-japangrad-theme] {
 
 .university-logo-editor.field {
   flex-direction: row;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
-  padding: 16px;
+  padding: 14px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .university-logo-editor > div {
@@ -2357,8 +2357,8 @@ html[data-japangrad-theme] {
 }
 
 .university-logo-editor p {
-  margin: 9px 0 0;
-  font-size: 12px;
+  margin: 8px 0 0;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
@@ -2366,12 +2366,12 @@ html[data-japangrad-theme] {
 .university-logo-picker {
   position: relative;
   display: inline-flex;
-  padding: 6px 11px;
-  font-size: 12px;
+  padding: 5px 9px;
+  font-size: 11px;
   cursor: pointer;
   background: var(--jg-surface);
   border: 1px solid var(--jg-border);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .university-logo-picker input {
@@ -2392,37 +2392,37 @@ html[data-japangrad-theme] {
 }
 
 .university-logo-editor .text-button {
-  margin-left: 10px;
-  font-size: 12px;
+  margin-left: 8px;
+  font-size: 11px;
 }
 
 .university-fee-editor,
 .university-dormitory-editor {
-  gap: 16px !important;
-  padding: 18px;
+  gap: 14px !important;
+  padding: 15px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .fee-editor-heading {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
 }
 
 .fee-editor-heading h3 {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .fee-editor-heading p,
 .fee-editor-hint {
-  margin: 5px 0 0;
-  font-size: 12px;
+  margin: 4px 0 0;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
@@ -2430,10 +2430,10 @@ html[data-japangrad-theme] {
 .fee-editor-total {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px 10px;
+  gap: 6px 8px;
   align-items: baseline;
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .fee-editor-total strong {
@@ -2443,19 +2443,19 @@ html[data-japangrad-theme] {
 
 .fee-editor-total > span {
   margin-left: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .fee-editor-section-label {
-  padding-top: 14px;
-  font-size: 12px;
+  padding-top: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
   border-top: 1px solid var(--jg-line);
 }
 
 .archive-upload-form .archive-upload-fields {
-  grid-template-columns: minmax(100px, 0.6fr) minmax(0, 1.4fr);
+  grid-template-columns: minmax(85px, 0.6fr) minmax(0, 1.4fr);
 }
 
 .archive-drop-area {
@@ -2465,19 +2465,19 @@ html[data-japangrad-theme] {
 .archive-dropzone {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: center;
   width: 100%;
-  min-height: 208px;
-  padding: 24px 18px;
+  min-height: 177px;
+  padding: 20px 15px;
   font-family: inherit;
   color: var(--jg-text);
   text-align: center;
   cursor: pointer;
   background: var(--jg-subtle);
   border: 1px dashed var(--jg-border);
-  border-radius: 10px;
+  border-radius: 8px;
   transition:
     background 0.15s,
     border-color 0.15s;
@@ -2502,33 +2502,33 @@ html[data-japangrad-theme] {
 .archive-dropzone-icon {
   display: grid;
   place-items: center;
-  width: 46px;
-  height: 46px;
-  margin-bottom: 4px;
+  width: 39px;
+  height: 39px;
+  margin-bottom: 3px;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .archive-dropzone-icon svg {
-  width: 23px;
-  height: 23px;
+  width: 20px;
+  height: 20px;
 }
 
 .archive-dropzone strong {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1.8;
 }
 
 .archive-dropzone strong > span {
-  margin-left: 5px;
+  margin-left: 4px;
   color: var(--jg-accent-text);
 }
 
 .archive-dropzone-hint {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
@@ -2549,38 +2549,38 @@ html[data-japangrad-theme] {
 
 .archive-selected-file {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 12px;
-  margin-top: 4px;
+  padding: 10px;
+  margin-top: 3px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .archive-selected-format {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   font-size: 11px;
   font-weight: 600;
   color: var(--jg-secondary);
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .archive-selected-file > div {
   display: flex;
   flex: 1;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   min-width: 0;
 }
 
 .archive-selected-file strong {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   line-height: 1.7;
   color: var(--jg-text);
@@ -2594,43 +2594,43 @@ html[data-japangrad-theme] {
 
 .archive-selected-file > .ant-btn {
   flex-shrink: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .archive-selected-file > .ant-btn:last-child {
   display: grid;
   place-items: center;
-  width: 26px;
-  padding: 4px;
+  width: 22px;
+  padding: 3px;
 }
 
 .archive-selected-file svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .mail-local-note {
-  padding: 12px 14px;
-  margin-bottom: 20px !important;
-  font-size: 12px;
+  padding: 10px 12px;
+  margin-bottom: 17px !important;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-secondary);
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .mail-timeline {
   display: grid;
-  gap: 16px;
+  gap: 14px;
 }
 
 .mail-card {
-  padding: 20px;
+  padding: 17px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-left: 3px solid var(--jg-accent-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .mail-card[data-direction='received'] {
@@ -2640,10 +2640,10 @@ html[data-japangrad-theme] {
 .mail-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -2657,12 +2657,12 @@ html[data-japangrad-theme] {
 
 .mail-subject {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: start;
   justify-content: space-between;
   width: 100%;
-  padding: 12px 0 6px;
-  font-size: 16px;
+  padding: 10px 0 5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--jg-text);
   text-align: left;
@@ -2681,16 +2681,16 @@ html[data-japangrad-theme] {
 }
 
 .mail-address {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
 }
 
 .mail-body {
-  padding: 16px 0;
-  margin: 10px 0 0;
+  padding: 14px 0;
+  margin: 8px 0 0;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.9;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
@@ -2701,20 +2701,20 @@ html[data-japangrad-theme] {
 .mail-followup {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px 14px;
-  padding: 12px 14px;
-  margin-top: 14px;
-  font-size: 13px;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .mail-followup strong,
 .mail-followup time {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .mail-followup time {
@@ -2723,63 +2723,63 @@ html[data-japangrad-theme] {
 
 .comparison-tray {
   position: sticky;
-  bottom: 18px;
+  bottom: 15px;
   z-index: 3;
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
-  padding: 14px 16px;
-  margin-top: 22px;
+  padding: 12px 14px;
+  margin-top: 19px;
   background: var(--jg-elevated);
   border: 1px solid var(--jg-border);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: var(--jg-shadow);
 }
 
 .tray-label {
   display: flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
 }
 
 .tray-label svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .tray-targets {
   display: flex;
   flex: 1;
   flex-wrap: wrap;
-  gap: 7px;
+  gap: 6px;
 }
 
 .tray-targets button {
   display: inline-flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   max-width: 220px;
-  padding: 6px 9px;
-  font-size: 12px;
+  padding: 5px 8px;
+  font-size: 11px;
   color: var(--jg-text);
   overflow-wrap: anywhere;
   cursor: pointer;
   background: var(--jg-subtle);
   border: 0;
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .tray-targets svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
 }
 
 .comparison-intro {
-  margin: 10px 0 20px;
-  font-size: 13px;
+  margin: 8px 0 17px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -2787,13 +2787,13 @@ html[data-japangrad-theme] {
   max-height: 65vh;
   overflow: auto;
   border: 1px solid var(--jg-line);
-  border-radius: 10px;
+  border-radius: 8px;
 }
 
 .comparison-table {
   width: 100%;
-  min-width: 680px;
-  font-size: 13px;
+  min-width: 578px;
+  font-size: 11px;
   color: var(--jg-text);
   table-layout: fixed;
   border-spacing: 0;
@@ -2802,7 +2802,7 @@ html[data-japangrad-theme] {
 
 .comparison-table th,
 .comparison-table td {
-  padding: 15px 16px;
+  padding: 13px 14px;
   line-height: 1.8;
   vertical-align: top;
   text-align: left;
@@ -2813,7 +2813,7 @@ html[data-japangrad-theme] {
 }
 
 .comparison-table tr > th:first-child {
-  width: 150px;
+  width: 128px;
   font-weight: 500;
   color: var(--jg-muted);
   background: var(--jg-subtle);
@@ -2828,7 +2828,7 @@ html[data-japangrad-theme] {
 
 .comparison-table thead th a {
   display: inline-flex;
-  gap: 9px;
+  gap: 8px;
   align-items: center;
   color: var(--jg-text);
 }
@@ -2839,15 +2839,15 @@ html[data-japangrad-theme] {
 }
 
 .comparison-table .university-logo {
-  width: 30px;
-  height: 30px;
-  border-radius: 6px;
+  width: 26px;
+  height: 26px;
+  border-radius: 5px;
 }
 
 .comparison-footer {
   display: flex;
   justify-content: flex-end;
-  margin-top: 20px;
+  margin-top: 17px;
 }
 
 .collection-empty,
@@ -2855,25 +2855,25 @@ html[data-japangrad-theme] {
 .welcome-empty {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: center;
-  padding: 44px 24px;
+  padding: 37px 20px;
   color: var(--jg-secondary);
   text-align: center;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .search-empty {
-  margin-top: 24px;
+  margin-top: 20px;
 }
 
 .collection-empty h2,
 .search-empty h2,
 .collection-empty h3 {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 600;
   color: var(--jg-text);
 }
@@ -2882,7 +2882,7 @@ html[data-japangrad-theme] {
 .search-empty p,
 .welcome-empty p {
   max-width: 58ch;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-muted);
 }
@@ -2891,26 +2891,26 @@ html[data-japangrad-theme] {
   display: grid;
   flex-shrink: 0;
   place-items: center;
-  width: 56px;
-  height: 56px;
-  margin-bottom: 6px;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 5px;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .empty-symbol svg {
-  width: 26px;
-  height: 26px;
+  width: 22px;
+  height: 22px;
 }
 
 .welcome-empty {
-  min-height: 340px;
+  min-height: 289px;
 }
 
 .welcome-empty h2 {
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 600;
   color: var(--jg-text);
   letter-spacing: -0.5px;
@@ -2919,77 +2919,77 @@ html[data-japangrad-theme] {
 .empty-journey {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
   justify-content: center;
-  padding-top: 22px;
-  margin-top: 12px;
+  padding-top: 19px;
+  margin-top: 10px;
   border-top: 1px solid var(--jg-line);
 }
 
 .empty-journey span {
   display: inline-flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .empty-journey svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .empty-journey > svg {
-  width: 12px;
-  height: 12px;
+  width: 10px;
+  height: 10px;
   color: var(--jg-muted);
 }
 
 .back-link {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-accent-text) !important;
 }
 
 .workspace-skeleton {
-  padding-top: 8px;
+  padding-top: 7px;
 }
 
 .workspace-skeleton > span {
   display: block;
   background: var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .skeleton-title {
-  width: 260px;
-  height: 36px;
+  width: 221px;
+  height: 31px;
 }
 
 .skeleton-description {
-  width: min(480px, 80%);
-  height: 16px;
-  margin-top: 16px;
+  width: min(408px, 80%);
+  height: 14px;
+  margin-top: 14px;
 }
 
 .skeleton-toolbar {
-  height: 66px;
-  margin-top: 30px;
+  height: 56px;
+  margin-top: 26px;
 }
 
 .workspace-skeleton > div {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  margin-top: 20px;
+  gap: 14px;
+  margin-top: 17px;
 }
 
 .skeleton-card {
   display: block;
-  height: 208px;
+  height: 177px;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 html[data-japangrad-theme] :is(.ant-modal-content, .ant-drawer-content) {
@@ -2999,13 +2999,13 @@ html[data-japangrad-theme] :is(.ant-modal-content, .ant-drawer-content) {
 
 html[data-japangrad-theme] .ant-modal-content {
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
   box-shadow: var(--jg-overlay-shadow);
 }
 
 html[data-japangrad-theme] .ant-modal-title,
 html[data-japangrad-theme] .ant-drawer-title {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--jg-text);
   background: transparent;
@@ -3085,12 +3085,12 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   .university-dashboard,
   .admission-overview-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    gap: 14px;
   }
 
   .exam-scroll-hint {
     display: block;
-    margin: 0 0 10px !important;
+    margin: 0 0 8px !important;
     font-size: 11px;
     color: var(--jg-muted);
   }
@@ -3104,32 +3104,32 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 @media (max-width: 767px) {
   .page-heading {
     flex-wrap: wrap;
-    gap: 17px;
+    gap: 14px;
     align-items: start;
-    margin-bottom: 22px;
+    margin-bottom: 19px;
   }
 
   .page-heading h1 {
-    font-size: 25px;
+    font-size: 21px;
     letter-spacing: -0.5px;
   }
 
   .detail-heading h1 {
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .page-description {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .detail-actions {
-    gap: 8px;
+    gap: 7px;
     width: 100%;
   }
 
   .explorer-breadcrumb {
-    gap: 6px;
-    margin-bottom: 18px;
+    gap: 5px;
+    margin-bottom: 15px;
     font-size: 11px;
   }
 
@@ -3143,15 +3143,15 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
   .university-card,
   .school-card {
-    padding: 18px;
+    padding: 15px;
   }
 
   .university-card-header {
-    gap: 10px;
+    gap: 8px;
   }
 
   .university-card-identity h2 {
-    font-size: 18px;
+    font-size: 15px;
   }
 
   .university-card-compare {
@@ -3159,25 +3159,25 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .university-content-count {
-    gap: 10px;
+    gap: 8px;
   }
 
   .university-identity {
-    gap: 12px;
+    gap: 10px;
   }
 
   .university-identity > .university-logo-large {
-    width: 50px;
-    height: 50px;
+    width: 42px;
+    height: 42px;
   }
 
   .university-profile-panel,
   .university-fee-panel {
-    padding: 20px;
+    padding: 17px;
   }
 
   .university-progress-counts strong {
-    font-size: 22px;
+    font-size: 19px;
   }
 
   .university-progress-counts span {
@@ -3185,12 +3185,12 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .university-fee-items dd {
-    font-size: 23px;
+    font-size: 20px;
   }
 
   .list-toolbar {
-    gap: 9px;
-    padding: 12px;
+    gap: 8px;
+    padding: 10px;
   }
 
   .list-toolbar .explorer-search {
@@ -3199,7 +3199,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .sort-select {
-    width: 132px;
+    width: 112px;
     margin-left: 0;
   }
 
@@ -3214,18 +3214,18 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   .collection-heading,
   .archive-heading {
     flex-wrap: wrap;
-    gap: 14px;
+    gap: 12px;
     align-items: start;
   }
 
   .collection-heading h2,
   .archive-heading h2 {
-    font-size: 17px;
+    font-size: 14px;
   }
 
   .collection-heading p,
   .archive-heading > div > p:last-child {
-    font-size: 12px;
+    font-size: 11px;
   }
 
   .section-search {
@@ -3233,11 +3233,11 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .entity-overview {
-    padding: 17px;
+    padding: 14px;
   }
 
   .overview-meta {
-    gap: 12px;
+    gap: 10px;
   }
 
   .teacher-toolbar .explorer-search {
@@ -3250,17 +3250,17 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .professor-page-identity {
-    gap: 12px;
+    gap: 10px;
   }
 
   .professor-page-identity > .entity-symbol {
-    width: 50px;
-    height: 50px;
-    font-size: 22px;
+    width: 42px;
+    height: 42px;
+    font-size: 19px;
   }
 
   .professor-page-content {
-    padding: 18px;
+    padding: 15px;
   }
 
   .professor-fields > div:last-child {
@@ -3269,7 +3269,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
   .admission-period,
   .admission-materials {
-    padding: 18px;
+    padding: 15px;
   }
 
   .admission-materials ul {
@@ -3277,15 +3277,15 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .exam-batch-table-wrap {
-    max-height: 320px;
+    max-height: 272px;
   }
 
   .archive-toolbar > .ant-select {
-    width: 118px;
+    width: 100px;
   }
 
   .archive-selection-card {
-    padding: 18px;
+    padding: 15px;
   }
 
   .archive-answer-heading {
@@ -3293,7 +3293,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .archive-detail-heading h2 {
-    font-size: 21px;
+    font-size: 18px;
   }
 
   .archive-upload-form .archive-upload-fields,
@@ -3303,7 +3303,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
   .form-footer > span {
     flex-basis: 100%;
-    margin-bottom: 4px;
+    margin-bottom: 3px;
   }
 
   .fee-editor-total > span {
@@ -3312,45 +3312,45 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .university-logo-editor.field {
-    gap: 12px;
-    padding: 13px;
+    gap: 10px;
+    padding: 11px;
   }
 
   .university-logo-editor .university-logo-large {
-    width: 52px;
-    height: 52px;
+    width: 44px;
+    height: 44px;
   }
 
   .university-logo-editor .text-button {
-    margin-left: 8px;
+    margin-left: 7px;
   }
 
   .archive-dropzone {
-    min-height: 190px;
-    padding: 22px 12px;
+    min-height: 162px;
+    padding: 19px 10px;
   }
 
   .archive-selected-file {
-    gap: 7px;
-    padding: 10px;
+    gap: 6px;
+    padding: 8px;
   }
 
   .archive-selected-file > .ant-btn {
-    padding: 0 4px;
+    padding: 0 3px;
   }
 
   .mail-card {
-    padding: 17px;
+    padding: 14px;
   }
 
   .comparison-tray {
-    bottom: 10px;
-    gap: 10px;
-    padding: 12px;
+    bottom: 8px;
+    gap: 8px;
+    padding: 10px;
   }
 
   .tray-targets {
-    flex-basis: calc(100% - 70px);
+    flex-basis: calc(100% - 60px);
   }
 
   .comparison-tray > .text-button {
@@ -3359,28 +3359,28 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
   .comparison-table th,
   .comparison-table td {
-    padding: 13px;
+    padding: 11px;
   }
 
   .comparison-table tr > th:first-child {
-    width: 120px;
+    width: 102px;
   }
 
   .welcome-empty {
-    min-height: 320px;
-    padding: 32px 18px;
+    min-height: 272px;
+    padding: 27px 15px;
   }
 
   .welcome-empty h2 {
-    font-size: 21px;
+    font-size: 18px;
   }
 
   .empty-journey {
-    gap: 9px;
+    gap: 8px;
   }
 
   .empty-journey span {
-    gap: 4px;
+    gap: 3px;
     font-size: 11px;
   }
 
@@ -3401,17 +3401,17 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 /* Research labs and the applicant's target list. */
 .research-lab-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 255px), 1fr));
+  gap: 17px;
 }
 
 .research-lab-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 12px;
   min-width: 0;
-  padding: 24px;
+  padding: 20px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: var(--jg-radius);
@@ -3445,13 +3445,13 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .journey-comparison-footer,
 .journey-selection {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
 }
 
 .research-lab-card h3 {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 650;
   line-height: 1.4;
   overflow-wrap: anywhere;
@@ -3465,9 +3465,9 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .lab-teachers {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
 }
@@ -3477,7 +3477,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .research-lab-card-bottom {
-  padding-top: 16px;
+  padding-top: 14px;
   margin-top: auto;
   color: var(--jg-secondary);
   border-top: 1px solid var(--jg-line);
@@ -3491,8 +3491,8 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .lab-overview-footer {
   flex-wrap: wrap;
-  padding-top: 18px;
-  margin-top: 18px;
+  padding-top: 15px;
+  margin-top: 15px;
   border-top: 1px solid var(--jg-line);
 }
 
@@ -3502,16 +3502,16 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .lab-admission-notes {
-  padding: 24px;
-  margin-bottom: 32px;
+  padding: 20px;
+  margin-bottom: 27px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: var(--jg-radius);
 }
 
 .lab-admission-notes h2 {
-  margin-bottom: 8px;
-  font-size: 20px;
+  margin-bottom: 7px;
+  font-size: 17px;
 }
 
 .lab-admission-notes p {
@@ -3521,13 +3521,13 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .lab-admission-notes dl {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  margin: 22px 0;
+  gap: 20px;
+  margin: 19px 0;
 }
 
 .lab-admission-notes dt {
-  margin-bottom: 6px;
-  font-size: 13px;
+  margin-bottom: 5px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -3540,17 +3540,17 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .journey-summary {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px 28px;
+  gap: 10px 24px;
   align-items: center;
-  padding: 18px 22px;
-  margin-bottom: 24px;
+  padding: 15px 19px;
+  margin-bottom: 20px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: var(--jg-radius);
 }
 
 .journey-summary strong {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 650;
 }
 
@@ -3559,31 +3559,31 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .journey-year-select {
-  min-width: 208px;
+  min-width: 177px;
 }
 
 .journey-selection {
   flex-wrap: wrap;
   justify-content: flex-start;
-  padding: 12px 16px;
-  margin: 18px 0;
+  padding: 10px 14px;
+  margin: 15px 0;
   background: var(--jg-accent-soft);
   border-radius: var(--jg-control-radius);
 }
 
 .journey-empty {
-  margin-top: 48px;
+  margin-top: 41px;
 }
 
 .journey-comparison-footer {
   flex-wrap: wrap;
-  margin-top: 20px;
+  margin-top: 17px;
   color: var(--jg-secondary);
 }
 
 .comparison-table th small {
   display: block;
-  margin-top: 6px;
+  margin-top: 5px;
   font-weight: 400;
   color: var(--jg-secondary);
 }
@@ -3600,11 +3600,11 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
   .journey-year-select {
     flex: 1;
-    min-width: 190px;
+    min-width: 162px;
   }
 
   .research-lab-card {
-    padding: 20px;
+    padding: 17px;
   }
 }
 
@@ -3621,26 +3621,26 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .journey-picker-toolbar {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 210px;
-  gap: 12px;
-  margin-bottom: 18px;
+  grid-template-columns: minmax(0, 1fr) 178px;
+  gap: 10px;
+  margin-bottom: 15px;
 }
 
 .journey-picker-caption {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  font-size: 13px;
+  margin-bottom: 10px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .journey-picker-list {
   display: grid;
-  gap: 10px;
-  max-height: min(440px, 45dvh);
+  gap: 8px;
+  max-height: min(374px, 45dvh);
   padding: 3px;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -3648,10 +3648,10 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .journey-lab-picker .journey-picker-option.ant-checkbox-wrapper {
   display: flex;
-  gap: 4px;
+  gap: 3px;
   align-items: flex-start;
   width: 100%;
-  padding: 16px;
+  padding: 14px;
   margin: 0;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
@@ -3659,7 +3659,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .journey-picker-option > .ant-checkbox {
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .journey-picker-option > span:last-child {
@@ -3674,18 +3674,18 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .journey-picker-identity {
   display: grid;
-  gap: 5px;
+  gap: 4px;
 }
 
 .journey-picker-name {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
+  gap: 7px 14px;
   align-items: center;
 }
 
 .journey-picker-name strong {
-  font-size: 15px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--jg-text);
   overflow-wrap: anywhere;
@@ -3693,12 +3693,12 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .journey-picker-added {
   margin-left: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-success);
 }
 
 .journey-picker-affiliation {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
 }
@@ -3708,23 +3708,23 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   overflow: hidden;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
 }
 
 .journey-picker-empty {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   justify-items: center;
-  padding: 40px 16px;
+  padding: 34px 14px;
   color: var(--jg-secondary);
   text-align: center;
 }
 
 .journey-picker-empty h3 {
   margin: 0;
-  font-size: 17px;
+  font-size: 14px;
   color: var(--jg-text);
 }
 
@@ -3735,16 +3735,16 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .journey-picker-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding-top: 18px;
-  margin-top: 18px;
+  padding-top: 15px;
+  margin-top: 15px;
   border-top: 1px solid var(--jg-line);
 }
 
 .journey-picker-footer > span:first-child {
   margin-right: auto;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -3758,7 +3758,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .journey-lab-picker .journey-picker-option.ant-checkbox-wrapper {
-    padding: 12px;
+    padding: 10px;
   }
 
   .journey-summary > .text-button {
@@ -3771,45 +3771,45 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 /* Application planning: contact records, material preparation and schedule. */
 .planner-muted,
 .planner-view-description {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .planner-view-description {
-  margin-bottom: 18px !important;
+  margin-bottom: 15px !important;
   line-height: 1.7;
 }
 
 .professor-contact-form,
 .planner-task-editor {
   display: grid;
-  gap: 18px;
+  gap: 15px;
   color: var(--jg-text);
 }
 
 .planner-contact-heading {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: flex-start;
   justify-content: space-between;
 }
 
 .planner-contact-heading h3 {
-  margin: 0 0 8px;
-  font-size: 20px;
+  margin: 0 0 7px;
+  font-size: 17px;
 }
 
 .planner-contact-heading p {
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .planner-form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
+  gap: 15px;
 }
 
 .planner-form-grid .ant-input-number {
@@ -3820,24 +3820,24 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .planner-form-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .planner-inline-actions h4 {
   margin: 0 auto 0 0;
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .planner-inline-actions small,
 .planner-form-footer > span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .planner-form-footer {
   justify-content: flex-end;
-  padding-top: 18px;
+  padding-top: 15px;
   border-top: 1px solid var(--jg-line);
 }
 
@@ -3847,13 +3847,13 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .contact-status {
   display: grid;
-  gap: 8px;
-  margin: 8px 0;
+  gap: 7px;
+  margin: 7px 0;
 }
 
 .contact-status-label {
   width: fit-content;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--jg-accent-text);
 }
@@ -3874,14 +3874,14 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .contact-steps {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  gap: 5px;
   padding: 0;
   margin: 0;
   list-style: none;
 }
 
 .contact-steps li {
-  padding-top: 5px;
+  padding-top: 4px;
   font-size: 10px;
   color: var(--jg-muted);
   text-align: center;
@@ -3899,7 +3899,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .planner-card-status {
-  padding-top: 12px;
+  padding-top: 10px;
   border-top: 1px solid var(--jg-line);
 }
 
@@ -3909,9 +3909,9 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .planner-card-material > span {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -3923,10 +3923,10 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .planner-card-links {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   justify-content: space-between;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .research-lab-card .planner-card-links a {
@@ -3937,15 +3937,15 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .planner-card-links .ant-btn {
   padding: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
 .planner-material-summary {
   display: grid;
-  gap: 12px;
-  padding: 20px;
-  margin-bottom: 22px;
+  gap: 10px;
+  padding: 17px;
+  margin-bottom: 19px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: var(--jg-radius);
@@ -3953,7 +3953,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .planner-task-list {
   display: grid;
-  padding: 0 20px;
+  padding: 0 17px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: var(--jg-radius);
@@ -3961,10 +3961,10 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .planner-task-row {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) 32px 32px;
-  gap: 12px;
+  grid-template-columns: auto minmax(0, 1fr) 27px 27px;
+  gap: 10px;
   align-items: start;
-  padding: 20px 0;
+  padding: 17px 0;
   border-bottom: 1px solid var(--jg-line);
 }
 
@@ -3973,7 +3973,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .planner-task-row > .ant-checkbox-wrapper {
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .planner-task-content {
@@ -3983,9 +3983,9 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .planner-task-content h3 {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  font-size: 15px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
@@ -3996,8 +3996,8 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .planner-task-content p {
-  margin-top: 6px !important;
-  font-size: 13px;
+  margin-top: 5px !important;
+  font-size: 11px;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -4005,8 +4005,8 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .planner-task-content > span {
   display: block;
-  margin-top: 6px;
-  font-size: 12px;
+  margin-top: 5px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -4021,8 +4021,8 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .journey-planning-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 280px;
-  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) 238px;
+  gap: 20px;
   align-items: start;
 }
 
@@ -4035,25 +4035,25 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .journey-planning-main .explorer-search {
-  min-width: min(100%, 230px);
+  min-width: min(100%, 196px);
 }
 
 .journey-planning-main .list-caption {
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
 }
 
 .journey-workspace-tabs .ant-tabs-nav {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .journey-task-panel {
   position: sticky;
-  top: 84px;
+  top: 71px;
   display: grid;
-  gap: 22px;
-  max-height: calc(100dvh - 112px);
-  padding: 20px;
+  gap: 19px;
+  max-height: calc(100dvh - 95px);
+  padding: 17px;
   overflow-y: auto;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
@@ -4062,26 +4062,26 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .journey-task-panel header {
   display: grid;
-  gap: 4px;
+  gap: 3px;
 }
 
 .journey-task-panel h2 {
-  font-size: 17px;
+  font-size: 14px;
 }
 
 .journey-task-panel header > span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .task-panel-total > strong {
-  font-size: 30px;
+  font-size: 26px;
   font-weight: 600;
   line-height: 1.3;
 }
 
 .task-panel-total > p {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -4092,16 +4092,16 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .task-panel-section {
   display: grid;
-  gap: 13px;
-  padding-top: 18px;
+  gap: 11px;
+  padding-top: 15px;
   border-top: 1px solid var(--jg-line);
 }
 
 .task-panel-section h3 {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   justify-content: space-between;
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .task-panel-section h3 span {
@@ -4112,11 +4112,11 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .task-panel-material {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  column-gap: 8px;
+  column-gap: 7px;
 }
 
 .task-panel-material > span {
-  font-size: 12px;
+  font-size: 11px;
   overflow-wrap: anywhere;
 }
 
@@ -4131,7 +4131,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .task-panel-todo {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: flex-start;
 }
 
@@ -4146,7 +4146,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .task-panel-todo strong,
 .task-panel-reminder strong {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   overflow-wrap: anywhere;
 }
@@ -4167,35 +4167,35 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .contact-board-scroll {
   max-width: 100%;
-  padding-bottom: 14px;
+  padding-bottom: 12px;
   overflow-x: auto;
   overscroll-behavior-x: contain;
 }
 
 .contact-board-columns {
   display: grid;
-  grid-template-columns: repeat(7, minmax(270px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(7, minmax(230px, 1fr));
+  gap: 12px;
   align-items: start;
-  min-width: 1960px;
+  min-width: 1666px;
 }
 
 .contact-board-column {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   align-content: start;
-  min-height: 300px;
-  padding: 14px;
+  min-height: 255px;
+  padding: 12px;
   background: var(--jg-subtle);
   border-radius: var(--jg-radius);
 }
 
 .contact-board-column > h2 {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   justify-content: space-between;
-  margin-bottom: 4px;
-  font-size: 13px;
+  margin-bottom: 3px;
+  font-size: 11px;
 }
 
 .contact-board-column > h2 span {
@@ -4205,9 +4205,9 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .contact-board-card {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
-  padding: 16px;
+  padding: 14px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: var(--jg-control-radius);
@@ -4218,12 +4218,12 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .contact-board-card h3 {
-  font-size: 15px;
+  font-size: 13px;
   overflow-wrap: anywhere;
 }
 
 .contact-board-card > p {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -4232,8 +4232,8 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .contact-board-empty {
-  padding: 24px 0;
-  font-size: 12px;
+  padding: 20px 0;
+  font-size: 11px;
   color: var(--jg-muted);
   text-align: center;
 }
@@ -4241,47 +4241,47 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .planner-timeline-heading {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .planner-timeline-heading h2 {
-  margin-bottom: 7px;
-  font-size: 19px;
+  margin-bottom: 6px;
+  font-size: 16px;
 }
 
 .planner-timeline-heading p {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .timeline-controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 17px;
 }
 
 .timeline-controls label {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .timeline-controls label .ant-input {
-  width: 155px;
+  width: 132px;
 }
 
 .timeline-controls > .ant-select {
-  min-width: 100px;
+  min-width: 85px;
 }
 
 .timeline-controls > span {
   display: inline-flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
   margin-left: auto;
   font-size: 11px;
@@ -4290,8 +4290,8 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .timeline-controls i {
   display: inline-block;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 2px;
 }
 
@@ -4310,7 +4310,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .gantt-scroll {
   max-width: 100%;
-  max-height: 570px;
+  max-height: 484px;
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--jg-surface);
@@ -4319,20 +4319,20 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .gantt-grid {
-  min-width: 900px;
+  min-width: 765px;
 }
 
 .gantt-header,
 .gantt-row {
   display: grid;
-  grid-template-columns: 180px minmax(0, 1fr);
+  grid-template-columns: 153px minmax(0, 1fr);
 }
 
 .gantt-header {
   position: sticky;
   top: 0;
   z-index: 4;
-  min-height: 44px;
+  min-height: 37px;
   background: var(--jg-subtle);
   border-bottom: 1px solid var(--jg-line);
 }
@@ -4341,8 +4341,8 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   position: sticky;
   left: 0;
   z-index: 5;
-  padding: 12px 14px;
-  font-size: 12px;
+  padding: 10px 12px;
+  font-size: 11px;
   background: var(--jg-subtle);
   border-right: 1px solid var(--jg-line);
 }
@@ -4354,8 +4354,8 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .gantt-axis > span {
   position: absolute;
-  top: 13px;
-  padding-left: 6px;
+  top: 11px;
+  padding-left: 5px;
   font-size: 11px;
   color: var(--jg-secondary);
 }
@@ -4374,15 +4374,15 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   z-index: 3;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 3px;
   justify-content: center;
-  padding: 12px 14px;
+  padding: 10px 12px;
   background: var(--jg-surface);
   border-right: 1px solid var(--jg-line);
 }
 
 .gantt-row-label strong {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   overflow-wrap: anywhere;
 }
@@ -4417,8 +4417,8 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 .gantt-event {
   position: absolute;
   z-index: 2;
-  height: 24px;
-  padding: 0 7px;
+  height: 20px;
+  padding: 0 6px;
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 10px;
@@ -4428,7 +4428,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   cursor: pointer;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-border);
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
 .gantt-event:is(
@@ -4464,9 +4464,9 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .gantt-event.is-point::before {
   display: inline-block;
-  width: 5px;
-  height: 5px;
-  margin-right: 5px;
+  width: 4px;
+  height: 4px;
+  margin-right: 4px;
   content: '';
   background: currentcolor;
   border-radius: 50%;
@@ -4478,17 +4478,17 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 
 .gantt-no-events {
   position: absolute;
-  top: 20px;
-  left: 12px;
+  top: 17px;
+  left: 10px;
   font-size: 11px;
   color: var(--jg-muted);
 }
 
 .planner-conflicts {
   display: grid;
-  gap: 12px;
-  padding: 20px;
-  margin-top: 24px;
+  gap: 10px;
+  padding: 17px;
+  margin-top: 20px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-left: 3px solid var(--jg-warning);
@@ -4496,19 +4496,19 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .planner-conflicts h3 {
-  font-size: 16px;
+  font-size: 14px;
   color: var(--jg-warning);
 }
 
 .planner-conflicts > p {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .planner-conflicts article {
   display: grid;
-  gap: 4px;
-  font-size: 12px;
+  gap: 3px;
+  font-size: 11px;
 }
 
 .planner-conflicts article strong {
@@ -4520,24 +4520,24 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .planner-reminder-section {
-  margin-top: 26px;
+  margin-top: 22px;
 }
 
 .planner-reminder-section > h3 {
-  margin-bottom: 16px;
-  font-size: 17px;
+  margin-bottom: 14px;
+  font-size: 14px;
 }
 
 .planner-reminder-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 187px), 1fr));
+  gap: 10px;
 }
 
 .planner-reminder-grid > button {
   display: grid;
-  gap: 6px;
-  padding: 16px;
+  gap: 5px;
+  padding: 14px;
   color: var(--jg-text);
   text-align: left;
   cursor: pointer;
@@ -4547,7 +4547,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .planner-reminder-grid > button strong {
-  font-size: 15px;
+  font-size: 13px;
   color: var(--jg-accent-text);
 }
 
@@ -4556,7 +4556,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .planner-reminder-grid > button span {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
 }
 
@@ -4567,27 +4567,27 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .planner-date-hint {
-  margin-top: 22px !important;
-  font-size: 12px;
+  margin-top: 19px !important;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .planner-event-details {
   display: grid;
-  gap: 18px;
+  gap: 15px;
   color: var(--jg-text);
 }
 
 .planner-event-details dt {
-  margin-bottom: 5px;
-  font-size: 12px;
+  margin-bottom: 4px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .planner-event-details dd {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
@@ -4600,7 +4600,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   .journey-task-panel {
     position: static;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 20px;
+    gap: 17px;
     max-height: none;
   }
 
@@ -4620,16 +4620,16 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
   }
 
   .planner-contact-heading h3 {
-    font-size: 18px;
+    font-size: 15px;
   }
 
   .planner-task-row {
-    grid-template-columns: auto minmax(0, 1fr) 28px 28px;
-    gap: 7px;
+    grid-template-columns: auto minmax(0, 1fr) 24px 24px;
+    gap: 6px;
   }
 
   .planner-task-list {
-    padding: 0 12px;
+    padding: 0 10px;
   }
 
   .timeline-controls > span {
@@ -4643,16 +4643,16 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .admission-language {
-  padding: 20px 24px;
-  margin-top: 16px;
+  padding: 17px 20px;
+  margin-top: 14px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: var(--jg-control-radius);
 }
 
 .admission-language h3 {
-  margin: 0 0 10px;
-  font-size: 14px;
+  margin: 0 0 8px;
+  font-size: 12px;
 }
 
 .admission-language p {
@@ -4666,7 +4666,7 @@ html[data-japangrad-theme] .ant-btn:active:not(:disabled) {
 }
 
 .contact-board-card > .ant-btn {
-  margin-top: 6px;
+  margin-top: 5px;
 }
 
 /* 想考 uses a heart and 心仪老师 uses a star; both fill when marked. */

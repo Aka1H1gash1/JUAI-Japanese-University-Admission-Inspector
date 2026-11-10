@@ -16,26 +16,25 @@
   z-index: 2;
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 26px;
+  height: 26px;
   padding: 0;
-  margin-left: 4px;
+  margin-left: 3px;
   color: var(--jg-muted);
   cursor: pointer;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 7px;
+  border-radius: 6px;
 }
 
 .archive-card-metadata svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .archive-selection-top .archive-selection-year {
   margin-left: auto;
 }
-
 
 .page-heading h1 {
   font-weight: 700;
@@ -43,47 +42,47 @@
 }
 
 .page-description {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--jg-secondary);
 }
 
 .workspace-page-heading {
   position: relative;
-  gap: 24px;
-  padding: 30px 32px;
-  margin-bottom: 24px;
+  gap: 20px;
+  padding: 26px 27px;
+  margin-bottom: 20px;
   background: var(--jg-heading-bg);
   border: 1px solid var(--jg-heading-line);
   border-radius: var(--jg-radius);
 }
 
 .workspace-page-heading h1 {
-  font-size: clamp(28px, 2.6vw, 36px);
+  font-size: clamp(24px, 2.6vw, 31px);
 }
 
 .workspace-page-heading .page-description {
   max-width: 46ch;
-  margin-top: 12px !important;
+  margin-top: 10px !important;
 }
 
 .workspace-page-heading > .ant-btn {
-  height: 42px;
+  height: 36px;
 }
 
 .collection-stats {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 16px;
-  padding: 6px 0;
-  margin: 0 0 26px;
+  gap: 14px;
+  padding: 5px 0;
+  margin: 0 0 22px;
 }
 
 .collection-stats > div {
   display: grid;
-  grid-template-columns: 42px minmax(0, 1fr);
-  column-gap: 12px;
+  grid-template-columns: 36px minmax(0, 1fr);
+  column-gap: 10px;
   align-items: center;
-  padding: 4px 16px;
+  padding: 3px 14px;
   border-right: 1px solid var(--jg-line);
 }
 
@@ -99,27 +98,27 @@
   display: grid;
   grid-row: span 2;
   place-items: center;
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .collection-stat-icon svg {
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
 }
 
 .collection-stats dt {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .collection-stats dd {
   margin: 0;
-  font-size: 25px;
+  font-size: 21px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   line-height: 1.35;
@@ -130,7 +129,7 @@
 }
 
 .list-caption {
-  margin-top: 22px;
+  margin-top: 19px;
 }
 
 .list-caption > span:first-child {
@@ -141,7 +140,7 @@
 .university-grid,
 .school-grid,
 .professor-grid {
-  gap: 20px;
+  gap: 17px;
 }
 
 .university-card,
@@ -153,25 +152,25 @@
 }
 
 .university-card {
-  gap: 18px;
-  padding: 24px;
+  gap: 15px;
+  padding: 20px;
 }
 
 .university-card-header {
-  padding: 24px 24px 22px;
-  margin: -24px -24px 0;
+  padding: 20px 20px 19px;
+  margin: -20px -20px 0;
   background: var(--jg-card-header);
   border-bottom: 1px solid var(--jg-line);
   border-radius: var(--jg-radius) var(--jg-radius) 0 0;
 }
 
 .university-card-header .university-logo {
-  width: 52px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
 }
 
 .university-card-identity h2 {
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 700;
 }
 
@@ -188,7 +187,7 @@
 }
 
 .university-card-rank {
-  padding: 4px 8px;
+  padding: 3px 7px;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
   border-radius: var(--jg-tag-radius);
@@ -201,20 +200,20 @@
 .university-card-budget {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 3px 12px;
+  gap: 3px 10px;
   align-items: baseline;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: var(--jg-card-header);
   border-radius: var(--jg-control-radius);
 }
 
 .university-card-budget > span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .university-card-budget strong {
-  font-size: 21px;
+  font-size: 18px;
   font-weight: 650;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.5px;
@@ -245,23 +244,23 @@
 }
 
 .university-content-count strong {
-  font-size: 17px;
+  font-size: 14px;
 }
 
 .detail-heading {
-  padding-block: 4px 12px;
+  padding-block: 3px 10px;
 }
 
 .university-heading {
-  padding: 24px;
+  padding: 20px;
   background: var(--jg-heading-bg);
   border: 1px solid var(--jg-heading-line);
   border-radius: var(--jg-radius);
 }
 
 .university-heading .university-logo-large {
-  width: 68px;
-  height: 68px;
+  width: 58px;
+  height: 58px;
 }
 
 .university-profile-panel,
@@ -282,16 +281,16 @@
 }
 
 .university-fee-totals {
-  padding: 20px 18px;
+  padding: 17px 15px;
   border: 1px solid var(--jg-accent-line);
 }
 
 .university-fee-totals > div:first-child strong {
-  font-size: 23px;
+  font-size: 20px;
 }
 
 .university-progress-counts {
-  padding: 16px;
+  padding: 14px;
   background: var(--jg-card-header);
   border-radius: var(--jg-control-radius);
 }
@@ -301,31 +300,31 @@
 }
 
 .school-card-top .entity-symbol {
-  width: 42px;
-  height: 42px;
+  width: 36px;
+  height: 36px;
 }
 
 .professor-card-top {
-  margin-bottom: 18px;
+  margin-bottom: 15px;
   background: var(--jg-card-header);
 }
 
 .research-lab-card .lab-budget {
   align-self: start;
-  padding: 7px 10px;
+  padding: 6px 8px;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
   border-radius: var(--jg-control-radius);
 }
 
 .journey-summary {
-  padding: 14px 22px;
+  padding: 12px 19px;
   background: var(--jg-card-header);
 }
 
 .journey-summary strong {
   margin-inline: 3px;
-  font-size: 24px;
+  font-size: 20px;
   color: var(--jg-accent-text);
 }
 
@@ -334,7 +333,7 @@
 }
 
 .task-panel-total {
-  padding: 18px;
+  padding: 15px;
   background: var(--jg-accent-soft);
   border-radius: var(--jg-control-radius);
 }
@@ -354,7 +353,7 @@
 }
 
 .contact-board-column > h2 {
-  padding-bottom: 12px;
+  padding-bottom: 10px;
   border-bottom: 2px solid var(--jg-accent-line);
 }
 
@@ -368,19 +367,19 @@
 }
 
 .contact-board-column > h2 span {
-  padding: 2px 7px;
+  padding: 2px 6px;
   background: var(--jg-surface);
   border-radius: var(--jg-tag-radius);
 }
 
 .contact-board-card {
-  padding: 18px;
-  border-radius: 12px;
+  padding: 15px;
+  border-radius: 10px;
   box-shadow: var(--jg-shadow);
 }
 
 .contact-board-card h3 {
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .gantt-header,
@@ -414,12 +413,12 @@ html[data-japangrad-theme] .ant-modal-content {
 }
 
 html[data-japangrad-theme] .ant-modal-header {
-  padding-bottom: 14px;
+  padding-bottom: 12px;
   border-bottom: 1px solid var(--jg-line);
 }
 
 html[data-japangrad-theme] .ant-modal-title {
-  font-size: 18px;
+  font-size: 15px;
 }
 
 html[data-japangrad-theme] .ant-btn {
@@ -459,7 +458,7 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
 
 @media (max-width: 1279px) {
   .workspace-page-heading {
-    padding: 26px;
+    padding: 22px;
   }
 
   .journey-page > .workspace-page-heading {
@@ -469,16 +468,16 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
 
 @media (max-width: 767px) {
   .workspace-page-heading {
-    gap: 18px;
-    padding: 22px;
+    gap: 15px;
+    padding: 19px;
   }
 
   .workspace-page-heading h1 {
-    font-size: 27px;
+    font-size: 23px;
   }
 
   .workspace-page-heading .page-description {
-    font-size: 13px;
+    font-size: 11px;
   }
 
   .workspace-page-heading > .detail-actions {
@@ -488,7 +487,7 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
 
   .collection-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 18px 12px;
+    gap: 15px 10px;
   }
 
   .collection-stats > div {
@@ -497,41 +496,41 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
   }
 
   .collection-stats dd {
-    font-size: 22px;
+    font-size: 19px;
   }
 
   .university-grid,
   .school-grid,
   .professor-grid {
     grid-template-columns: minmax(0, 1fr);
-    gap: 16px;
+    gap: 14px;
   }
 
   .university-card {
-    padding: 20px;
+    padding: 17px;
   }
 
   .university-card-header {
-    gap: 10px;
-    padding: 20px;
-    margin: -20px -20px 0;
+    gap: 8px;
+    padding: 17px;
+    margin: -17px -17px 0;
   }
 
   .university-card-header .university-logo {
-    width: 44px;
-    height: 44px;
+    width: 37px;
+    height: 37px;
   }
 
   .university-card-identity h2 {
-    font-size: 18px;
+    font-size: 15px;
   }
 
   .university-card-budget strong {
-    font-size: 19px;
+    font-size: 16px;
   }
 
   .university-heading {
-    padding: 20px;
+    padding: 17px;
   }
 
   .university-heading .detail-actions {
@@ -539,10 +538,10 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
   }
 
   .university-progress-counts {
-    gap: 6px;
-    padding: 12px;
+    gap: 5px;
+    padding: 10px;
   }
-}/* The assistant shares the workspace palette and overlay layers. */
+} /* The assistant shares the workspace palette and overlay layers. */
 
 /* A docked assistant shares the screen with the document; it never covers it. */
 
@@ -580,11 +579,11 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
 
   .workspace-page-heading {
     flex-wrap: wrap;
-    padding: 24px;
+    padding: 20px;
   }
 
   .workspace-page-heading h1 {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .list-toolbar .explorer-search {
@@ -602,9 +601,8 @@ html[data-japangrad-theme] .ant-table-thead > tr > th {
 }
 
 @container workspace-document (max-width:520px) {
-
   .workspace-page-heading {
-    padding: 20px;
+    padding: 17px;
   }
 
   .detail-actions {

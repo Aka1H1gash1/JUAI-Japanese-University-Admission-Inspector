@@ -264,13 +264,13 @@ const { page, pageSize, total, paged } = usePagination(rows, [
 .file-filters {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin: 20px 0;
+  gap: 10px;
+  margin: 17px 0;
 }
 
 .file-filters > * {
   flex: 1;
-  min-width: 150px;
+  min-width: 128px;
 }
 
 .file-table-scroll {
@@ -279,14 +279,14 @@ const { page, pageSize, total, paged } = usePagination(rows, [
 
 .file-table {
   width: 100%;
-  min-width: 850px;
-  font-size: 13px;
+  min-width: 722px;
+  font-size: 11px;
   border-collapse: collapse;
 }
 
 .file-table th,
 .file-table td {
-  padding: 14px 12px;
+  padding: 12px 10px;
   vertical-align: top;
   text-align: left;
   border-bottom: 1px solid var(--jg-line);
@@ -303,11 +303,11 @@ const { page, pageSize, total, paged } = usePagination(rows, [
 
 .file-table small {
   display: block;
-  margin-top: 5px;
+  margin-top: 4px;
   color: var(--jg-muted);
 }
 
 .file-manager:deep(h1) {
-  font-size: 24px;
+  font-size: 20px;
 }
 </style>

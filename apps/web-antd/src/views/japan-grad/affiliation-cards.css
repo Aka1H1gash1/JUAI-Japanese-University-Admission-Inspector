@@ -2,7 +2,7 @@
 .explorer-page .school-grid.affiliation-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  gap: 15px;
   align-items: stretch;
 }
 
@@ -10,11 +10,11 @@
   display: flex;
   flex-direction: column;
   min-width: 0;
-  min-height: 240px;
-  padding: 24px;
+  min-height: 204px;
+  padding: 20px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 16px;
+  border-radius: 14px;
   box-shadow: none;
 }
 
@@ -22,12 +22,12 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .affiliation-card-grid .school-card h3 {
-  margin: 0 0 10px;
-  font-size: 20px;
+  margin: 0 0 8px;
+  font-size: 17px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -44,10 +44,10 @@
 .affiliation-card-grid .school-card-bottom {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 12px;
-  padding-top: 16px;
+  gap: 7px 10px;
+  padding-top: 14px;
   margin-top: auto;
-  font-size: 12px;
+  font-size: 11px;
   border-top: 1px solid var(--jg-line);
 }
 
@@ -67,7 +67,7 @@
   }
 
   .affiliation-card-grid .school-card {
-    min-height: 210px;
-    padding: 20px;
+    min-height: 178px;
+    padding: 17px;
   }
 }

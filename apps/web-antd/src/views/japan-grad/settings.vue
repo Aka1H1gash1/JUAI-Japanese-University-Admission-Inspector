@@ -492,16 +492,16 @@ async function shutdownRuntime() {
 <style scoped>
 .workspace-settings {
   max-width: 1000px;
-  padding-bottom: 40px;
+  padding-bottom: 34px;
   margin: auto;
 }
 
 .workspace-settings > header {
   display: flex;
-  gap: 18px;
+  gap: 15px;
   align-items: center;
   justify-content: space-between;
-  margin: 14px 0 28px;
+  margin: 12px 0 24px;
 }
 
 .workspace-settings header p {
@@ -512,43 +512,43 @@ async function shutdownRuntime() {
 }
 
 .workspace-settings h1 {
-  margin: 10px 0 0;
-  font-size: 32px;
+  margin: 8px 0 0;
+  font-size: 27px;
   letter-spacing: -0.04em;
 }
 
 .workspace-settings header a {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
 .settings-panel {
-  padding: 25px;
+  padding: 21px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .settings-copy-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  margin: 6px 0;
+  margin: 5px 0;
 }
 
 .settings-panel + .settings-panel {
-  margin-top: 18px;
+  margin-top: 15px;
 }
 
 .settings-panel h2 {
-  margin: 0 0 12px;
-  font-size: 21px;
+  margin: 0 0 10px;
+  font-size: 18px;
 }
 
 .settings-panel p,
 .settings-panel li {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-muted);
 }
@@ -556,14 +556,14 @@ async function shutdownRuntime() {
 .settings-fields {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 18px;
-  margin: 24px 0;
+  gap: 15px;
+  margin: 20px 0;
 }
 
 .settings-fields label {
   display: grid;
-  gap: 8px;
-  font-size: 12px;
+  gap: 7px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
@@ -582,19 +582,19 @@ async function shutdownRuntime() {
 
 .settings-browser-state {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 15px;
-  margin: 24px 0;
-  font-size: 13px;
+  padding: 13px;
+  margin: 20px 0;
+  font-size: 11px;
   color: var(--jg-secondary);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .settings-browser-state i {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   background: var(--jg-muted);
   border-radius: 50%;
 }
@@ -604,40 +604,40 @@ async function shutdownRuntime() {
 }
 
 .settings-panel ol {
-  padding-left: 20px;
-  margin: 20px 0;
+  padding-left: 17px;
+  margin: 17px 0;
 }
 
 .settings-panel details {
-  margin: 22px 0;
-  font-size: 12px;
+  margin: 19px 0;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .mobile-access-links {
-  padding: 16px;
-  margin: 18px 0;
+  padding: 14px;
+  margin: 15px 0;
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .mobile-access-links > div {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 10px;
-  margin: 10px 0;
+  gap: 8px;
+  margin: 8px 0;
 }
 
 .runtime-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
-  margin: 20px 0;
+  gap: 8px;
+  margin: 17px 0;
 }
 
 .settings-panel summary {
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   cursor: pointer;
 }
 
@@ -647,7 +647,7 @@ async function shutdownRuntime() {
   }
 
   .settings-panel {
-    padding: 18px;
+    padding: 15px;
   }
 
   .mobile-access-links > div {

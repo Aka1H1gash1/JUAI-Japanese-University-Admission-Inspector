@@ -454,22 +454,22 @@ function exportCalendar() {
 .timeline-stage-legend {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   margin-left: auto;
 }
 
 .timeline-stage-legend > span {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
   font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .timeline-stage-legend i {
-  width: 5px;
-  height: 5px;
+  width: 4px;
+  height: 4px;
   background: var(--jg-muted);
   border-radius: 50%;
 }
@@ -487,29 +487,29 @@ function exportCalendar() {
 }
 
 .timeline-fold {
-  padding: 14px 16px;
-  margin-top: 12px;
+  padding: 12px 14px;
+  margin-top: 10px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .timeline-fold > summary {
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--jg-secondary);
   cursor: pointer;
 }
 
 .timeline-fold > summary > span {
-  margin-left: 8px;
-  font-size: 12px;
+  margin-left: 7px;
+  font-size: 11px;
   font-weight: 400;
   color: var(--jg-muted);
 }
 
 .timeline-fold[open] > summary {
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .gantt-event {
@@ -528,15 +528,15 @@ function exportCalendar() {
 .timeline-outdated {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px 12px;
+  gap: 5px 10px;
   align-items: baseline;
-  padding: 12px 14px;
-  margin: 0 0 14px;
-  font-size: 12px;
+  padding: 10px 12px;
+  margin: 0 0 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
   background: var(--jg-subtle);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .timeline-outdated small {
@@ -546,7 +546,7 @@ function exportCalendar() {
 
 a.gantt-event {
   display: block;
-  line-height: 22px;
+  line-height: 19px;
   text-decoration: none;
 }
 
@@ -555,20 +555,20 @@ a.gantt-event {
 }
 
 .timeline-records {
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .timeline-records > header {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .timeline-records h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .timeline-records h3 span {
@@ -577,24 +577,24 @@ a.gantt-event {
 }
 
 .timeline-records .ant-select {
-  width: 200px;
+  width: 170px;
 }
 
 .timeline-record-list {
   display: grid;
   overflow: hidden;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .timeline-record-list > button {
   display: grid;
   grid-template-columns:
-    minmax(0, 1.5fr) minmax(140px, 1fr) minmax(100px, 0.6fr)
+    minmax(0, 1.5fr) minmax(119px, 1fr) minmax(85px, 0.6fr)
     auto;
-  gap: 18px;
+  gap: 15px;
   align-items: center;
-  padding: 16px;
+  padding: 14px;
   color: var(--jg-text);
   text-align: left;
   cursor: pointer;
@@ -613,26 +613,26 @@ a.gantt-event {
 
 .timeline-record-list small {
   display: block;
-  margin-top: 4px;
-  font-size: 12px;
+  margin-top: 3px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .timeline-record-edit {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
 .gantt-row-label > .text-button {
   display: block;
-  margin-top: 8px;
-  font-size: 12px;
+  margin-top: 7px;
+  font-size: 11px;
 }
 
 @media (max-width: 700px) {
   .timeline-record-list > button {
     grid-template-columns: minmax(0, 1fr) auto;
-    gap: 8px;
+    gap: 7px;
   }
 
   .timeline-record-list > button > span:nth-child(2) {

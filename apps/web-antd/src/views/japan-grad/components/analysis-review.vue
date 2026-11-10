@@ -451,14 +451,14 @@ async function apply() {
 <style scoped>
 .analysis-scope-confirm {
   display: grid;
-  gap: 8px;
-  padding: 12px;
-  margin: 10px 0;
-  font-size: 12px;
+  gap: 7px;
+  padding: 10px;
+  margin: 8px 0;
+  font-size: 11px;
   color: var(--jg-warning);
   background: var(--jg-subtle);
   border-left: 3px solid var(--jg-warning);
-  border-radius: 5px;
+  border-radius: 4px;
 }
 
 .analysis-scope-confirm p {
@@ -472,16 +472,16 @@ async function apply() {
 }
 
 .analysis-review-context {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .analysis-review-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
-  gap: 20px;
+  gap: 17px;
   height: 58vh;
-  min-height: 240px;
+  min-height: 204px;
 }
 
 .analysis-original {
@@ -490,16 +490,16 @@ async function apply() {
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .analysis-original header {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   justify-content: space-between;
-  padding: 12px;
-  font-size: 12px;
+  padding: 10px;
+  font-size: 11px;
 }
 
 .analysis-original iframe {
@@ -510,7 +510,7 @@ async function apply() {
 }
 
 .analysis-original pre {
-  padding: 16px;
+  padding: 14px;
   margin: 0;
   overflow: auto;
   font-family: inherit;
@@ -519,49 +519,49 @@ async function apply() {
 }
 
 .analysis-proposed {
-  padding-right: 8px;
+  padding-right: 7px;
   overflow: auto;
 }
 
 .analysis-warnings {
-  padding: 12px 12px 12px 28px;
-  margin: 0 0 16px;
-  font-size: 12px;
+  padding: 10px 10px 10px 24px;
+  margin: 0 0 14px;
+  font-size: 11px;
   color: var(--jg-warning);
   background: var(--jg-subtle);
 }
 
 .analysis-field {
-  padding: 16px 0;
+  padding: 14px 0;
   border-bottom: 1px solid var(--jg-line);
 }
 
 .analysis-field > header {
   display: flex;
-  gap: 8px;
+  gap: 7px;
   justify-content: space-between;
 }
 
 .analysis-field header > span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .analysis-current {
-  max-height: 90px;
+  max-height: 76px;
   overflow: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
 
 .analysis-evidence blockquote {
-  max-height: 140px;
-  padding-left: 12px;
-  margin: 6px 0;
+  max-height: 119px;
+  padding-left: 10px;
+  margin: 5px 0;
   overflow: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -576,19 +576,19 @@ async function apply() {
 
 .analysis-field > small {
   display: block;
-  margin-top: 8px;
+  margin-top: 7px;
   color: var(--jg-muted);
 }
 
 .analysis-exam-destination {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 14px;
 }
 
 .analysis-exam-destination .ant-select {
-  min-width: 240px;
+  min-width: 204px;
 }
 
 .analysis-exam-destination .ant-input {
@@ -597,8 +597,8 @@ async function apply() {
 
 .analysis-review-footer {
   display: grid;
-  gap: 12px;
-  padding-top: 18px;
+  gap: 10px;
+  padding-top: 15px;
 }
 
 .analysis-review-footer :deep(.ant-checkbox-wrapper) {
@@ -607,13 +607,13 @@ async function apply() {
 
 .analysis-review-footer > div {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .analysis-review-footer > div > span {
   flex: 1;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -625,7 +625,7 @@ async function apply() {
   }
 
   .analysis-original {
-    min-height: 330px;
+    min-height: 280px;
   }
 
   .analysis-proposed {

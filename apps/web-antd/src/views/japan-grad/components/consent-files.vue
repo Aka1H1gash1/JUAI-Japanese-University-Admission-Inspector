@@ -1,33 +1,36 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { App, Button, Checkbox, Input, Modal } from 'ant-design-vue';
-import { useCommunicationsStore } from '../communications';
 import type { StoredDocument } from '../documents';
-import { fileUrl, fileSize, supportedFileAccept } from '../documents';
-import { localApi, jsonOptions } from '../local-api';
+
+import { computed, ref } from 'vue';
+
+import { App, Button, Checkbox, Input, Modal } from 'ant-design-vue';
+
 import { japanToday } from '../application-planning';
+import { useCommunicationsStore } from '../communications';
+import { fileSize, fileUrl, supportedFileAccept } from '../documents';
+import { jsonOptions, localApi } from '../local-api';
 const props = defineProps<{ professorId: string; experienceId: string }>();
-const communications = useCommunicationsStore(),
-  { message, modal } = App.useApp();
+const communications = useCommunicationsStore();
+const { message, modal } = App.useApp();
 const files = computed(() =>
   communications.consentFiles(props.professorId, props.experienceId),
 );
-const open = ref(false),
-  busy = ref(false),
-  error = ref(''),
-  file = ref<File>(),
-  title = ref(''),
-  signed = ref(false),
-  signedDate = ref(''),
-  inputKey = ref(0),
-  editing = ref<StoredDocument>();
+const busy = ref(false);
+const editing = ref<StoredDocument>();
+const errorMessage = ref('');
+const file = ref<File>();
+const inputKey = ref(0);
+const open = ref(false);
+const signed = ref(false);
+const signedDate = ref('');
+const title = ref('');
 function add() {
   editing.value = undefined;
   file.value = undefined;
   title.value = '';
   signed.value = false;
   signedDate.value = '';
-  error.value = '';
+  errorMessage.value = '';
   inputKey.value++;
   open.value = true;
 }
@@ -37,7 +40,7 @@ function edit(doc: StoredDocument) {
   title.value = doc.title;
   signed.value = doc.signed === true;
   signedDate.value = doc.signedDate || '';
-  error.value = '';
+  errorMessage.value = '';
   open.value = true;
 }
 function choose(value?: File) {
@@ -46,28 +49,28 @@ function choose(value?: File) {
     value.size > 50 * 1024 * 1024 ||
     !/\.(pdf|docx?|md|txt)$/i.test(value.name)
   ) {
-    error.value = '请选择 PDF、DOC、DOCX、MD、TXT，单文件最多 50 MB。';
+    errorMessage.value = '请选择 PDF、DOC、DOCX、MD、TXT，单文件最多 50 MB。';
     return;
   }
   file.value = value;
   if (!title.value) title.value = value.name.replace(/\.[^.]+$/, '');
-  error.value = '';
+  errorMessage.value = '';
 }
 function drop(e: DragEvent) {
   if (busy.value) return;
   if (e.dataTransfer?.files.length !== 1) {
-    error.value = '每次只上传一个文件。';
+    errorMessage.value = '每次只上传一个文件。';
     return;
   }
   choose(e.dataTransfer.files[0]);
 }
 async function save() {
   if (!title.value.trim() || (!editing.value && !file.value)) {
-    error.value = '请填写标题并选择文件。';
+    errorMessage.value = '请填写标题并选择文件。';
     return;
   }
   busy.value = true;
-  error.value = '';
+  errorMessage.value = '';
   try {
     if (editing.value)
       await localApi(
@@ -79,6 +82,8 @@ async function save() {
         }),
       );
     else {
+      const uploadFile = file.value;
+      if (!uploadFile) return;
       const metadata = {
         ownerType: 'professor',
         ownerId: props.professorId,
@@ -86,7 +91,7 @@ async function save() {
         kind: 'consent',
         year: Number(japanToday().slice(0, 4)),
         title: title.value.trim(),
-        filename: file.value!.name,
+        filename: uploadFile.name,
         signed: signed.value,
         signedDate: signed.value ? signedDate.value : '',
       };
@@ -96,14 +101,15 @@ async function save() {
           'Content-Type': 'application/octet-stream',
           'X-JapanGrad-Metadata': encodeURIComponent(JSON.stringify(metadata)),
         },
-        body: file.value,
+        body: uploadFile,
       });
     }
     await communications.load([props.professorId]);
     open.value = false;
     message.success('内诺文件已保存');
-  } catch (e) {
-    error.value = e instanceof Error ? e.message : '文件保存失败。';
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : '文件保存失败。';
   } finally {
     busy.value = false;
   }
@@ -124,27 +130,21 @@ function remove(doc: StoredDocument) {
 <template>
   <section class="consent-files">
     <header>
-      <strong>内诺文件</strong
-      ><Button size="small" @click="add">新增文件</Button>
+      <strong>内诺文件</strong><Button size="small" @click="add">新增文件</Button>
     </header>
     <div v-if="files.length" class="consent-file-list">
       <article v-for="doc in files" :key="doc.id">
         <div>
-          <a :href="fileUrl(doc.id)" target="_blank" rel="noopener noreferrer"
-            >{{ doc.title }} ↗</a
-          ><small
-            >{{ fileSize(doc.size) }} ·
+          <a :href="fileUrl(doc.id)" target="_blank" rel="noopener noreferrer">{{ doc.title }} ↗</a><small>{{ fileSize(doc.size) }} ·
             {{
               doc.signed
                 ? `已标记签署${doc.signedDate ? ` · ${doc.signedDate}` : ''}`
                 : '未标记签署'
-            }}</small
-          >
+            }}</small>
         </div>
-        <Button size="small" @click="edit(doc)">编辑</Button
-        ><Button size="small" danger type="text" @click="remove(doc)"
-          >移除</Button
-        >
+        <Button size="small" @click="edit(doc)">编辑</Button><Button size="small" danger type="text" @click="remove(doc)">
+          移除
+        </Button>
       </article>
     </div>
     <p v-else>尚未上传内诺文件，可保存签署文件或待签署版本。</p>
@@ -156,7 +156,8 @@ function remove(doc: StoredDocument) {
       :mask-closable="!busy"
       :closable="!busy"
       :keyboard="!busy"
-      ><form class="explorer-form" @submit.prevent="save">
+    >
+      <form class="explorer-form" @submit.prevent="save">
         <div
           v-if="!editing"
           class="consent-drop"
@@ -167,8 +168,7 @@ function remove(doc: StoredDocument) {
             file
               ? `${file.name} · ${fileSize(file.size)}`
               : '拖拽一个文件到这里，或点击选择文件'
-          }}</label
-          ><input
+          }}</label><input
             id="consent-file"
             :key="inputKey"
             type="file"
@@ -178,8 +178,7 @@ function remove(doc: StoredDocument) {
           />
         </div>
         <div class="field">
-          <label for="consent-title">文件标题</label
-          ><Input
+          <label for="consent-title">文件标题</label><Input
             id="consent-title"
             v-model:value="title"
             :maxlength="240"
@@ -187,91 +186,100 @@ function remove(doc: StoredDocument) {
           />
         </div>
         <div class="field">
-          <Checkbox v-model:checked="signed" :disabled="busy"
-            >标记为已签署</Checkbox
-          >
+          <Checkbox v-model:checked="signed" :disabled="busy">
+            标记为已签署
+          </Checkbox>
         </div>
         <div v-if="signed" class="field">
-          <label for="consent-signed-date">签署日期（可选）</label
-          ><Input
+          <label for="consent-signed-date">签署日期（可选）</label><Input
             id="consent-signed-date"
             v-model:value="signedDate"
             type="date"
             :disabled="busy"
           />
         </div>
-        <p v-if="error" class="form-error" role="alert">{{ error }}</p>
+        <p v-if="errorMessage" class="form-error" role="alert">
+          {{ errorMessage }}
+        </p>
         <footer class="form-footer">
-          <span>保存原文件并关联当前考学经历</span
-          ><Button :disabled="busy" @click="open = false">取消</Button
-          ><Button type="primary" html-type="submit" :loading="busy"
-            >保存文件</Button
-          >
+          <span>保存原文件并关联当前考学经历</span><Button :disabled="busy" @click="open = false">取消</Button><Button type="primary" html-type="submit" :loading="busy">
+            保存文件
+          </Button>
         </footer>
-      </form></Modal
-    >
+      </form>
+    </Modal>
   </section>
 </template>
 <style scoped>
 .consent-files > header {
   display: flex;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
 }
+
 .consent-files > p {
+  font-size: 11px;
   color: var(--jg-muted);
-  font-size: 13px;
 }
+
 .consent-file-list {
   display: grid;
-  gap: 10px;
-  margin-top: 12px;
+  gap: 8px;
+  margin-top: 10px;
 }
+
 .consent-file-list article {
   display: flex;
+  gap: 7px;
   align-items: center;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  padding: 10px;
   background: var(--jg-surface);
+  border: 1px solid var(--jg-line);
+  border-radius: 7px;
 }
+
 .consent-file-list article > div {
   flex: 1;
   min-width: 0;
 }
+
 .consent-file-list a {
   color: var(--jg-accent-text);
   overflow-wrap: anywhere;
 }
+
 .consent-file-list small {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
   color: var(--jg-muted);
 }
+
 .consent-drop {
   position: relative;
-  padding: 28px;
-  margin: 16px 0;
-  border: 1px dashed var(--jg-border);
-  border-radius: 8px;
+  padding: 24px;
+  margin: 14px 0;
   text-align: center;
   background: var(--jg-subtle);
+  border: 1px dashed var(--jg-border);
+  border-radius: 7px;
 }
+
 .consent-drop input {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
-  opacity: 0;
   cursor: pointer;
+  opacity: 0;
 }
+
 .consent-drop:focus-within {
   outline: 2px solid var(--jg-accent);
   outline-offset: 3px;
 }
+
 .explorer-form > .field {
-  margin: 18px 0;
+  margin: 15px 0;
 }
 </style>

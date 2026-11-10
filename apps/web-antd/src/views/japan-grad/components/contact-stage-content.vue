@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed } from 'vue';
 import type { LabTarget } from '../lab-targets';
+
+import { computed } from 'vue';
+
 import {
-  primaryProfessor,
-  normalizedContact,
   CONTACT_RESULT_LABELS,
+  normalizedContact,
+  primaryProfessor,
 } from '../application-planning';
 import { useCommunicationsStore } from '../communications';
 import { fileUrl } from '../documents';
@@ -57,8 +59,8 @@ const requirements = computed(() =>
 </script>
 <template>
   <div class="contact-stage-content">
-    <template v-if="contact.status === 'not_contacted'"
-      ><section>
+    <template v-if="contact.status === 'not_contacted'">
+      <section>
         <h4>研究方向</h4>
         <p>{{ person?.research || target.lab.research || '研究方向待补充' }}</p>
       </section>
@@ -70,8 +72,7 @@ const requirements = computed(() =>
               :href="fileUrl(paper.id)"
               target="_blank"
               rel="noopener noreferrer"
-              >{{ paper.title }}</a
-            >
+              >{{ paper.title }}</a>
           </li>
         </ul>
         <p v-else class="stage-empty">尚未归档老师论文</p>
@@ -79,15 +80,14 @@ const requirements = computed(() =>
       <section>
         <h4>联络 / 报考要求</h4>
         <p>{{ requirements || '要求待整理' }}</p>
-      </section></template
-    >
-    <template v-else-if="contact.status === 'first_sent'"
-      ><section>
+      </section>
+    </template>
+    <template v-else-if="contact.status === 'first_sent'">
+      <section>
         <h4>{{ first ? '第一封邮件' : '邮件草稿（未归档已发原文）' }}</h4>
         <strong>{{
           first?.subject || contact.draftSubject || '主题待记录'
-        }}</strong
-        ><time v-if="first">{{ first.date.replace('T', ' ') }}</time>
+        }}</strong><time v-if="first">{{ first.date.replace('T', ' ') }}</time>
         <p class="stage-mail-body">
           {{
             first?.body ||
@@ -95,10 +95,10 @@ const requirements = computed(() =>
             '在老师邮件往来中保存已发送邮件，原文会自动显示。'
           }}
         </p>
-      </section></template
-    >
-    <template v-else-if="contact.status === 'replied'"
-      ><section>
+      </section>
+    </template>
+    <template v-else-if="contact.status === 'replied'">
+      <section>
         <h4>
           来往信件 <span>{{ mails.length }} 封</span>
         </h4>
@@ -106,24 +106,24 @@ const requirements = computed(() =>
           已发 {{ mails.filter((m) => m.direction === 'sent').length }} · 收到
           {{ replies.length }}
         </p>
-        <template v-if="latestReply"
-          ><strong>{{ latestReply.subject }}</strong
-          ><time>{{ latestReply.date.replace('T', ' ') }}</time>
-          <p class="stage-mail-body">{{ latestReply.body }}</p></template
-        >
+        <template v-if="latestReply">
+          <strong>{{ latestReply.subject }}</strong><time>{{ latestReply.date.replace('T', ' ') }}</time>
+          <p class="stage-mail-body">{{ latestReply.body }}</p>
+        </template>
         <p v-else>{{ contact.replySummary || '尚未归档来信原文' }}</p>
       </section>
       <section v-if="contact.followUpDate">
         <h4>下次跟进</h4>
         <p>{{ contact.followUpDate }}</p>
-      </section></template
-    >
+      </section>
+    </template>
     <template
       v-else-if="
         contact.status === 'interview_scheduled' ||
         contact.status === 'interview_completed'
       "
-      ><section>
+    >
+      <section>
         <h4>
           {{
             contact.status === 'interview_completed'
@@ -145,8 +145,7 @@ const requirements = computed(() =>
                   '时间待安排'
                 ).replace('T', ' ')
           }}<small v-if="contact.interviewAt || contact.actualInterviewAt">
-            JST</small
-          >
+            JST</small>
         </p>
       </section>
       <section>
@@ -157,18 +156,17 @@ const requirements = computed(() =>
         <h4>
           问题与回答 <span>{{ contact.interviewQA.length }} 条</span>
         </h4>
-        <template v-if="contact.interviewQA.length"
-          ><strong>{{ contact.interviewQA[0]!.question }}</strong>
-          <p>{{ contact.interviewQA[0]!.answer || '回答待补充' }}</p></template
-        >
+        <template v-if="contact.interviewQA.length">
+          <strong>{{ contact.interviewQA[0]!.question }}</strong>
+          <p>{{ contact.interviewQA[0]!.answer || '回答待补充' }}</p>
+        </template>
         <p v-else class="stage-empty">待记录面试问答与复盘</p>
-      </section></template
-    >
-    <template v-else-if="contact.status === 'consent'"
-      ><section>
+      </section>
+    </template>
+    <template v-else-if="contact.status === 'consent'">
+      <section>
         <h4>内诺邮件原文</h4>
-        <strong v-if="consent">{{ consent.subject }}</strong
-        ><time v-if="contact.consentDate">{{ contact.consentDate }}</time>
+        <strong v-if="consent">{{ consent.subject }}</strong><time v-if="contact.consentDate">{{ contact.consentDate }}</time>
         <p class="stage-mail-body">
           {{
             consent?.body ||
@@ -187,99 +185,109 @@ const requirements = computed(() =>
               :href="fileUrl(doc.id)"
               target="_blank"
               rel="noopener noreferrer"
-              >{{ doc.title }}</a
-            ><small>{{ doc.signed ? '已标记签署' : '待签署 / 未标记' }}</small>
+              >{{ doc.title }}</a><small>{{ doc.signed ? '已标记签署' : '待签署 / 未标记' }}</small>
           </li>
         </ul>
         <p v-else class="stage-empty">尚未上传文件</p>
-      </section></template
-    >
-    <template v-else
-      ><section>
+      </section>
+    </template>
+    <template v-else>
+      <section>
         <h4>考学结果</h4>
         <strong class="stage-result">{{
           CONTACT_RESULT_LABELS[contact.finalResult]
-        }}</strong
-        ><time v-if="contact.resultDate">{{ contact.resultDate }}</time>
+        }}</strong><time v-if="contact.resultDate">{{ contact.resultDate }}</time>
         <p>{{ contact.resultNotes || '结果说明待记录' }}</p>
-      </section></template
-    >
+      </section>
+    </template>
   </div>
 </template>
 <style scoped>
 .contact-stage-content {
   display: grid;
-  gap: 16px;
-  padding: 16px 0;
+  gap: 14px;
+  padding: 14px 0;
+  margin-top: 8px;
   border-top: 1px solid var(--jg-line);
-  margin-top: 10px;
 }
+
 .contact-stage-content section {
   min-width: 0;
 }
+
 .contact-stage-content h4 {
-  margin: 0 0 7px;
-  color: var(--jg-muted);
+  margin: 0 0 6px;
   font-size: 11px;
   font-weight: 500;
+  color: var(--jg-muted);
 }
+
 .contact-stage-content h4 span {
-  margin-left: 5px;
+  margin-left: 4px;
 }
+
 .contact-stage-content p {
   display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
   margin: 0;
-  color: var(--jg-secondary);
-  font-size: 12px;
+  overflow: hidden;
+  -webkit-line-clamp: 3;
+  font-size: 11px;
   line-height: 1.7;
+  color: var(--jg-secondary);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  -webkit-box-orient: vertical;
 }
+
 .contact-stage-content .stage-mail-body {
   -webkit-line-clamp: 5;
 }
+
 .contact-stage-content strong {
   display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
   overflow: hidden;
-  overflow-wrap: anywhere;
-  font-size: 12px;
+  -webkit-line-clamp: 2;
+  font-size: 11px;
   color: var(--jg-text);
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
 }
+
 .contact-stage-content time {
   display: block;
+  margin: 5px 0;
+  font-size: 11px;
   color: var(--jg-muted);
-  margin: 6px 0;
+}
+
+.contact-stage-content ul {
+  display: grid;
+  gap: 6px;
+  padding-left: 12px;
+  margin: 0;
   font-size: 11px;
 }
-.contact-stage-content ul {
-  padding-left: 14px;
-  margin: 0;
-  display: grid;
-  gap: 7px;
-  font-size: 12px;
-}
+
 .contact-stage-content a {
-  color: var(--jg-accent-text);
   display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
   overflow: hidden;
+  -webkit-line-clamp: 2;
+  color: var(--jg-accent-text);
   overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
 }
+
 .contact-stage-content li small {
   display: block;
   font-size: 10px;
   color: var(--jg-muted);
 }
+
 .contact-stage-content .stage-empty {
   color: var(--jg-muted);
 }
+
 .contact-stage-content strong.stage-result {
-  font-size: 16px;
+  font-size: 14px;
 }
 </style>

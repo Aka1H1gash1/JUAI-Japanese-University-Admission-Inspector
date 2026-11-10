@@ -36,6 +36,7 @@ import './paper.css';
 import './directory.css';
 import './affiliation-cards.css';
 import './quick-jump.css';
+import './density.css';
 
 const jobs = useCollectionJobsStore();
 const { message } = App.useApp();

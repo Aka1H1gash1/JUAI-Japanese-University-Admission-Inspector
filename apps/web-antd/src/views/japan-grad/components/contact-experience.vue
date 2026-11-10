@@ -1016,20 +1016,20 @@ function summary(status: ContactStatus) {
 
 .experience-heading {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: start;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 17px;
 }
 
 .experience-heading h3 {
   margin: 0;
-  font-size: 19px;
+  font-size: 16px;
 }
 
 .experience-heading p {
-  margin: 8px 0 0;
-  font-size: 13px;
+  margin: 7px 0 0;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1037,47 +1037,47 @@ function summary(status: ContactStatus) {
 .experience-base {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr)) auto;
-  gap: 14px;
+  gap: 12px;
   align-items: end;
-  margin: 16px 0;
+  margin: 14px 0;
 }
 
 .experience-base {
-  grid-template-columns: minmax(0, 1.5fr) minmax(180px, 1fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(153px, 1fr);
 }
 
 .experience-selectors label,
 .experience-base label,
 .experience-followup label {
   display: grid;
-  gap: 7px;
-  font-size: 13px;
+  gap: 6px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .experience-stage-tabs {
   display: flex;
-  gap: 8px;
-  padding: 12px 0 18px;
+  gap: 7px;
+  padding: 10px 0 15px;
   overflow-x: auto;
   border-bottom: 1px solid var(--jg-line);
 }
 
 .experience-stage-tabs button {
-  padding: 8px 12px;
+  padding: 7px 10px;
   color: var(--jg-secondary);
   white-space: nowrap;
   cursor: pointer;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .experience-stage-tabs button.is-current::before {
   display: inline-block;
-  width: 5px;
-  height: 5px;
-  margin-right: 6px;
+  width: 4px;
+  height: 4px;
+  margin-right: 5px;
   content: '';
   background: var(--jg-accent);
   border-radius: 50%;
@@ -1093,12 +1093,12 @@ function summary(status: ContactStatus) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin: 18px 0;
+  margin: 15px 0;
 }
 
 .experience-section-heading h4 {
   margin: 0;
-  font-size: 15px;
+  font-size: 13px;
 }
 
 .experience-stage-table,
@@ -1108,14 +1108,14 @@ function summary(status: ContactStatus) {
   border-spacing: 0;
   border-collapse: separate;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .experience-stage-table th,
 .experience-stage-table td,
 .experience-overview th,
 .experience-overview td {
-  padding: 16px;
+  padding: 14px;
   vertical-align: top;
   text-align: left;
   border-bottom: 1px solid var(--jg-line);
@@ -1127,8 +1127,8 @@ function summary(status: ContactStatus) {
 }
 
 .experience-stage-table th {
-  width: 160px;
-  font-size: 13px;
+  width: 136px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--jg-secondary);
   background: var(--jg-subtle);
@@ -1147,14 +1147,14 @@ function summary(status: ContactStatus) {
 
 .experience-stage-table td > .ant-select {
   width: 100%;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 .experience-stage-table td > small,
 .experience-paper-list small {
   display: block;
-  margin-top: 7px;
-  font-size: 12px;
+  margin-top: 6px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1163,28 +1163,28 @@ function summary(status: ContactStatus) {
 }
 
 .experience-original {
-  max-height: 340px;
-  padding: 16px;
-  margin: 14px 0 0;
+  max-height: 289px;
+  padding: 14px;
+  margin: 12px 0 0;
   overflow: auto;
   font-family: inherit;
-  font-size: 13px;
+  font-size: 11px;
   line-height: 1.8;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
   background: var(--jg-subtle);
-  border-radius: 6px;
+  border-radius: 5px;
 }
 
 .experience-paper-list {
   display: grid;
-  gap: 12px;
-  padding-left: 18px;
+  gap: 10px;
+  padding-left: 15px;
 }
 
 .experience-date-inputs {
   display: flex;
-  gap: 12px;
+  gap: 10px;
 }
 
 .experience-date-inputs > * {
@@ -1192,53 +1192,53 @@ function summary(status: ContactStatus) {
 }
 
 .experience-qa {
-  padding-bottom: 16px;
-  margin-bottom: 16px;
+  padding-bottom: 14px;
+  margin-bottom: 14px;
   border-bottom: 1px solid var(--jg-line);
 }
 
 .experience-qa header {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
 }
 
 .experience-qa textarea + textarea {
-  margin-top: 8px;
+  margin-top: 7px;
 }
 
 .experience-extra {
-  padding: 14px 16px;
-  margin: 18px 0;
+  padding: 12px 14px;
+  margin: 15px 0;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .experience-extra summary {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-secondary);
   cursor: pointer;
 }
 
 .experience-extra[open] > summary {
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .experience-draft-actions {
   display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .experience-extra > textarea {
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .experience-followup {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
-  gap: 16px;
-  margin: 20px 0;
+  grid-template-columns: 187px minmax(0, 1fr);
+  gap: 14px;
+  margin: 17px 0;
 }
 
 .experience-overview-scroll {
@@ -1246,8 +1246,8 @@ function summary(status: ContactStatus) {
 }
 
 .experience-overview {
-  min-width: 550px;
-  font-size: 13px;
+  min-width: 468px;
+  font-size: 11px;
 }
 
 .experience-overview th {
@@ -1257,30 +1257,30 @@ function summary(status: ContactStatus) {
 
 .experience-stage-history {
   display: grid;
-  gap: 12px;
-  padding-left: 20px;
-  margin-top: 20px;
-  font-size: 12px;
+  gap: 10px;
+  padding-left: 17px;
+  margin-top: 17px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .experience-stage-history time {
-  margin-right: 12px;
+  margin-right: 10px;
 }
 
 .experience-footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
   justify-content: flex-end;
-  padding-top: 18px;
+  padding-top: 15px;
   border-top: 1px solid var(--jg-line);
 }
 
 .experience-footer > span {
   margin-right: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1301,7 +1301,7 @@ function summary(status: ContactStatus) {
   }
 
   .experience-stage-table th {
-    padding-bottom: 10px;
+    padding-bottom: 8px;
     border-bottom: 0;
   }
 

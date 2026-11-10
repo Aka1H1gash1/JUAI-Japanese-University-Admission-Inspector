@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { Tooltip } from 'ant-design-vue';
 import type { PlannerEvent } from '../application-calendar';
+
+import { Tooltip } from 'ant-design-vue';
+
 import { timelineDateText, timelineNodeLabel } from '../timeline';
 defineProps<{ event: PlannerEvent }>();
 </script>
@@ -21,11 +23,10 @@ defineProps<{ event: PlannerEvent }>();
       borderRadius: '8px',
     }"
   >
-    <template #title
-      ><div class="timeline-hover-card">
+    <template #title>
+      <div class="timeline-hover-card">
         <header>
-          <strong>{{ timelineNodeLabel(event) }}</strong
-          ><span>JST</span>
+          <strong>{{ timelineNodeLabel(event) }}</strong><span>JST</span>
         </header>
         <p
           v-if="
@@ -47,60 +48,69 @@ defineProps<{ event: PlannerEvent }>();
             </dd>
           </div>
         </dl>
-      </div></template
-    >
-    <slot />
+      </div>
+    </template>
+    <slot></slot>
   </Tooltip>
 </template>
 <style scoped>
 .timeline-hover-card {
-  min-width: 210px;
-  max-height: 300px;
+  min-width: 178px;
+  max-height: 255px;
   overflow-y: auto;
   font-family: var(--jg-font);
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.7;
 }
+
 .timeline-hover-card header {
   display: flex;
+  gap: 14px;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
 }
+
 .timeline-hover-card strong {
-  font-size: 14px;
+  font-size: 12px;
   color: var(--jg-text);
   overflow-wrap: anywhere;
 }
+
 .timeline-hover-card header span {
-  color: var(--jg-muted);
   font-size: 10px;
+  color: var(--jg-muted);
   letter-spacing: 0.06em;
 }
+
 .timeline-hover-context {
-  margin: 6px 0 0;
+  margin: 5px 0 0;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
 }
+
 .timeline-hover-card dl {
-  margin: 12px 0 0;
+  margin: 10px 0 0;
 }
+
 .timeline-hover-card dl > div + div {
-  margin-top: 10px;
-  padding-top: 10px;
+  padding-top: 8px;
+  margin-top: 8px;
   border-top: 1px solid var(--jg-line);
 }
+
 .timeline-hover-card dt {
   margin-bottom: 3px;
-  color: var(--jg-muted);
   font-size: 11px;
+  color: var(--jg-muted);
 }
+
 .timeline-hover-card dd {
   margin: 0;
   color: var(--jg-text);
-  white-space: pre-wrap;
   overflow-wrap: anywhere;
+  white-space: pre-wrap;
 }
+
 .timeline-hover-card dd.is-empty {
   color: var(--jg-muted);
 }

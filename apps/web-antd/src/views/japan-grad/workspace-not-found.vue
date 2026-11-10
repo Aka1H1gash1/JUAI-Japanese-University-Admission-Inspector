@@ -9,20 +9,20 @@
 <style scoped>
 .juai-not-found {
   max-width: 640px;
-  padding: 80px 24px;
+  padding: 68px 20px;
   margin: auto;
   color: #203252;
 }
 
 .juai-not-found > span {
-  font-size: 20px;
+  font-size: 17px;
   font-weight: 700;
   letter-spacing: 0.12em;
 }
 
 .juai-not-found h1 {
-  margin: 28px 0 14px;
-  font-size: 30px;
+  margin: 24px 0 12px;
+  font-size: 26px;
 }
 
 .juai-not-found p {
@@ -32,7 +32,7 @@
 
 .juai-not-found a {
   display: inline-block;
-  margin-top: 20px;
+  margin-top: 17px;
   color: #526790;
 }
 </style>

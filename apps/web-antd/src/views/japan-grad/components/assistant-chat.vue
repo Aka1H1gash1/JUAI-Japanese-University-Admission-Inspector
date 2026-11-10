@@ -1282,30 +1282,30 @@ const proposalLabel = (status: string) =>
 .is-embedded .assistant-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 12px;
+  gap: 5px;
+  padding: 10px;
 }
 
 .is-embedded .assistant-toolbar .ant-select {
   flex: 1;
-  min-width: 130px;
+  min-width: 110px;
 }
 
 .is-embedded .assistant-toolbar .ant-btn {
-  padding-inline: 8px;
-  font-size: 12px;
+  padding-inline: 7px;
+  font-size: 11px;
 }
 
 .is-embedded .assistant-context {
-  padding-inline: 14px;
+  padding-inline: 12px;
   font-size: 10px;
 }
 
 .assistant-document-context {
   display: flex;
-  gap: 7px;
+  gap: 6px;
   align-items: center;
-  padding: 8px 14px;
+  padding: 7px 12px;
   margin: 0;
   font-size: 11px;
   background: var(--jg-card-header);
@@ -1313,8 +1313,8 @@ const proposalLabel = (status: string) =>
 }
 
 .assistant-document-context svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   color: var(--jg-accent-text);
 }
 
@@ -1332,35 +1332,35 @@ const proposalLabel = (status: string) =>
 }
 
 .is-embedded .assistant-welcome {
-  padding: 24px 16px;
+  padding: 20px 14px;
 }
 
 .is-embedded .assistant-welcome h2 {
-  font-size: 17px;
+  font-size: 14px;
 }
 
 .is-embedded .assistant-welcome p {
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .is-embedded .assistant-conversation {
-  padding: 14px;
+  padding: 12px;
 }
 
 .is-embedded .assistant-message-user {
-  margin-left: 16px;
+  margin-left: 14px;
 }
 
 .is-embedded .assistant-message {
-  padding: 13px;
+  padding: 11px;
 }
 
 .is-embedded .assistant-message-text {
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .is-embedded .assistant-composer {
-  padding: 12px;
+  padding: 10px;
 }
 
 .is-embedded .assistant-connect-actions > .text-button {
@@ -1369,33 +1369,33 @@ const proposalLabel = (status: string) =>
 
 .assistant-selection-intro {
   display: grid;
-  gap: 12px;
-  padding: 24px 12px;
+  gap: 10px;
+  padding: 20px 10px;
 }
 
 .assistant-selection-intro > svg {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   color: var(--jg-accent-text);
 }
 
 .assistant-selection-intro h2 {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 650;
 }
 
 .assistant-selection-intro p {
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-muted);
 }
 
 .assistant-attached-selection {
-  max-height: 150px;
-  padding: 8px 10px;
-  margin: 10px 0 0;
+  max-height: 128px;
+  padding: 7px 8px;
+  margin: 8px 0 0;
   overflow: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
   white-space: pre-wrap;
   border-left: 2px solid var(--jg-accent-line);
@@ -1403,15 +1403,15 @@ const proposalLabel = (status: string) =>
 
 .assistant-attached-selection > span {
   display: block;
-  margin-bottom: 4px;
+  margin-bottom: 3px;
   font-size: 10px;
   color: var(--jg-muted);
 }
 
 .assistant-message-sources {
   display: grid;
-  gap: 7px;
-  margin-top: 14px;
+  gap: 6px;
+  margin-top: 12px;
 }
 
 .assistant-message-sources > span {
@@ -1421,14 +1421,14 @@ const proposalLabel = (status: string) =>
 
 .assistant-message-sources button {
   display: grid;
-  gap: 5px;
-  padding: 9px;
+  gap: 4px;
+  padding: 8px;
   color: var(--jg-secondary);
   text-align: left;
   cursor: pointer;
   background: var(--jg-card-header);
   border: 1px solid var(--jg-line);
-  border-radius: 7px;
+  border-radius: 6px;
 }
 
 .assistant-message-sources strong {
@@ -1448,7 +1448,7 @@ const proposalLabel = (status: string) =>
 }
 
 .assistant-citation-warning {
-  margin-top: 10px !important;
+  margin-top: 8px !important;
   font-size: 11px;
   line-height: 1.8;
   color: var(--jg-warning);
@@ -1456,26 +1456,26 @@ const proposalLabel = (status: string) =>
 
 .assistant-save-note {
   display: inline-flex;
-  gap: 5px;
+  gap: 4px;
   align-items: center;
-  margin-top: 12px;
+  margin-top: 10px;
   font-size: 11px;
 }
 
 .assistant-save-note svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .assistant-selection-attachment {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: flex-start;
-  padding: 9px;
-  margin-bottom: 9px;
+  padding: 8px;
+  margin-bottom: 8px;
   background: var(--jg-accent-soft);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 7px;
+  border-radius: 6px;
 }
 
 .assistant-selection-attachment > div {
@@ -1490,10 +1490,10 @@ const proposalLabel = (status: string) =>
 
 .assistant-selection-attachment p {
   display: -webkit-box;
-  margin-top: 5px !important;
+  margin-top: 4px !important;
   overflow: hidden;
   -webkit-line-clamp: 3;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.7;
   overflow-wrap: anywhere;
   -webkit-box-orient: vertical;
@@ -1508,20 +1508,20 @@ const proposalLabel = (status: string) =>
 }
 
 .assistant-selection-attachment svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .assistant-panel {
   position: sticky;
-  top: 64px;
+  top: 54px;
   display: flex;
   flex: 0 0 var(--assistant-pane-width, 440px);
   flex-direction: column;
   align-self: flex-start;
-  width: var(--assistant-pane-width, 440px);
+  width: var(--assistant-pane-width, 374px);
   min-width: 0;
-  height: calc(100dvh - 64px);
+  height: calc(100dvh - 54px);
   container-name: assistant-pane;
   container-type: inline-size;
   background: var(--jg-surface);
@@ -1530,29 +1530,29 @@ const proposalLabel = (status: string) =>
 
 .assistant-panel-heading {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 14px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--jg-line);
 }
 
 .assistant-panel-heading strong {
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .assistant-panel-heading svg {
-  width: 17px;
-  height: 17px;
+  width: 14px;
+  height: 14px;
 }
 
 .assistant-resizer {
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -4px;
+  left: -3px;
   z-index: 2;
-  width: 8px;
+  width: 7px;
   touch-action: none;
   cursor: col-resize;
 }
@@ -1567,43 +1567,43 @@ const proposalLabel = (status: string) =>
   flex: 1;
   height: auto;
   min-height: 0;
-  padding: 14px;
+  padding: 12px;
 }
 
 .assistant-connect-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
 }
 
 .assistant-connect-actions > .text-button {
   width: 100%;
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .assistant-native-ready {
   display: flex;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
 .assistant-native-ready svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .assistant-native-login {
   display: flex;
   flex-wrap: wrap;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 10px;
-  margin-bottom: 12px;
-  font-size: 12px;
+  padding: 8px;
+  margin-bottom: 10px;
+  font-size: 11px;
   background: var(--jg-accent-soft);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .assistant-native-login a {
@@ -1616,21 +1616,21 @@ const proposalLabel = (status: string) =>
   }
 
   .assistant-welcome {
-    padding: 18px 2px;
+    padding: 15px 2px;
   }
 
   .assistant-welcome h2 {
-    font-size: 20px;
+    font-size: 17px;
   }
 
   .assistant-message {
-    padding: 14px;
+    padding: 12px;
   }
 }
 
 @media (max-width: 900px) {
   .assistant-panel {
-    top: 64px;
+    top: 54px;
     flex: 1;
     width: 100%;
     border-left: 0;
@@ -1643,8 +1643,8 @@ const proposalLabel = (status: string) =>
 
 @media (max-width: 767px) {
   .assistant-panel {
-    top: 60px;
-    height: calc(100dvh - 60px);
+    top: 51px;
+    height: calc(100dvh - 51px);
   }
 }
 
@@ -1659,26 +1659,26 @@ const proposalLabel = (status: string) =>
 .assistant-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  padding-bottom: 14px;
+  gap: 7px;
+  padding-bottom: 12px;
 }
 
 .assistant-toolbar .ant-select {
   flex: 1;
-  min-width: 180px;
+  min-width: 153px;
 }
 
 .assistant-toolbar svg {
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .assistant-context {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 16px;
-  margin: 0 0 14px;
-  font-size: 12px;
+  gap: 7px 14px;
+  margin: 0 0 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1689,35 +1689,35 @@ const proposalLabel = (status: string) =>
 .assistant-conversation {
   flex: 1;
   min-height: 0;
-  padding: 18px;
+  padding: 15px;
   overflow-y: auto;
   scrollbar-width: thin;
   background: var(--jg-bg);
   border: 1px solid var(--jg-line);
-  border-radius: 16px;
+  border-radius: 14px;
 }
 
 .assistant-welcome {
   display: grid;
-  gap: 18px;
+  gap: 15px;
   justify-items: start;
-  padding: 28px 16px;
+  padding: 24px 14px;
 }
 
 .assistant-welcome-icon {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
+  width: 41px;
+  height: 41px;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .assistant-welcome h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 19px;
   letter-spacing: -0.6px;
 }
 
@@ -1730,23 +1730,23 @@ const proposalLabel = (status: string) =>
 
 .assistant-suggestions {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  margin-top: 8px;
+  margin-top: 7px;
 }
 
 .assistant-suggestions button {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
   justify-content: space-between;
-  padding: 14px;
+  padding: 12px;
   color: var(--jg-secondary);
   text-align: left;
   cursor: pointer;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .assistant-suggestions button:hover {
@@ -1756,29 +1756,29 @@ const proposalLabel = (status: string) =>
 
 .assistant-suggestions svg {
   flex-shrink: 0;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
 }
 
 .assistant-message {
-  padding: 18px;
-  margin-bottom: 22px;
+  padding: 15px;
+  margin-bottom: 19px;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .assistant-message-user {
-  margin-left: 36px;
+  margin-left: 31px;
   background: var(--jg-accent-soft);
   border-color: var(--jg-accent-line);
 }
 
 .assistant-message > header {
   display: flex;
-  gap: 10px;
-  margin-bottom: 10px;
-  font-size: 12px;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--jg-secondary);
 }
@@ -1790,7 +1790,7 @@ const proposalLabel = (status: string) =>
 
 .assistant-message-text {
   margin: 0;
-  font-size: 14px;
+  font-size: 12px;
   line-height: 1.9;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -1798,10 +1798,10 @@ const proposalLabel = (status: string) =>
 
 .assistant-tool-progress {
   display: grid;
-  gap: 7px;
+  gap: 6px;
   padding: 0;
-  margin: 14px 0 0;
-  font-size: 12px;
+  margin: 12px 0 0;
+  font-size: 11px;
   color: var(--jg-secondary);
   list-style: none;
 }
@@ -1809,13 +1809,13 @@ const proposalLabel = (status: string) =>
 .assistant-tool-progress li {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 5px;
   align-items: center;
 }
 
 .assistant-tool-progress svg {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
 }
 
 .assistant-tool-progress small {
@@ -1825,34 +1825,34 @@ const proposalLabel = (status: string) =>
 }
 
 .assistant-proposal {
-  padding: 16px;
-  margin-top: 16px;
+  padding: 14px;
+  margin-top: 14px;
   background: var(--jg-card-header);
   border: 1px solid var(--jg-accent-line);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .assistant-proposal > header {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   justify-content: space-between;
-  font-size: 13px;
+  font-size: 11px;
 }
 
 .assistant-proposal header small {
   display: block;
-  margin-top: 4px;
+  margin-top: 3px;
 }
 
 .assistant-proposal header > span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-accent-text);
   white-space: nowrap;
 }
 
 .assistant-proposal summary {
-  padding: 14px 0;
-  font-size: 12px;
+  padding: 12px 0;
+  font-size: 11px;
   color: var(--jg-secondary);
   cursor: pointer;
 }
@@ -1860,15 +1860,15 @@ const proposalLabel = (status: string) =>
 .assistant-proposal footer {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   justify-content: end;
-  margin-top: 12px;
+  margin-top: 10px;
 }
 
 .assistant-proposal footer > span {
   flex: 1;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
@@ -1878,15 +1878,15 @@ const proposalLabel = (status: string) =>
 
 .assistant-diff-scroll table {
   width: 100%;
-  min-width: 420px;
+  min-width: 357px;
   table-layout: fixed;
   border-collapse: collapse;
 }
 
 .assistant-diff-scroll th,
 .assistant-diff-scroll td {
-  padding: 10px;
-  font-size: 12px;
+  padding: 8px;
+  font-size: 11px;
   vertical-align: top;
   text-align: left;
   border: 1px solid var(--jg-line);
@@ -1898,11 +1898,11 @@ const proposalLabel = (status: string) =>
 }
 
 .assistant-diff-scroll th:first-child {
-  width: 120px;
+  width: 102px;
 }
 
 .assistant-diff-scroll pre {
-  max-height: 260px;
+  max-height: 221px;
   margin: 0;
   overflow: auto;
   font: 12px/1.7 var(--jg-font);
@@ -1911,41 +1911,41 @@ const proposalLabel = (status: string) =>
 }
 
 .assistant-working {
-  margin: 16px 0 0;
-  font-size: 13px;
+  margin: 14px 0 0;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
 .assistant-notice,
 .assistant-error {
-  padding: 10px 12px;
-  margin: 0 0 12px;
-  font-size: 12px;
+  padding: 8px 10px;
+  margin: 0 0 10px;
+  font-size: 11px;
   color: var(--jg-secondary);
   background: var(--jg-subtle);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .assistant-error {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  margin: 12px 0 0;
+  margin: 10px 0 0;
   color: var(--jg-error);
   background: var(--jg-error-bg);
 }
 
 .assistant-composer {
-  padding-top: 14px;
+  padding-top: 12px;
 }
 
 .assistant-composer footer {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
 .assistant-composer footer span {
@@ -1955,9 +1955,9 @@ const proposalLabel = (status: string) =>
 
 .assistant-settings {
   display: grid;
-  gap: 16px;
+  gap: 14px;
   max-height: 72dvh;
-  padding-right: 6px;
+  padding-right: 5px;
   overflow-y: auto;
   color: var(--jg-text);
 }
@@ -1965,7 +1965,7 @@ const proposalLabel = (status: string) =>
 .assistant-setting-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
+  gap: 14px;
 }
 
 .assistant-settings .form-context {
@@ -1973,50 +1973,50 @@ const proposalLabel = (status: string) =>
 }
 
 .assistant-scope-details {
-  padding: 12px 14px;
+  padding: 10px 12px;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .assistant-scope-details summary {
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-secondary);
   cursor: pointer;
 }
 
 .assistant-scope-details[open] > :not(summary) {
-  margin-top: 14px;
+  margin-top: 12px;
 }
 
 .assistant-settings > .form-footer {
   position: sticky;
   bottom: 0;
-  padding: 12px 0 0;
+  padding: 10px 0 0;
   background: var(--jg-elevated);
 }
 
 .assistant-scope {
   min-width: 0;
-  padding: 14px;
+  padding: 12px;
   margin: 0;
   border: 1px solid var(--jg-line);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .assistant-scope legend {
   float: none;
   width: auto;
-  padding: 0 6px;
+  padding: 0 5px;
   margin: 0;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .assistant-scope :deep(.ant-checkbox-group) {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   justify-items: start;
-  max-height: 180px;
+  max-height: 153px;
   overflow-y: auto;
 }
 
@@ -2026,43 +2026,43 @@ const proposalLabel = (status: string) =>
 
 .assistant-scope small {
   display: block;
-  margin-top: 12px;
+  margin-top: 10px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
 
 .assistant-skeleton {
   display: grid;
-  gap: 20px;
-  padding-top: 24px;
+  gap: 17px;
+  padding-top: 20px;
 }
 
 .assistant-skeleton span {
-  height: 110px;
+  height: 94px;
   background: var(--jg-subtle);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .assistant-skeleton span:nth-child(2) {
-  height: 70px;
-  margin-left: 40px;
+  height: 60px;
+  margin-left: 34px;
 }
 
 @media (max-width: 767px) {
   .assistant-conversation {
-    padding: 12px;
+    padding: 10px;
   }
 
   .assistant-welcome {
-    padding: 18px 4px;
+    padding: 15px 3px;
   }
 
   .assistant-message {
-    padding: 14px;
+    padding: 12px;
   }
 
   .assistant-message-user {
-    margin-left: 20px;
+    margin-left: 17px;
   }
 
   .assistant-setting-row {

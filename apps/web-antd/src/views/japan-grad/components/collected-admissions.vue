@@ -155,20 +155,20 @@ onBeforeUnmount(() => {
 </template>
 <style scoped>
 .collected-admissions {
-  padding: 24px;
-  margin: 28px 0;
+  padding: 20px;
+  margin: 24px 0;
   background: var(--jg-surface);
   border: 1px solid var(--jg-accent-line);
   border-top: 3px solid var(--jg-accent);
-  border-radius: 12px;
+  border-radius: 10px;
 }
 
 .collected-admissions > header {
   display: flex;
-  gap: 16px;
+  gap: 14px;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 18px;
+  margin-bottom: 15px;
 }
 
 .collected-admissions header span {
@@ -178,8 +178,8 @@ onBeforeUnmount(() => {
 }
 
 .collected-admissions h2 {
-  margin: 9px 0 0;
-  font-size: 23px;
+  margin: 8px 0 0;
+  font-size: 20px;
 }
 
 .collected-admissions header > a,
@@ -191,28 +191,28 @@ onBeforeUnmount(() => {
 }
 
 .collected-admissions details {
-  padding-top: 15px;
-  margin-top: 15px;
+  padding-top: 13px;
+  margin-top: 13px;
   border-top: 1px solid var(--jg-line);
 }
 
 .collected-admissions summary {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-secondary);
   cursor: pointer;
 }
 
 .admissions-scope {
   display: block;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-muted);
   white-space: pre-wrap;
 }
 
 .admissions-warning {
-  padding: 10px 12px;
-  font-size: 12px;
+  padding: 8px 10px;
+  font-size: 11px;
   line-height: 1.8;
   color: var(--jg-warning);
   background: var(--jg-subtle);
@@ -222,8 +222,8 @@ onBeforeUnmount(() => {
 .admissions-summary-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 20px 28px;
-  margin-top: 20px;
+  gap: 17px 24px;
+  margin-top: 17px;
 }
 
 .admissions-summary-grid > section {
@@ -231,21 +231,21 @@ onBeforeUnmount(() => {
 }
 
 .admissions-summary-grid h3 {
-  margin: 0 0 10px;
-  font-size: 15px;
+  margin: 0 0 8px;
+  font-size: 13px;
   font-weight: 600;
 }
 
 .admissions-summary-grid h3 small {
-  margin-left: 10px;
+  margin-left: 8px;
   font-size: 10px;
   font-weight: 400;
   color: var(--jg-success);
 }
 
 .admissions-summary-grid p {
-  margin: 0 0 10px;
-  font-size: 13px;
+  margin: 0 0 8px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-secondary);
   overflow-wrap: anywhere;
@@ -253,42 +253,42 @@ onBeforeUnmount(() => {
 }
 
 .admissions-item-list {
-  padding-left: 20px;
-  margin: 0 0 12px;
-  font-size: 13px;
+  padding-left: 17px;
+  margin: 0 0 10px;
+  font-size: 11px;
   line-height: 1.9;
   color: var(--jg-secondary);
 }
 
 .admissions-item-list li {
-  padding-bottom: 7px;
+  padding-bottom: 6px;
   overflow-wrap: anywhere;
 }
 
 .admissions-evidence {
   display: flex;
   flex-wrap: wrap;
-  gap: 7px 12px;
-  margin-top: 8px;
+  gap: 6px 10px;
+  margin-top: 7px;
 }
 
 .admissions-originals {
   display: grid;
-  gap: 10px;
-  padding-top: 18px;
-  margin-top: 24px;
+  gap: 8px;
+  padding-top: 15px;
+  margin-top: 20px;
   border-top: 1px solid var(--jg-line);
 }
 
 .admissions-originals strong {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--jg-secondary);
 }
 
 @media (max-width: 650px) {
   .collected-admissions {
-    padding: 18px;
+    padding: 15px;
   }
 
   .admissions-summary-grid {

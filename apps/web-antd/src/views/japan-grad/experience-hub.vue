@@ -193,31 +193,31 @@ const {
 <style scoped>
 .experience-hub-heading {
   display: flex;
-  gap: 24px;
+  gap: 20px;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 0 28px;
-  margin-bottom: 24px;
+  padding: 10px 0 24px;
+  margin-bottom: 20px;
   border-bottom: 1px solid var(--jg-line);
 }
 
 .experience-eyebrow {
   display: block;
-  margin-bottom: 12px;
-  font-size: 12px;
+  margin-bottom: 10px;
+  font-size: 11px;
   color: var(--jg-accent-text);
   letter-spacing: 0.12em;
 }
 
 .experience-hub-heading h1 {
   margin: 0;
-  font-size: 34px;
+  font-size: 29px;
   line-height: 1.3;
 }
 
 .experience-hub-heading p {
-  margin: 12px 0 0;
-  font-size: 14px;
+  margin: 10px 0 0;
+  font-size: 12px;
   line-height: 1.8;
   color: var(--jg-muted);
 }
@@ -225,27 +225,27 @@ const {
 .experience-hub-stat {
   display: grid;
   flex-shrink: 0;
-  gap: 6px;
+  gap: 5px;
   text-align: right;
 }
 
 .experience-hub-stat strong {
-  font-size: 44px;
+  font-size: 37px;
   font-weight: 600;
   line-height: 1;
   color: var(--jg-accent-text);
 }
 
 .experience-hub-stat span {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .experience-hub-toolbar {
   display: flex;
-  gap: 24px;
+  gap: 20px;
   align-items: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .experience-hub-toolbar > .ant-input-affix-wrapper {
@@ -255,29 +255,29 @@ const {
 .experience-hub-toolbar label {
   display: flex;
   flex-shrink: 0;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .experience-university-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+  gap: 17px;
 }
 
 .experience-university-card {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
-  padding: 24px;
+  padding: 20px;
   color: var(--jg-text);
   text-decoration: none;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
-  border-radius: 18px;
+  border-radius: 15px;
   transition:
     border-color 0.2s,
     transform 0.2s;
@@ -292,76 +292,76 @@ const {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 
 .experience-university-count {
-  padding: 5px 10px;
-  font-size: 12px;
+  padding: 4px 8px;
+  font-size: 11px;
   color: var(--jg-accent-text);
   background: var(--jg-accent-soft);
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 .experience-university-card h2 {
   margin: 0;
-  font-size: 22px;
+  font-size: 19px;
   line-height: 1.4;
   overflow-wrap: anywhere;
 }
 
 .experience-university-card > p {
   margin: 0;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
 }
 
 .experience-university-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
-  font-size: 12px;
+  gap: 10px;
+  font-size: 11px;
   color: var(--jg-secondary);
 }
 
 .experience-university-card footer {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   align-items: center;
   justify-content: space-between;
-  padding-top: 16px;
+  padding-top: 14px;
   margin-top: auto;
-  font-size: 12px;
+  font-size: 11px;
   color: var(--jg-muted);
   border-top: 1px solid var(--jg-line);
 }
 
 .experience-university-card footer svg {
-  width: 18px;
-  height: 18px;
+  width: 15px;
+  height: 15px;
   color: var(--jg-accent-text);
 }
 
 .experience-selected-university {
   display: flex;
-  gap: 20px;
+  gap: 17px;
   align-items: center;
   min-width: 0;
 }
 
 .experience-selected-university h1 {
-  font-size: 28px;
+  font-size: 24px;
   overflow-wrap: anywhere;
 }
 
 .experience-hub-heading.is-university {
-  padding-bottom: 20px;
-  margin-bottom: 8px;
+  padding-bottom: 17px;
+  margin-bottom: 7px;
 }
 
 .experience-back {
   flex-shrink: 0;
-  font-size: 13px;
+  font-size: 11px;
   color: var(--jg-accent-text);
 }
 
@@ -378,20 +378,20 @@ const {
 
   .experience-hub-toolbar {
     flex-wrap: wrap;
-    gap: 14px;
+    gap: 12px;
   }
 
   .experience-hub-heading {
-    gap: 16px;
+    gap: 14px;
     align-items: flex-start;
   }
 
   .experience-hub-heading h1 {
-    font-size: 28px;
+    font-size: 24px;
   }
 
   .experience-hub-stat strong {
-    font-size: 32px;
+    font-size: 27px;
   }
 
   .is-university {
@@ -399,12 +399,12 @@ const {
   }
 
   .experience-selected-university {
-    gap: 14px;
+    gap: 12px;
     align-items: flex-start;
   }
 
   .experience-selected-university h1 {
-    font-size: 24px;
+    font-size: 20px;
   }
 }
 
