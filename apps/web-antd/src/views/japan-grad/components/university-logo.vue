@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 
+import {
+  catalogLogoUrl,
+  findCatalogUniversity,
+  loadUniversityCatalog,
+} from '../university-catalog';
 import ExplorerIcon from './explorer-icon.vue';
 
 const props = withDefaults(
@@ -8,8 +13,22 @@ const props = withDefaults(
   { logoId: '', name: '', large: false },
 );
 const failed = ref(false);
+onMounted(() => {
+  void loadUniversityCatalog();
+});
+const catalogEntry = computed(() => findCatalogUniversity(props.name));
+const source = computed(() =>
+  props.logoId
+    ? `/api/japangrad/university-logos/${encodeURIComponent(props.logoId)}`
+    : catalogLogoUrl(catalogEntry.value?.logo ?? null),
+);
+const attribution = computed(() =>
+  !props.logoId && catalogEntry.value?.logo
+    ? `${catalogEntry.value.logo.author} · ${catalogEntry.value.logo.license}`
+    : undefined,
+);
 watch(
-  () => props.logoId,
+  () => source.value,
   () => {
     failed.value = false;
   },
@@ -18,12 +37,13 @@ watch(
 
 <template>
   <span
+    :title="attribution"
     class="university-logo"
-    :class="{ 'university-logo-large': large, 'has-logo': logoId && !failed }"
+    :class="{ 'university-logo-large': large, 'has-logo': source && !failed }"
   >
     <img
-      v-if="logoId && !failed"
-      :src="`/api/japangrad/university-logos/${encodeURIComponent(logoId)}`"
+      v-if="source && !failed"
+      :src="source"
       :alt="name ? `${name}校徽` : '校徽预览'"
       @error="failed = true"
     />

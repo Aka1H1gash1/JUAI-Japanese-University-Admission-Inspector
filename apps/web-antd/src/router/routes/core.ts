@@ -110,6 +110,12 @@ const coreRoutes: RouteRecordRaw[] = [
         meta: { title: '特殊入学项目' },
       },
       {
+        path: 'design',
+        component: () =>
+          import('#/views/japan-grad/design-system/preview-index.vue'),
+        meta: { title: 'JUAI 1.0 设计预览' },
+      },
+      {
         name: 'WorkspaceSettings',
         path: 'settings',
         component: () => import('#/views/japan-grad/settings.vue'),

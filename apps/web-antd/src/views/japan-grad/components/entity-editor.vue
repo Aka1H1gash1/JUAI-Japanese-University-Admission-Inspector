@@ -15,6 +15,13 @@ import {
 import { localApi } from '../local-api';
 import { vAccessibleSelect } from '../select-accessibility';
 import {
+  catalogError,
+  catalogLoading,
+  catalogUniversities,
+  findCatalogUniversity,
+  loadUniversityCatalog,
+} from '../university-catalog';
+import {
   DEFAULT_UNIVERSITY_FEES,
   DORMITORY_OPTIONS,
   formatYen,
@@ -39,6 +46,42 @@ const { message, modal } = App.useApp();
 const form = ref<EditorFields>({});
 let initialForm = '';
 const feedback = ref('');
+const selectedCatalogId = ref<string>();
+const catalogOptions = computed(() =>
+  catalogUniversities.value.map((item) => ({
+    value: item.id,
+    label: `${item.name} · ${item.category} · ${item.prefecture}`,
+    search: [item.name, item.japaneseName, ...(item.aliases ?? [])]
+      .join(' ')
+      .toLowerCase(),
+  })),
+);
+const catalogEntry = computed(() =>
+  findCatalogUniversity(form.value.japaneseName || form.value.name || ''),
+);
+function filterCatalog(
+  input: string,
+  option?: { label?: unknown; [key: string]: unknown },
+) {
+  return String(option?.search ?? '').includes(input.trim().toLowerCase());
+}
+function chooseCatalog(value: unknown) {
+  selectedCatalogId.value = typeof value === 'string' ? value : undefined;
+  const item = catalogUniversities.value.find((entry) => entry.id === value);
+  if (!item) return;
+  Object.assign(form.value, {
+    name: item.name,
+    japaneseName: item.japaneseName,
+    category: item.category,
+    website: item.website,
+    ...universityGeography({
+      region: item.region,
+      prefecture: item.prefecture,
+    }),
+  });
+  changeUniversityCategory();
+}
+
 const uploadingLogo = ref(false);
 let logoUploadToken = 0;
 const kindLabel = computed(
@@ -177,6 +220,8 @@ watch(open, (value) => {
   uploadingLogo.value = false;
   if (!value) return;
   feedback.value = '';
+  selectedCatalogId.value = undefined;
+  if (props.kind === 'university') void loadUniversityCatalog();
   automaticFees.clear();
   form.value = {
     name: '',
@@ -376,6 +421,34 @@ async function save() {
         }}
       </p>
       <div class="form-fields">
+        <div v-if="kind === 'university' && !entityId" class="field full">
+          <label for="entity-university-catalog">从文部科学省大学名单选择</label>
+          <Select
+            id="entity-university-catalog"
+            v-accessible-select
+            :value="selectedCatalogId"
+            :options="catalogOptions"
+            :loading="catalogLoading"
+            :filter-option="filterCatalog"
+            show-search
+            allow-clear
+            placeholder="搜索大学名称，也可在下方手动填写"
+            @change="chooseCatalog"
+          />
+          <p v-if="catalogError" role="status">
+            {{ catalogError }}
+            <button
+              type="button"
+              class="text-button"
+              @click="loadUniversityCatalog()"
+            >
+              重试
+            </button>
+          </p>
+          <p v-else>
+            选择后自动填写名称、类型、地区与官网；未收录校徽的大学显示默认图标。
+          </p>
+        </div>
         <div
           v-if="kind === 'university'"
           class="field full university-logo-editor"
@@ -412,6 +485,15 @@ async function save() {
               移除校徽
             </button>
             <p>PNG、JPG、WebP，最大 3 MB；保存大学后生效。</p>
+            <p v-if="!form.logoId && catalogEntry?.logo">
+              目录校徽：{{ catalogEntry.logo.author }} ·
+              {{ catalogEntry.logo.license }}
+              <a
+                :href="catalogEntry.logo.sourceUrl"
+                target="_blank"
+                rel="noopener noreferrer"
+                >查看来源与许可</a>
+            </p>
           </div>
         </div>
         <div class="field full">
@@ -770,6 +852,23 @@ async function save() {
             :maxlength="2048"
             placeholder="https://…，可选"
           />
+          <template
+            v-if="
+              kind === 'university' &&
+              catalogEntry &&
+              form.website === catalogEntry.website
+            "
+          >
+            <p v-if="catalogEntry.websiteNotes">
+              {{ catalogEntry.websiteNotes }}
+            </p>
+            <a
+              v-if="catalogEntry.websiteSourceUrl"
+              :href="catalogEntry.websiteSourceUrl"
+              target="_blank"
+              rel="noopener noreferrer"
+              >官网对应来源</a>
+          </template>
         </div>
         <template v-if="kind === 'professor'">
           <div class="field full">

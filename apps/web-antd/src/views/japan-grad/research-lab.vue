@@ -11,6 +11,7 @@ import ExplorerIcon from './components/explorer-icon.vue';
 import LabTasks from './components/lab-tasks.vue';
 import MajorAdmissions from './components/major-admissions.vue';
 import ResearchLabTeachers from './components/research-lab-teachers.vue';
+import LabPreview from './design-system/lab-preview.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
 import {
   annualBudgetText,
@@ -127,7 +128,8 @@ function remove() {
 </script>
 <template>
   <!-- eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline -->
-  <section v-if="target" class="explorer-page research-lab-page">
+  <LabPreview v-if="target && route.query.design === '1'" />
+  <section v-else-if="target" class="explorer-page research-lab-page">
     <nav class="explorer-breadcrumb" aria-label="当前位置">
       <RouterLink to="/japan-grad/universities">大学清单</RouterLink
       ><ExplorerIcon name="chevron" /><RouterLink

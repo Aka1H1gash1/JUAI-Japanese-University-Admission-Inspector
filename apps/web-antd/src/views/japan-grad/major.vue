@@ -10,9 +10,10 @@ import DocumentArchive from './components/document-archive.vue';
 import EntityEditor from './components/entity-editor.vue';
 import ExamHistory from './components/exam-history.vue';
 import ExplorerIcon from './components/explorer-icon.vue';
-import MajorAdmissions from './components/major-admissions.vue';
 import MajorAdmissionTable from './components/major-admission-table.vue';
+import MajorAdmissions from './components/major-admissions.vue';
 import ResearchLabCollection from './components/research-lab-collection.vue';
+import MajorPreview from './design-system/major-preview.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
 
 const store = useExplorerStore();
@@ -62,7 +63,10 @@ function deleteMajor() {
 </script>
 
 <template>
-  <section v-if="major && school && university" class="explorer-page">
+  <MajorPreview
+    v-if="major && school && university && route.query.design === '1'"
+  />
+  <section v-else-if="major && school && university" class="explorer-page">
     <nav class="explorer-breadcrumb" aria-label="当前位置">
       <RouterLink to="/japan-grad/universities">大学清单</RouterLink><ExplorerIcon name="chevron" /><RouterLink
         :to="`/japan-grad/universities/${university.id}`"

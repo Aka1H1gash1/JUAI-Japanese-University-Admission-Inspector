@@ -11,6 +11,7 @@ import { primaryProfessor, materialProgress } from '../application-planning';
 
 const props = defineProps<{
   labId: string;
+  designPreview?: boolean;
   showAffiliation?: boolean;
   selectable?: boolean;
   selected?: boolean;
@@ -48,7 +49,10 @@ async function toggle() {
     :class="{ 'is-selected': selected }"
   >
     <RouterLink
-      :to="labPath(target)"
+      :to="{
+        path: labPath(target),
+        query: designPreview ? { design: '1' } : {},
+      }"
       class="research-lab-card-link"
       :aria-label="`查看${target.lab.name}研究室详情`"
     />
@@ -91,13 +95,13 @@ async function toggle() {
       </p>
       <p class="lab-budget">{{ annualBudgetText(target.university) }}</p>
     </template>
-    <div class="planner-card-status">
+    <div v-if="!designPreview" class="planner-card-status">
       <span class="planner-muted"
         >联系状态 · {{ primaryProfessor(target)?.name || '老师待添加' }}</span
       ><ContactStatus :contact="primaryProfessor(target)?.contact" />
     </div>
     <div
-      v-if="showAffiliation || target.lab.tasks?.length"
+      v-if="!designPreview && (showAffiliation || target.lab.tasks?.length)"
       class="planner-card-material"
     >
       <span

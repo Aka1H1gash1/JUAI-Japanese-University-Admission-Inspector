@@ -1,0 +1,207 @@
+/* Palette and Ant Design remain managed by palette.ts. */
+:root {
+  --juai-space-1: 4px;
+  --juai-space-2: 8px;
+  --juai-space-3: 12px;
+  --juai-space-4: 16px;
+  --juai-space-6: 24px;
+  --juai-space-8: 32px;
+  --juai-radius: 10px;
+  --juai-radius-control: 6px;
+  --juai-page-width: 1200px;
+  --juai-font-body: 13px;
+  --juai-font-caption: 11px;
+  --juai-font-heading: 28px;
+  --juai-font-section: 16px;
+  --juai-color-surface: var(--jg-surface);
+  --juai-color-text: var(--jg-text);
+  --juai-color-muted: var(--jg-muted);
+  --juai-color-line: var(--jg-line);
+  --juai-color-accent: var(--jg-accent-text);
+}
+
+.juai-design {
+  max-width: var(--juai-page-width);
+  margin: 0 auto;
+  font-family: var(--jg-font);
+  font-size: var(--juai-font-body);
+  line-height: 1.65;
+  color: var(--juai-color-text);
+}
+
+.university-explorer .explorer-main .juai-design :is(h1, h2, h3) {
+  font-family: var(--jg-font);
+}
+
+.juai-design :is(p, dd, li, h1, h2, h3, a) {
+  overflow-wrap: anywhere;
+}
+
+.juai-design :is(.juai-section, .juai-panel-grid, .juai-split) > * {
+  min-width: 0;
+}
+
+.juai-prototype-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  font-size: var(--juai-font-caption);
+  color: var(--juai-color-muted);
+}
+
+.juai-prototype-bar span {
+  padding: 3px 8px;
+  color: var(--juai-color-accent);
+  background: var(--jg-subtle);
+  border-radius: 4px;
+}
+
+.juai-prototype-bar a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.juai-stack {
+  display: grid;
+  gap: var(--juai-space-6);
+}
+
+.juai-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--juai-space-6);
+}
+
+.juai-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  gap: var(--juai-space-6);
+}
+
+.juai-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px 32px;
+  margin: 20px 0 0;
+}
+
+.juai-facts dt {
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--jg-text);
+}
+
+.juai-facts dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--jg-secondary);
+  white-space: pre-wrap;
+}
+
+.juai-date-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 20px;
+  margin: 20px 0;
+  background: var(--jg-subtle);
+  border-radius: 8px;
+}
+
+.juai-scope-note {
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--jg-muted);
+}
+
+.juai-section-selector {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.juai-section-selector .ant-select {
+  width: min(100%, 280px);
+}
+
+.juai-prose {
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--jg-secondary);
+  white-space: pre-wrap;
+}
+
+.juai-research-topic {
+  margin-bottom: 20px !important;
+  font-size: 19px;
+  font-weight: 500;
+  line-height: 1.6;
+  color: var(--jg-text);
+}
+
+.juai-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 20px;
+  font-size: 12px;
+  color: var(--jg-accent-text);
+}
+
+.juai-history {
+  font-size: 12px;
+  color: var(--jg-secondary);
+}
+
+.juai-history summary {
+  cursor: pointer;
+}
+
+.juai-history[open] summary {
+  margin-bottom: 16px;
+}
+
+.juai-design .collection-heading {
+  margin-bottom: 16px;
+}
+
+.juai-design .collection-heading h2 {
+  font-family: var(--jg-font);
+  font-size: 18px;
+}
+
+.juai-design .collection-heading p {
+  display: none;
+}
+
+.juai-design :is(.lab-collection, .lab-teacher-section) {
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+}
+
+@media (max-width: 720px) {
+  .juai-panel-grid,
+  .juai-split,
+  .juai-facts {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .juai-date-row {
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .juai-design .ant-btn {
+    min-height: 40px;
+  }
+}

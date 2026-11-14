@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { CollectionStatus } from './collection-types';
+import type { Profile } from './profile-types';
 
 import { computed, ref } from 'vue';
 import { useRoute } from 'vue-router';
@@ -7,21 +8,10 @@ import { useRoute } from 'vue-router';
 import { App, Button, Input, InputNumber, Tabs } from 'ant-design-vue';
 
 import JgLoader from './components/jg-loader.vue';
+import PersonalProfile from './components/personal-profile.vue';
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
 import { serverMode } from './runtime-capabilities';
-interface Profile {
-  displayName: string;
-  email: string;
-  school: string;
-  major: string;
-  education: string;
-  language: string;
-  interests: string;
-  notes: string;
-  admissionYear: number;
-  identity: string;
-}
 interface BrowserRuntime {
   browserMode: boolean;
   mobile: {
@@ -96,17 +86,17 @@ async function loadRuntime() {
   }
 }
 void loadRuntime();
-async function save() {
+async function save(draft: Profile) {
   busy.value = true;
   errorMessage.value = '';
   try {
     const saved = await localApi<{ version: number; profile: Profile }>(
       '/settings',
-      jsonOptions('PUT', { version: version.value, profile: profile.value }),
+      jsonOptions('PUT', { version: version.value, profile: draft }),
     );
     version.value = saved.version;
     profile.value = saved.profile;
-    message.success('个人信息与默认查询条件已保存。');
+    message.success('个人档案已保存。');
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '保存失败。';
   } finally {
@@ -215,7 +205,7 @@ async function shutdownRuntime() {
   <section class="workspace-settings">
     <header>
       <div>
-        <h1>设置</h1>
+        <h1>{{ tab === 'profile' ? '个人档案' : '设置' }}</h1>
       </div>
       <RouterLink to="/japan-grad/ai">AI 接入与 API 配置 ↗</RouterLink>
     </header>
@@ -225,71 +215,13 @@ async function shutdownRuntime() {
     <JgLoader v-if="loading" text="正在读取设置" />
     <Tabs v-model:active-key="tab">
       <Tabs.TabPane key="profile" tab="个人信息">
-        <form v-if="profile" class="settings-panel" @submit.prevent="save">
-          <h2>个人信息</h2>
-          <p>
-            保存在本地工作区。AI
-            查询默认预填入学年份和申请身份，其他资料由你决定是否填入备注。
-          </p>
-          <div class="settings-fields">
-            <label>称呼<Input
-                v-model:value="profile.displayName"
-                :maxlength="160"
-                :disabled="busy"
-/></label><label>邮箱<Input
-                v-model:value="profile.email"
-                :maxlength="240"
-                :disabled="busy"
-            /></label>
-            <label>毕业 / 在读院校<Input
-                v-model:value="profile.school"
-                :maxlength="240"
-                :disabled="busy"
-/></label><label>专业<Input
-                v-model:value="profile.major"
-                :maxlength="240"
-                :disabled="busy"
-            /></label>
-            <label>当前学历<Input
-                v-model:value="profile.education"
-                :maxlength="240"
-                :disabled="busy"
-/></label><label>语言成绩<Input
-                v-model:value="profile.language"
-                :maxlength="1000"
-                :disabled="busy"
-                placeholder="如 JLPT、TOEFL、IELTS 等"
-            /></label>
-            <label>默认入学年份<InputNumber
-                v-model:value="profile.admissionYear"
-                :min="1900"
-                :max="2200"
-                :precision="0"
-                :disabled="busy"
-/></label><label>默认申请身份<Input
-                v-model:value="profile.identity"
-                :maxlength="240"
-                :disabled="busy"
-                placeholder="如：修士・外国人留学生"
-            /></label>
-            <label class="settings-wide">研究兴趣<Input.TextArea
-                v-model:value="profile.interests"
-                :rows="3"
-                :maxlength="2000"
-                :disabled="busy"
-/></label><label class="settings-wide">个人备注<Input.TextArea
-                v-model:value="profile.notes"
-                :rows="3"
-                :maxlength="4000"
-                :disabled="busy"
-            /></label>
-          </div>
-          <footer>
-            <Button type="primary" html-type="submit" :loading="busy">
-              保存设置
-            </Button>
-          </footer>
-        </form>
+        <PersonalProfile
+          v-if="profile"
+          :profile="profile"
+          :busy="busy"
+          :error="errorMessage"
+          @save="save"
+        />
       </Tabs.TabPane>
       <Tabs.TabPane key="browser" tab="浏览器连接">
         <section v-if="serverMode" class="settings-panel">
@@ -491,7 +423,7 @@ async function shutdownRuntime() {
 </template>
 <style scoped>
 .workspace-settings {
-  max-width: 1000px;
+  max-width: 1080px;
   padding-bottom: 34px;
   margin: auto;
 }
@@ -551,33 +483,6 @@ async function shutdownRuntime() {
   font-size: 11px;
   line-height: 1.9;
   color: var(--jg-muted);
-}
-
-.settings-fields {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 15px;
-  margin: 20px 0;
-}
-
-.settings-fields label {
-  display: grid;
-  gap: 7px;
-  font-size: 11px;
-  color: var(--jg-secondary);
-}
-
-.settings-fields .ant-input-number {
-  width: 100%;
-}
-
-.settings-wide {
-  grid-column: 1/-1;
-}
-
-.settings-panel footer {
-  display: flex;
-  justify-content: flex-end;
 }
 
 .settings-browser-state {
@@ -642,10 +547,6 @@ async function shutdownRuntime() {
 }
 
 @media (max-width: 600px) {
-  .settings-fields {
-    grid-template-columns: 1fr;
-  }
-
   .settings-panel {
     padding: 15px;
   }

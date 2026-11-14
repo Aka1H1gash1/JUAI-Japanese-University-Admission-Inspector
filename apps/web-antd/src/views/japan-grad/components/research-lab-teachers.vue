@@ -3,14 +3,14 @@ import { computed, ref } from 'vue';
 
 import { Button, Input, Switch } from 'ant-design-vue';
 
-import { professorInitials, useExplorerStore } from '../explorer';
+import { professorInitials, useExplorerStore, websiteUrl } from '../explorer';
 import { labContext } from '../lab-targets';
 import { usePagination } from '../use-pagination';
 import ContactStatus from './contact-status.vue';
 import EntityCreateFlow from './entity-create-flow.vue';
 import ExplorerIcon from './explorer-icon.vue';
 import ListPagination from './list-pagination.vue';
-const props = defineProps<{ labId: string }>();
+const props = defineProps<{ labId: string; compact?: boolean }>();
 const store = useExplorerStore();
 const ctx = computed(() => labContext(store, props.labId));
 const query = ref('');
@@ -53,7 +53,8 @@ const { page, pageSize, total, paged } = usePagination(visibleProfessors, [
     <header class="collection-heading">
       <div>
         <h2>
-          老师<span>{{ allProfessors.length }}</span>
+          {{ compact ? '所属教师' : '老师'
+          }}<span>{{ allProfessors.length }}</span>
         </h2>
         <p>研究室成员的个人资料、论文和邮件分别保存在老师详情中。</p>
       </div>
@@ -77,7 +78,37 @@ const { page, pageSize, total, paged } = usePagination(visibleProfessors, [
             aria-label="只看心仪老师"
           />只看心仪<span>{{ favoriteCount }}</span></label>
       </div>
-      <div v-if="visibleProfessors.length" class="professor-grid">
+      <ul v-if="compact && visibleProfessors.length" class="juai-teacher-list">
+        <li v-for="professor in paged" :key="professor.id">
+          <span class="juai-teacher-avatar" aria-hidden="true">{{
+            professorInitials(professor.name)
+          }}</span>
+          <div class="juai-teacher-main">
+            <RouterLink
+              :to="`/japan-grad/universities/${ctx.university.id}/schools/${ctx.school.id}/majors/${ctx.major.id}/labs/${labId}/professors/${professor.id}`"
+            >
+              {{ professor.name }}
+            </RouterLink>
+            <span>{{ professor.title || '职称未确认' }}</span>
+            <p>{{ professor.research || '研究方向尚未补充' }}</p>
+          </div>
+          <div class="juai-teacher-actions">
+            <a
+              v-if="websiteUrl(professor.personalWebsite)"
+              :href="websiteUrl(professor.personalWebsite)"
+              target="_blank"
+              rel="noopener noreferrer"
+              >个人主页 ↗</a><Button
+              type="text"
+              :aria-label="`编辑老师：${professor.name}`"
+              @click="editProfessor(professor.id)"
+            >
+              <ExplorerIcon name="edit" />
+            </Button>
+          </div>
+        </li>
+      </ul>
+      <div v-else-if="visibleProfessors.length" class="professor-grid">
         <article
           v-for="professor in paged"
           :key="professor.id"
@@ -183,3 +214,82 @@ const { page, pageSize, total, paged } = usePagination(visibleProfessors, [
     />
   </section>
 </template>
+
+<style scoped>
+.juai-teacher-list {
+  display: grid;
+  gap: 16px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.juai-teacher-list li {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--jg-line);
+}
+
+.juai-teacher-list li:last-child {
+  border-bottom: 0;
+}
+
+.juai-teacher-avatar {
+  display: grid;
+  flex: 0 0 40px;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  font-size: 16px;
+  color: var(--jg-accent-text);
+  background: var(--jg-subtle);
+  border-radius: 50%;
+}
+
+.juai-teacher-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.juai-teacher-main > a {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.juai-teacher-main > span {
+  margin-left: 12px;
+  font-size: 11px;
+  color: var(--jg-muted);
+}
+
+.juai-teacher-main p {
+  margin-top: 6px;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--jg-secondary);
+  overflow-wrap: anywhere;
+}
+
+.juai-teacher-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+  color: var(--jg-accent-text);
+}
+
+@media (max-width: 720px) {
+  .juai-teacher-list li {
+    flex-wrap: wrap;
+  }
+
+  .juai-teacher-actions {
+    width: 100%;
+    padding-left: 56px;
+  }
+}
+</style>

@@ -2,16 +2,16 @@
 
 ## 当前状态
 
-- 日期：2026-11-15；分支：`refactor/juai-1.0`。
+- 日期：2026-11-15；分支：共享核心及私有平台均为 `refactor/juai-1.0`；私有平台无代码修改。
 - 当前授权：仅阶段 1、2。阶段 3–7 未启动，不部署服务器，不修改数据库结构。
 - 统一需求：`requirements/PRODUCT_REQUIREMENTS.md` + `requirements/UI_REQUIREMENTS.md`；问题 0–14 逐项依赖见 REFACTOR_PLAN。
-- 阶段 1：已完成审查、分支、源代码/本地数据备份和兼容迁移设计；提交待记录。
-- 阶段 2：进行中，尚未标为业务完工。
+- 阶段 1：已完成；独立提交 `5b5ef0f3f`（docs(project): audit and plan the unified JUAI 1.0 refactor）。
+- 阶段 2：代表性原型、规范、浏览器验收和检查完成；对应提交标题 `feat(project): establish the JUAI 1.0 design system and representative previews`。全量业务尚未完工。
 
 ## 阶段 1 证据
 
 - 核心基线 `04a0fe5ab`；私有平台 HEAD `ad0cc3b`，线上发布 0.7.2。没有将原型改成产品 1.0 发布版本。
-- 备份：工作区外层 `git-backups/juai-1.0-phase1-20261115/`，权限 0700；包含代码 tar、Git 全 refs bundle、原有 diff、Git status、一致性工作区副本及 SHA-256 manifest。数据库 quick_check=ok，51 张表，manifest 记录 19 个文件。恢复方式见 ARCHITECTURE_AUDIT。
+- 备份：工作区外层 `git-backups/juai-1.0-phase1-20261115/`，权限 0700；包含代码 tar、Git 全 refs bundle、原有 diff、Git status、一致性工作区副本及 SHA-256 manifest。数据库 quick_check=ok，51 张表，manifest 记录 20 个文件（后补私有平台 Git bundle；两个 bundle 均验证可恢复）。恢复方式见 ARCHITECTURE_AUDIT。
 - 本地业务接口只读清点：4 大学、2 研究科、2 专攻、2 研究室、2 教师。没有插入示例用户资料。
 - 已有大学目录 819 条、195 个本地校徽/标志，其他 624 条使用默认图标；完整许可留在 credits.json。没有联网抓取、修改来源或重复建表。
 - 开始时已有未提交改动：entity-editor.vue、university-logo.vue、university-catalog.ts、目录静态资源，以及此前个人档案原型 settings.vue / personal-profile.vue / profile-types.ts。全部已进入外部代码快照；继承变更单独记录，不冒充本轮阶段 3 完成。
@@ -30,14 +30,28 @@
 
 ## 阶段 2 交付检查表
 
-- [ ] DESIGN_SYSTEM、UI_GUIDELINES 与集中 tokens。
-- [ ] 复用标题、分区、日期、文件列表和空状态组件。
-- [ ] 个人档案规范化；专攻和研究室显式 design=1 原型，真实数据与旧页返回。
-- [ ] 不同批次选择、缺失/混合范围提示，不伪造内诺与成员比例。
-- [ ] 桌面 / 手机 / 深色 / 长文本浏览器截图和交互验收。
-- [ ] 类型检查、Lint、构建、原有 hooks。
-- [ ] 阶段独立 commit；本地预览持续运行；截图交付。
+- [x] DESIGN_SYSTEM、UI_GUIDELINES 与集中 tokens。
+- [x] 复用标题、分区、日期、文件列表和空状态组件。
+- [x] 个人档案规范化；专攻和研究室显式 design=1 原型，真实数据与旧页返回。
+- [x] 不同批次选择、缺失/混合范围提示，不伪造内诺与成员比例。
+- [x] 桌面 / 手机 / 深色截图；长文本表单与交互验收（详见 PHASE2_ACCEPTANCE）。
+- [x] 类型检查、Lint、构建、原有 hooks。
+- [x] 阶段独立 commit 门槛；本地预览持续运行；截图交付。
 
 ## 未完成业务边界
 
 问题 0–14 均未作为完整业务验收。现有功能/原型可用不代表需求升级完成。迁移/API 新增为零，生产部署为零；阶段 3–7 详见计划，后续以持久化、迁移、权限和端到端验收结果更新状态。
+
+
+## 阶段 2 文件与效果
+
+- `design-system/`：集中 tokens、5 个基础组件、日期/记录选择 presenter、专攻和研究室原型、预览入口。
+- `personal-profile.vue` / `settings.vue`：继承之前阅读页并接入共享分区，保留版本化 API 保存；未提前实现动态语言 CRUD。
+- `ResearchLabCollection/Card` 的可选原型参数，`ResearchLabTeachers` 的可选紧凑列表；默认保留原行为。
+- 新文档 DESIGN_SYSTEM、UI_GUIDELINES、PHASE2_ACCEPTANCE；原始需求已快照保存，未覆盖旧设计记录。
+- 验收：11 个现有前端测试、10 个 presenter 断言，Node 24 类型检查与生产构建、Lint；隔离副本持久化/失败草稿；真实工作区 51 张表未变。
+- 原型入口：`http://127.0.0.1:5188/japan-grad/design`；详细操作、截图与限制见 [阶段 2 验收](PHASE2_ACCEPTANCE.md)。
+
+## 下一次恢复上下文
+
+先读 AGENTS、两份 requirements、DESIGN_SYSTEM、UI_GUIDELINES，再读本文件和 REFACTOR_PLAN。当前应停在阶段 2 交付，只有用户继续授权后才开展阶段 3。下一步依赖：现有目录稳定标识、招生批次与范围、内诺三态、成员人数和动态语言、统一文件引用/配额、账号双邮箱验证等兼容迁移和 API。不要把原型中的未确认值当成已完成业务字段；不要部署这次开发分支到生产。

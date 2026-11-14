@@ -9,7 +9,7 @@ import EntityCreateFlow from './entity-create-flow.vue';
 import ExplorerIcon from './explorer-icon.vue';
 import ListPagination from './list-pagination.vue';
 import ResearchLabCard from './research-lab-card.vue';
-const props = defineProps<{ majorId: string }>();
+const props = defineProps<{ majorId: string; designPreview?: boolean }>();
 const store = useExplorerStore();
 const query = ref('');
 const wantedOnly = ref(false);
@@ -87,6 +87,7 @@ const { page, pageSize, total, paged } = usePagination(visible, [
           v-for="lab in paged"
           :key="lab.id"
           :lab-id="lab.id"
+          :design-preview="designPreview"
           @edit="edit"
         />
       </div>
