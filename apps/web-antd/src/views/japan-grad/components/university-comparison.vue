@@ -5,13 +5,13 @@ import { Button, Modal } from 'ant-design-vue';
 
 import { useExplorerStore, websiteUrl } from '../explorer';
 import { universityGeography } from '../japan-geography';
-import UniversityLogo from './university-logo.vue';
 import {
-  formatYen,
   dormitoryLabel,
-  universityFees,
+  formatYen,
   universityBudgetTotals,
+  universityFees,
 } from '../university-fees';
+import UniversityLogo from './university-logo.vue';
 
 const props = defineProps<{ ids: string[] }>();
 const open = defineModel<boolean>('open', { default: false });
@@ -57,28 +57,28 @@ const rows = computed(() => [
     label: '入学金（仅第一年）',
     values: universities.value.map((item) => {
       const value = universityFees(item).admissionFee;
-      return value !== '' ? `¥ ${formatYen(value)}` : '';
+      return value === '' ? '' : `¥ ${formatYen(value)}`;
     }),
   },
   {
     label: '年度学费',
     values: universities.value.map((item) => {
       const value = universityFees(item).annualTuition;
-      return value !== '' ? `¥ ${formatYen(value)} / 年` : '';
+      return value === '' ? '' : `¥ ${formatYen(value)} / 年`;
     }),
   },
   {
     label: '房租 / 寮费（月）',
     values: universities.value.map((item) =>
-      item.monthlyRent !== '' ? `¥ ${formatYen(item.monthlyRent)} / 月` : '',
+      item.monthlyRent === '' ? '' : `¥ ${formatYen(item.monthlyRent)} / 月`,
     ),
   },
   {
     label: '生活费（月，不含房租）',
     values: universities.value.map((item) =>
-      item.monthlyLivingExpenses !== ''
-        ? `¥ ${formatYen(item.monthlyLivingExpenses)} / 月`
-        : '',
+      item.monthlyLivingExpenses === ''
+        ? ''
+        : `¥ ${formatYen(item.monthlyLivingExpenses)} / 月`,
     ),
   },
   {
@@ -95,18 +95,18 @@ const rows = computed(() => [
     label: '首年总费用',
     values: universities.value.map((item) => {
       const budget = universityBudgetTotals(item);
-      return budget.firstYear !== ''
-        ? `¥ ${formatYen(budget.firstYear)}${budget.complete ? '' : `\n已知费用，待补${budget.missingFields.join('、')}`}`
-        : '';
+      return budget.firstYear === ''
+        ? ''
+        : `¥ ${formatYen(budget.firstYear)}${budget.complete ? '' : `\n已知费用，待补${budget.missingFields.join('、')}`}`;
     }),
   },
   {
     label: '两年总费用',
     values: universities.value.map((item) => {
       const budget = universityBudgetTotals(item);
-      return budget.twoYears !== ''
-        ? `¥ ${formatYen(budget.twoYears)}${budget.complete ? '' : `\n已知费用，待补${budget.missingFields.join('、')}`}`
-        : '';
+      return budget.twoYears === ''
+        ? ''
+        : `¥ ${formatYen(budget.twoYears)}${budget.complete ? '' : `\n已知费用，待补${budget.missingFields.join('、')}`}`;
     }),
   },
   {
@@ -201,7 +201,11 @@ const rows = computed(() => [
                 :to="`/japan-grad/universities/${item.id}`"
                 @click="open = false"
               >
-                <UniversityLogo :logo-id="item.logoId" :name="item.name" />
+                <UniversityLogo
+                  :catalog-id="item.catalogId"
+                  :logo-id="item.logoId"
+                  :name="item.name"
+                />
                 {{ item.name }}
               </RouterLink>
             </th>
@@ -224,8 +228,7 @@ const rows = computed(() => [
                 :href="websiteUrl(item.website)"
                 target="_blank"
                 rel="noopener noreferrer"
-                >访问官网 ↗</a
-              ><span v-else class="not-filled">尚未填写</span>
+                >访问官网 ↗</a><span v-else class="not-filled">尚未填写</span>
             </td>
           </tr>
           <tr>

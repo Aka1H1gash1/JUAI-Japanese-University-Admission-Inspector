@@ -50,14 +50,22 @@ watch(
   },
 );
 function edit() {
-  draft.value = { ...props.profile };
+  draft.value = structuredClone(JSON.parse(JSON.stringify(props.profile)));
   submitted.value = false;
   editing.value = true;
+}
+function addLanguage() {
+  (draft.value.languageRecords ??= []).push({
+    id: crypto.randomUUID(),
+    type: '',
+    result: '',
+    date: '',
+  });
 }
 function submit() {
   if (props.busy) return;
   submitted.value = true;
-  emit('save', { ...draft.value });
+  emit('save', structuredClone(JSON.parse(JSON.stringify(draft.value))));
 }
 </script>
 
@@ -138,12 +146,23 @@ function submit() {
         </div>
       </ContentSection>
       <ContentSection title="语言能力" class="profile-language">
-        <ul v-if="languages.length" class="profile-scores">
+        <ul v-if="profile.languageRecords?.length" class="profile-scores">
+          <li v-for="record in profile.languageRecords" :key="record.id">
+            <span>{{ record.type
+              }}<small v-if="record.date" class="language-date">{{
+                record.date
+              }}</small></span><strong>{{ record.result }}</strong>
+          </li>
+        </ul>
+        <ul v-if="languages.length" class="profile-scores legacy-scores">
           <li v-for="(language, index) in languages" :key="index">
             <span>{{ language.name }}</span><strong v-if="language.score">{{ language.score }}</strong>
           </li>
         </ul>
-        <div v-else class="profile-empty">
+        <div
+          v-if="!languages.length && !profile.languageRecords?.length"
+          class="profile-empty"
+        >
           <strong>还没有记录语言成绩</strong>
           <p>JLPT / TOEFL / TOEIC / IELTS</p>
         </div>
@@ -201,7 +220,7 @@ function submit() {
               :maxlength="240"
               :disabled="busy"
           /></label>
-          <label>语言成绩<Input.TextArea
+          <label>原有语言成绩原文<Input.TextArea
               v-model:value="draft.language"
               :rows="2"
               :maxlength="1000"
@@ -209,6 +228,40 @@ function submit() {
               placeholder="如 JLPT N1 150；TOEFL 100"
           /></label>
         </div>
+      </fieldset>
+      <fieldset :disabled="busy">
+        <legend>语言能力</legend>
+        <div
+          v-for="(record, index) in draft.languageRecords"
+          :key="record.id"
+          class="language-editor-row"
+        >
+          <label>考试名称<Input
+              v-model:value="record.type"
+              :disabled="busy"
+              :maxlength="100"
+              placeholder="JLPT / TOEIC / 其他考试"
+          /></label>
+          <label>等级或分数<Input
+              v-model:value="record.result"
+              :disabled="busy"
+              :maxlength="240"
+          /></label>
+          <label>考试日期<input v-model="record.date" type="date" :disabled="busy" /></label>
+          <Button
+            :disabled="busy"
+            :aria-label="`删除第 ${index + 1} 条语言记录`"
+            @click="draft.languageRecords?.splice(index, 1)"
+          >
+            删除
+          </Button>
+        </div>
+        <Button
+          :disabled="busy || (draft.languageRecords?.length || 0) >= 100"
+          @click="addLanguage"
+        >
+          添加语言能力
+        </Button>
       </fieldset>
       <fieldset :disabled="busy">
         <legend>申请与研究</legend>
@@ -252,6 +305,40 @@ function submit() {
 </template>
 
 <style scoped>
+.language-editor-row input[type='date'] {
+  min-height: 32px;
+  padding: 4px 8px;
+  color: var(--jg-text);
+  background: var(--jg-surface);
+  border: 1px solid var(--jg-border);
+  border-radius: 6px;
+}
+
+.language-date {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--jg-muted);
+}
+
+.legacy-scores {
+  margin-top: 12px;
+}
+
+.language-editor-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 600px) {
+  .language-editor-row {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
 .profile-dossier {
   --profile-radius: var(--juai-radius);
   --profile-padding: var(--juai-space-6);

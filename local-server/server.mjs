@@ -29,6 +29,7 @@ import {
   fileProperties,
   validateFile,
 } from './file-types.mjs';
+import { migrateGeneralFiles } from './general-files-schema.mjs';
 import { createInformationService } from './information-service.mjs';
 import geography from './japan-geography.json' with { type: 'json' };
 import { migrateLabFacts } from './lab-facts-schema.mjs';
@@ -38,9 +39,14 @@ import {
   validPlannerDay,
   validPlannerMinute,
 } from './planning-fields.mjs';
+import {
+  createProductFoundation,
+  migrateProductFoundation,
+} from './product-foundation.mjs';
 import { upgradeResearchLabs } from './research-labs.mjs';
 import { createSpecialProgramService } from './special-program-service.mjs';
 import { timelineError } from './timeline-fields.mjs';
+import { catalogMatches, validateCatalogLinks } from './university-catalog.mjs';
 import { backupRoot, createManualBackup } from './workspace-backup.mjs';
 import {
   createWorkspaceRepository,
@@ -252,6 +258,11 @@ export function validateExplorer(data) {
   }
   const plannerError = planningError(data);
   if (plannerError) fail(plannerError);
+  try {
+    validateCatalogLinks(data);
+  } catch (error) {
+    fail(error.message, error.status || 400);
+  }
   return data;
 }
 
@@ -398,6 +409,42 @@ export async function createLocalApp({
       if (workspaceRepository) {
         const previous = previousData ?? snapshot().data;
         data = applyEntityDefaults(structuredClone(data));
+        for (const university of data.universities) {
+          const old = previous.universities.find(
+            (item) => item.id === university.id,
+          );
+          if (!old) {
+            const found = catalogMatches(
+              university.name,
+              university.japaneseName,
+            );
+            if (!university.catalogId && found.length === 1) {
+              university.catalogId = found[0].id;
+              university.schoolCode = found[0].schoolCode;
+            }
+            const names = new Set(
+              [university.name, university.japaneseName]
+                .filter(Boolean)
+                .map((v) => v.normalize('NFKC').trim().toLowerCase()),
+            );
+            if (
+              data.universities.some(
+                (u) =>
+                  u.id !== university.id &&
+                  [u.name, u.japaneseName]
+                    .filter(Boolean)
+                    .some((n) =>
+                      names.has(n.normalize('NFKC').trim().toLowerCase()),
+                    ),
+              )
+            )
+              fail('同名大学已存在，请使用已有记录。', 409);
+          }
+          if (university.catalogId === undefined && old?.catalogId) {
+            university.catalogId = old.catalogId;
+            university.schoolCode = old.schoolCode;
+          }
+        }
         for (const major of data.majors) {
           const retained = previous.majors.find((item) => item.id === major.id);
           const changed = !isDeepStrictEqual(
@@ -502,9 +549,11 @@ export async function createLocalApp({
     }
   }
   const ownerExists = (type, id, current = snapshot()) =>
-    current.data[type === 'major' ? 'majors' : 'professors'].some(
-      (item) => item.id === id,
-    );
+    type === 'workspace'
+      ? id === 'workspace'
+      : current.data[type === 'major' ? 'majors' : 'professors'].some(
+          (item) => item.id === id,
+        );
   const document = (id) => {
     const row = db.prepare('SELECT data FROM documents WHERE id = ?').get(id);
     if (!row) fail('文件记录不存在。', 404);
@@ -709,6 +758,32 @@ export async function createLocalApp({
     }
   }
   migrateLabFacts(db);
+  let productBackup = migrationBackup;
+  if (
+    !db.prepare('SELECT version FROM schema_migrations WHERE version=17').get()
+  ) {
+    productBackup ||= await createManualBackup(db, workspace, {
+      kind: 'before-product17',
+    });
+    migrateProductFoundation(db);
+  }
+  if (
+    !db
+      .prepare('SELECT version FROM schema_migrations WHERE version=18')
+      .get() &&
+    !productBackup
+  )
+    await createManualBackup(db, workspace, { kind: 'before-files18' });
+  migrateGeneralFiles(db);
+  const foundation = createProductFoundation({
+    db,
+    workspace,
+    platform,
+    fail,
+    json,
+    jsonBody,
+    transaction,
+  });
   const handler = async (req, res) => {
     try {
       const host = req.headers.host;
@@ -746,6 +821,9 @@ export async function createLocalApp({
           fail('缺少本地工作台请求标识。', 403);
         if (await ai.handle(req, res, route)) return;
         if (await settings.handle(req, res, route)) return;
+        if (await foundation.handle(req, res, route)) return;
+        if (route === '/api/japangrad/storage' && req.method === 'GET')
+          return json(res, await foundation.storage());
         if (await specialPrograms.handle(req, res, route)) return;
         if (await experiencePosts.handle(req, res, route)) return;
         if (await collection.handle(req, res, route)) return;
@@ -983,6 +1061,7 @@ export async function createLocalApp({
                 .prepare('SELECT id, owner_type, owner_id FROM documents')
                 .all()) {
                 if (
+                  row.owner_type !== 'workspace' &&
                   !(row.owner_type === 'major' ? majors : professors).has(
                     row.owner_id,
                   )
@@ -1056,7 +1135,10 @@ export async function createLocalApp({
         if (route === '/api/japangrad/documents' && req.method === 'GET') {
           const type = url.searchParams.get('ownerType');
           const id = url.searchParams.get('ownerId');
-          if (!['major', 'professor'].includes(type) || !ownerExists(type, id))
+          if (
+            !['major', 'professor', 'workspace'].includes(type) ||
+            !ownerExists(type, id)
+          )
             fail('所属记录不存在。', 404);
           return json(
             res,
@@ -1079,7 +1161,7 @@ export async function createLocalApp({
           }
           if (
             !meta ||
-            !['major', 'professor'].includes(meta.ownerType) ||
+            !['major', 'professor', 'workspace'].includes(meta.ownerType) ||
             !ownerExists(meta.ownerType, meta.ownerId)
           )
             fail('所属记录不存在。', 404);
@@ -1092,6 +1174,7 @@ export async function createLocalApp({
               'paper',
               'question',
             ].includes(meta.kind) ||
+            (meta.ownerType === 'workspace' && meta.kind !== 'other') ||
             (meta.ownerType === 'professor') !==
               ['consent', 'paper'].includes(meta.kind)
           )
@@ -1118,6 +1201,12 @@ export async function createLocalApp({
               fail('答案必须关联同专攻、同年份的过去问。');
           }
           const content = await body(req, 50 * 1024 * 1024);
+          const storage = await foundation.storage();
+          if (
+            storage.quota !== null &&
+            storage.used + content.length > storage.quota
+          )
+            fail('存储空间不足。', 413);
           let properties;
           try {
             properties = validateFile(meta.filename, content);
@@ -1134,7 +1223,9 @@ export async function createLocalApp({
               .slice(0, 160 - properties.extension.length)
               .replace(/\.(?:pdf|docx?|md|txt)$/i, '') + properties.extension;
           const relative = path.posix.join(
-            meta.ownerType === 'major' ? 'majors' : 'professors',
+            { workspace: 'files', major: 'majors', professor: 'professors' }[
+              meta.ownerType
+            ],
             meta.ownerId,
             meta.kind,
             String(meta.year),
@@ -1177,6 +1268,13 @@ export async function createLocalApp({
           };
           saveDocument(record);
           return json(res, record, 201);
+        }
+        const refsMatch = route.match(
+          /^\/api\/japangrad\/documents\/([\w-]+)\/references$/,
+        );
+        if (refsMatch && req.method === 'GET') {
+          document(refsMatch[1]);
+          return json(res, foundation.references(refsMatch[1]));
         }
         const fileMatch = route.match(
           /^\/api\/japangrad\/documents\/([\w-]+)(\/file)?$/,
@@ -1275,6 +1373,18 @@ export async function createLocalApp({
                 (item) =>
                   item.id === record.id || item.questionId === record.id,
               );
+            const references = related.flatMap((item) =>
+              foundation.references(item.id),
+            );
+            if (references.length > 0) {
+              res.writeHead(409, { 'Content-Type': 'application/json' });
+              return res.end(
+                JSON.stringify({
+                  error: '文件仍被招生批次引用，请先解除引用。',
+                  references,
+                }),
+              );
+            }
             const trash = await ensureDirectory('.trash');
             const moved = [];
             try {

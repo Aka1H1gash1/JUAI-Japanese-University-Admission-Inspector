@@ -13,6 +13,7 @@ import {
 import { planCollectionResources } from './collection-import-resources.mjs';
 import { matchCollectionEntities } from './collection-matching.mjs';
 import { emptyContactRecord } from './planning-fields.mjs';
+import { catalogMatches } from './university-catalog.mjs';
 
 const parents = {
   school: ['university', 'universityId'],
@@ -293,6 +294,13 @@ export function buildCollectionImportPlan({
         ),
         ...choice.fields,
       };
+      if (kind === 'university') {
+        const catalog = catalogMatches(entity.name, entity.japaneseName);
+        if (catalog.length === 1) {
+          entity.catalogId = catalog[0].id;
+          entity.schoolCode = catalog[0].schoolCode;
+        }
+      }
       if (kind === 'professor')
         entity.contact = {
           ...emptyContactRecord(),

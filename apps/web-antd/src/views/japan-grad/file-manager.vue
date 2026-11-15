@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import type { StoredDocument } from './documents';
+import type { StorageQuota } from './foundation-types';
 
 import { computed, ref, watch } from 'vue';
 
-import { Button, Input, Select } from 'ant-design-vue';
+import { App, Button, Input, Modal, Progress, Select } from 'ant-design-vue';
 
 import DocumentArchive from './components/document-archive.vue';
 import ListPagination from './components/list-pagination.vue';
-import { documentReaderPath, fileSize, kindLabels } from './documents';
+import PersonalFileUpload from './components/personal-file-upload.vue';
+import { documentReaderPath, fileSize, fileUrl, kindLabels } from './documents';
 import { useExplorerStore } from './explorer';
-import { localApi } from './local-api';
+import { jsonOptions, localApi } from './local-api';
 import { usePagination } from './use-pagination';
 const props = defineProps<{ university?: string; guidelinesOnly?: boolean }>();
 const store = useExplorerStore();
@@ -20,11 +22,39 @@ const year = ref<number>();
 const kind = ref<string>(props.guidelinesOnly ? 'guidelines' : '');
 const query = ref('');
 const files = ref<StoredDocument[]>([]);
+const storage = ref<StorageQuota>();
+const personalUpload = ref(false);
+const { modal, message } = App.useApp();
+async function removeFile(file: StoredDocument) {
+  const refs = await localApi<Array<{ label: string }>>(
+    `/documents/${file.id}/references`,
+  );
+  if (refs.length > 0) {
+    message.error(`文件仍被引用：${refs.map((r) => r.label).join('、')}`);
+    return;
+  }
+  modal.confirm({
+    title: `删除「${file.title}」？`,
+    content: '文件将移入可恢复区。',
+    okText: '删除',
+    cancelText: '取消',
+    okButtonProps: { danger: true },
+    async onOk() {
+      await localApi(`/documents/${file.id}`, jsonOptions('DELETE', {}));
+      await load();
+    },
+  });
+}
 const loadError = ref('');
 const upload = ref(false);
 async function load() {
   try {
-    files.value = await localApi<StoredDocument[]>('/documents/index');
+    const [index, quota] = await Promise.all([
+      localApi<StoredDocument[]>('/documents/index'),
+      localApi<StorageQuota>('/storage'),
+    ]);
+    files.value = index;
+    storage.value = quota;
     loadError.value = '';
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '文件读取失败';
@@ -108,6 +138,7 @@ const { page, pageSize, total, paged } = usePagination(rows, [
   <section class="explorer-page file-manager">
     <header class="collection-heading">
       <h1>{{ guidelinesOnly ? '募集要项总览' : '文件管理' }}</h1>
+
       <div>
         <Button @click="load">刷新</Button>
         <Button
@@ -119,6 +150,29 @@ const { page, pageSize, total, paged } = usePagination(rows, [
         </Button>
       </div>
     </header>
+    <section v-if="storage" class="storage-summary" aria-label="存储空间">
+      <div>
+        <strong>存储空间</strong><span>{{ fileSize(storage.used) }} 已使用 · 总配额
+          {{ storage.quota === null ? '不限制' : fileSize(storage.quota)
+          }}<template v-if="storage.remaining !== null">
+            · 剩余 {{ fileSize(storage.remaining) }}</template></span>
+      </div>
+      <Progress
+        v-if="storage.quota !== null"
+        :percent="
+          Math.min(100, Math.round((storage.used / storage.quota) * 100))
+        "
+        :show-info="false"
+      /><Button @click="personalUpload = true">上传个人文件</Button>
+    </section>
+    <Modal v-model:open="personalUpload" title="上传个人文件" :footer="null">
+      <PersonalFileUpload
+        @uploaded="
+          personalUpload = false;
+          load();
+        "
+      />
+    </Modal>
     <div class="file-filters">
       <Select
         v-if="!university"
@@ -231,6 +285,8 @@ const { page, pageSize, total, paged } = usePagination(rows, [
             <th>类型</th>
             <th>文件</th>
             <th>大小</th>
+            <th>上传时间</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
@@ -239,13 +295,26 @@ const { page, pageSize, total, paged } = usePagination(rows, [
             <td>{{ row.school?.name || '—' }}</td>
             <td>{{ row.major?.name || '—' }}</td>
             <td>{{ row.file.year }}</td>
-            <td>{{ kindLabels[row.file.kind] }}</td>
+            <td>
+              {{
+                row.file.ownerType === 'workspace'
+                  ? '个人文件'
+                  : kindLabels[row.file.kind]
+              }}
+            </td>
             <td>
               <RouterLink :to="documentReaderPath(row.file.id)">
                 {{ row.file.title }}
 </RouterLink><small>{{ row.file.filename }}</small>
             </td>
             <td>{{ fileSize(row.file.size) }}</td>
+            <td>{{ row.file.createdAt?.slice(0, 10) }}</td>
+            <td>
+              <a :href="fileUrl(row.file.id)" download>下载</a>
+              <Button type="text" danger @click="removeFile(row.file)">
+                删除
+              </Button>
+            </td>
           </tr>
           <tr v-if="!rows.length">
             <td colspan="7">暂无匹配文件，请选择专攻上传。</td>
@@ -309,5 +378,29 @@ const { page, pageSize, total, paged } = usePagination(rows, [
 
 .file-manager:deep(h1) {
   font-size: 20px;
+}
+</style>
+
+<style scoped>
+.storage-summary {
+  display: grid;
+  gap: 12px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background: var(--jg-surface);
+  border: 1px solid var(--jg-line);
+  border-radius: 10px;
+}
+
+.storage-summary > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.storage-summary .ant-btn {
+  justify-self: start;
 }
 </style>

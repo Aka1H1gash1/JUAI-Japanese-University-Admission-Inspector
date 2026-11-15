@@ -1,3 +1,4 @@
+import { catalogMatches } from './university-catalog.mjs';
 const kinds = ['university', 'school', 'major', 'lab', 'professor'];
 const lists = {
   university: 'universities',
@@ -70,6 +71,7 @@ export function matchCollectionEntities(data, job) {
     const names = fields
       .filter((f) => ['japaneseName', 'name'].includes(f.field))
       .map((f) => f.value);
+    const catalog = kind === 'university' ? catalogMatches(...names) : [];
     const urls = new Set(
       fields
         .filter((f) =>
@@ -82,6 +84,13 @@ export function matchCollectionEntities(data, job) {
     raw[kind] = (data[lists[kind]] || [])
       .filter((entity) => {
         if (anchor) return entity.id === anchor;
+        if (kind === 'university' && catalog.length === 1) {
+          const candidates = catalogMatches(entity.name, entity.japaneseName);
+          const identity =
+            entity.catalogId ||
+            (candidates.length === 1 ? candidates[0].id : '');
+          if (identity === catalog[0].id) return true;
+        }
         if (
           kind !== 'professor' &&
           [

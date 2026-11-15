@@ -45,7 +45,7 @@ const labs = computed(() =>
   <div class="juai-design juai-stack">
     <PageHeading
       title="JUAI 1.0 · 设计预览"
-      context="阶段 1–2 / 产品化重构"
+      context="阶段 3 / 基础能力接入"
       description="个人档案、招生信息与研究室三种信息结构，使用当前工作区真实资料。"
     />
     <ContentSection title="个人档案" subtitle="身份优先，阅读与编辑分离">
@@ -83,7 +83,7 @@ const labs = computed(() =>
       </ContentSection>
     </div>
     <p class="juai-scope-note">
-      本次交付为设计规范与代表性原型。结构化招生批次、内诺三态、成员人数、动态语言记录等业务升级列入后续阶段，未部署至服务器。
+      招生批次、内诺三态、成员人数及动态语言记录已接入本地数据库；其余业务页面按后续阶段继续重构，尚未部署至服务器。
     </p>
   </div>
 </template>

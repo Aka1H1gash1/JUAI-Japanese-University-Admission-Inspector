@@ -51,7 +51,12 @@ const catalogOptions = computed(() =>
   catalogUniversities.value.map((item) => ({
     value: item.id,
     label: `${item.name} · ${item.category} · ${item.prefecture}`,
-    search: [item.name, item.japaneseName, ...(item.aliases ?? [])]
+    search: [
+      item.name,
+      item.japaneseName,
+      item.englishName || '',
+      ...(item.aliases ?? []),
+    ]
       .join(' ')
       .toLowerCase(),
   })),
@@ -68,8 +73,14 @@ function filterCatalog(
 function chooseCatalog(value: unknown) {
   selectedCatalogId.value = typeof value === 'string' ? value : undefined;
   const item = catalogUniversities.value.find((entry) => entry.id === value);
-  if (!item) return;
+  if (!item) {
+    form.value.catalogId = '';
+    form.value.schoolCode = '';
+    return;
+  }
   Object.assign(form.value, {
+    catalogId: item.id,
+    schoolCode: item.schoolCode,
     name: item.name,
     japaneseName: item.japaneseName,
     category: item.category,
@@ -421,12 +432,12 @@ async function save() {
         }}
       </p>
       <div class="form-fields">
-        <div v-if="kind === 'university' && !entityId" class="field full">
+        <div v-if="kind === 'university'" class="field full">
           <label for="entity-university-catalog">从文部科学省大学名单选择</label>
           <Select
             id="entity-university-catalog"
             v-accessible-select
-            :value="selectedCatalogId"
+            :value="selectedCatalogId || form.catalogId || undefined"
             :options="catalogOptions"
             :loading="catalogLoading"
             :filter-option="filterCatalog"
@@ -434,7 +445,21 @@ async function save() {
             allow-clear
             placeholder="搜索大学名称，也可在下方手动填写"
             @change="chooseCatalog"
-          />
+          >
+            <template #option="{ value, label }">
+              <span class="catalog-option"><img
+                  v-if="
+                    catalogUniversities.find((u) => u.id === value)?.logo?.url
+                  "
+                  :src="
+                    catalogUniversities.find((u) => u.id === value)?.logo?.url
+                  "
+                  alt=""
+                  width="24"
+                  height="24"
+                /><ExplorerIcon v-else name="building" />{{ label }}</span>
+            </template>
+          </Select>
           <p v-if="catalogError" role="status">
             {{ catalogError }}
             <button
@@ -453,7 +478,12 @@ async function save() {
           v-if="kind === 'university'"
           class="field full university-logo-editor"
         >
-          <UniversityLogo :logo-id="form.logoId" :name="form.name" large />
+          <UniversityLogo
+            :catalog-id="form.catalogId"
+            :logo-id="form.logoId"
+            :name="form.name"
+            large
+          />
           <div>
             <label
               for="entity-logo-file"

@@ -237,9 +237,9 @@ function fillGap(gap: InformationGap) {
         <h1 class="workspace-title">申请总览</h1>
       </div>
       <Button @click="pickerOpen = true">
-<ExplorerIcon name="heart" />想考研究室
+        <ExplorerIcon name="heart" />想考研究室
         <span>{{ targets.length }}</span>
-</Button>
+      </Button>
     </header>
     <div class="overview-grid">
       <OverviewCalendar :events="events" :today="today" @todo="openTask" />
@@ -256,8 +256,8 @@ function fillGap(gap: InformationGap) {
             </h2>
           </div>
           <Button size="small" type="primary" @click="openTask()">
-<ExplorerIcon name="plus" />新增待办
-</Button>
+            <ExplorerIcon name="plus" />新增待办
+          </Button>
         </header>
         <div class="overview-task-controls">
           <Segmented
@@ -272,15 +272,15 @@ function fillGap(gap: InformationGap) {
             trigger="click"
             placement="bottomRight"
             title="哪些事情会成为待办？"
-            >
-<template #content>
-<p class="overview-help">
+          >
+            <template #content>
+              <p class="overview-help">
                 在这里或研究室的「待办」中新增，也可以确认智能导入。<br />日历里的日期节点不会自动变成待办，点击节点可选择「加入待办」。
               </p>
 </template><button class="overview-icon-button" aria-label="待办来源说明">
               <ExplorerIcon name="info" />
-</button>
-</Popover>
+            </button>
+          </Popover>
         </div>
         <div class="overview-panel-body">
           <div
@@ -302,12 +302,12 @@ function fillGap(gap: InformationGap) {
                 :aria-label="`完成${target.lab.name}的${task.title}`"
                 @change="completeTask(target, task)"
               /><RouterLink :to="`${labPath(target)}?tab=todos`">
-<strong>{{ task.title }}</strong><span>{{ target.university.name }} · {{ target.lab.name }}</span><small
+                <strong>{{ task.title }}</strong><span>{{ target.university.name }} · {{ target.lab.name }}</span><small
                   :class="{
                     'overview-danger': task.dueDate && task.dueDate < today,
                   }"
                   >{{ dueLabel(task.dueDate) }}</small>
-</RouterLink>
+              </RouterLink>
             </div>
           </div>
           <div v-else class="overview-empty-inline">
@@ -321,7 +321,11 @@ function fillGap(gap: InformationGap) {
                     : '没有逾期事项'
               }}
             </h3>
-            <button v-if="!targets.length" class="text-button" @click="openTask()">
+            <button
+              v-if="!targets.length"
+              class="text-button"
+              @click="openTask()"
+            >
               选择想考研究室
               <ExplorerIcon name="plus" />
             </button>
@@ -341,8 +345,8 @@ function fillGap(gap: InformationGap) {
             </h2>
           </div>
           <RouterLink to="/japan-grad/journey" class="overview-inline-link">
-修考之路 <ExplorerIcon name="arrow" />
-</RouterLink>
+            修考之路 <ExplorerIcon name="arrow" />
+          </RouterLink>
         </header>
         <div class="overview-panel-body">
           <div v-if="targets.length" class="overview-lab-list">
@@ -354,14 +358,13 @@ function fillGap(gap: InformationGap) {
               <div class="overview-lab-identity">
                 <UniversityLogo
                   :name="target.university.name"
+                  :catalog-id="target.university.catalogId"
                   :logo-id="target.university.logoId"
                 />
                 <div>
                   <RouterLink :to="labPath(target)">
-{{
-                    target.lab.name
-                  }}
-</RouterLink>
+                    {{ target.lab.name }}
+                  </RouterLink>
                   <p>
                     {{ target.university.name }} ·
                     {{ progressByLab.get(target.lab.id)!.label }}
@@ -400,8 +403,8 @@ function fillGap(gap: InformationGap) {
                 <RouterLink
                   :to="`${labPath(target)}?tab=materials`"
                   class="overview-material-progress"
-                  >
-<span>材料
+                >
+                  <span>材料
                     {{
                       progressByLab.get(target.lab.id)!.materials.percent
                     }}%</span><meter
@@ -424,9 +427,9 @@ function fillGap(gap: InformationGap) {
                   v-else
                   :to="labPath(target)"
                   class="overview-inline-link"
-                  >
-更新记录 <ExplorerIcon name="chevron" />
-</RouterLink>
+                >
+                  更新记录 <ExplorerIcon name="chevron" />
+                </RouterLink>
               </div>
             </article>
           </div>
@@ -441,19 +444,19 @@ function fillGap(gap: InformationGap) {
             </h3>
             <p>想考目标的联络阶段和材料进度会显示在这里。</p>
             <Button v-if="store.labs.length" @click="pickerOpen = true">
-选择研究室
+              选择研究室
 </Button><Button
               v-else-if="!store.universities.length"
               @click="createUniversityOpen = true"
-              >
-添加大学
+            >
+              添加大学
 </Button><RouterLink
               v-else
               to="/japan-grad/universities"
               class="overview-inline-link"
-              >
-前往大学清单 <ExplorerIcon name="arrow" />
-</RouterLink>
+            >
+              前往大学清单 <ExplorerIcon name="arrow" />
+            </RouterLink>
           </div>
         </div>
       </section>
@@ -473,9 +476,9 @@ function fillGap(gap: InformationGap) {
             trigger="click"
             placement="bottomRight"
             title="提醒我补充哪些信息"
-            >
-<template #content>
-<div class="overview-reminder-options">
+          >
+            <template #content>
+              <div class="overview-reminder-options">
                 <Checkbox.Group
                   v-model:value="selectedReminders"
                   :options="REMINDER_OPTIONS"
@@ -493,14 +496,14 @@ function fillGap(gap: InformationGap) {
 </button><button class="text-button" @click="selectedReminders = []">
                     全部关闭
 </button><Button size="small" @click="reminderOpen = false">
-完成
-</Button>
+                    完成
+                  </Button>
                 </div>
               </div>
 </template><Button size="small" aria-label="选择待补信息提醒项">
-<ExplorerIcon name="edit" />提醒设置
-</Button>
-</Popover>
+              <ExplorerIcon name="edit" />提醒设置
+            </Button>
+          </Popover>
         </header>
         <div class="overview-panel-body">
           <div v-if="gaps.length" class="overview-gap-list">
@@ -554,8 +557,8 @@ function fillGap(gap: InformationGap) {
       :mask-closable="!taskSaving"
       :closable="!taskSaving"
       :keyboard="!taskSaving"
-      >
-<form class="overview-task-form" @submit.prevent="saveTask">
+    >
+      <form class="overview-task-form" @submit.prevent="saveTask">
         <p v-if="taskSource" class="overview-form-note">{{ taskSource }}</p>
         <label for="overview-task-lab">研究室</label><Select
           id="overview-task-lab"
@@ -587,10 +590,10 @@ function fillGap(gap: InformationGap) {
         <p v-if="taskError" class="form-error" role="alert">{{ taskError }}</p>
         <footer>
           <Button :disabled="taskSaving" @click="taskOpen = false">取消</Button><Button type="primary" html-type="submit" :loading="taskSaving">
-添加待办
-</Button>
+            添加待办
+          </Button>
         </footer>
       </form>
-</Modal>
+    </Modal>
   </section>
 </template>

@@ -1,8 +1,8 @@
 export type DocumentKind =
-  | 'other'
   | 'answer'
   | 'consent'
   | 'guidelines'
+  | 'other'
   | 'paper'
   | 'question';
 export interface StoredDocument {
@@ -10,7 +10,7 @@ export interface StoredDocument {
   signed?: boolean;
   signedDate?: string;
   id: string;
-  ownerType: 'major' | 'professor';
+  ownerType: 'major' | 'professor' | 'workspace';
   ownerId: string;
   kind: DocumentKind;
   year: number;

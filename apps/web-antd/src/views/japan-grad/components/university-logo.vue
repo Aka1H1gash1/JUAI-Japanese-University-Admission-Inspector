@@ -3,20 +3,30 @@ import { computed, onMounted, ref, watch } from 'vue';
 
 import {
   catalogLogoUrl,
+  catalogUniversities,
   findCatalogUniversity,
   loadUniversityCatalog,
 } from '../university-catalog';
 import ExplorerIcon from './explorer-icon.vue';
 
 const props = withDefaults(
-  defineProps<{ logoId?: string; name?: string; large?: boolean }>(),
-  { logoId: '', name: '', large: false },
+  defineProps<{
+    logoId?: string;
+    name?: string;
+    large?: boolean;
+    catalogId?: string;
+  }>(),
+  { logoId: '', name: '', large: false, catalogId: '' },
 );
 const failed = ref(false);
 onMounted(() => {
   void loadUniversityCatalog();
 });
-const catalogEntry = computed(() => findCatalogUniversity(props.name));
+const catalogEntry = computed(() =>
+  props.catalogId
+    ? catalogUniversities.value.find((u) => u.id === props.catalogId)
+    : findCatalogUniversity(props.name),
+);
 const source = computed(() =>
   props.logoId
     ? `/api/japangrad/university-logos/${encodeURIComponent(props.logoId)}`

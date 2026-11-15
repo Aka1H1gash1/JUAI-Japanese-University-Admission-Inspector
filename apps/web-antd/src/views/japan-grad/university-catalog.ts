@@ -2,6 +2,8 @@ import { ref } from 'vue';
 
 export interface CatalogUniversity {
   id: string;
+  schoolCode: string;
+  englishName?: string;
   name: string;
   japaneseName: string;
   category: string;
@@ -57,9 +59,12 @@ export function findCatalogUniversity(name: string) {
   const key = normalize(name);
   if (!key) return undefined;
   const matches = catalogUniversities.value.filter((item) =>
-    [item.name, item.japaneseName, ...(item.aliases ?? [])].some(
-      (value) => normalize(value) === key,
-    ),
+    [
+      item.name,
+      item.japaneseName,
+      item.englishName || '',
+      ...(item.aliases ?? []),
+    ].some((value) => normalize(value) === key),
   );
   return matches.length === 1 ? matches[0] : undefined;
 }

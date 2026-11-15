@@ -6,6 +6,7 @@ import { useRoute } from 'vue-router';
 
 import { Button, Drawer, Select } from 'ant-design-vue';
 
+import AdmissionBatches from '../components/admission-batches.vue';
 import AnalysisHistory from '../components/analysis-history.vue';
 import CollectedAdmissions from '../components/collected-admissions.vue';
 import DocumentArchive from '../components/document-archive.vue';
@@ -34,6 +35,7 @@ const university = computed(() =>
   store.universities.find((item) => item.id === school.value?.universityId),
 );
 const recordId = ref('');
+const hasBatches = ref(false);
 const exam = computed(() =>
   selectedExam(major.value?.examHistory ?? [], recordId.value),
 );
@@ -119,7 +121,12 @@ const questions = computed(() =>
         </template>
       </PageHeading>
     </div>
-    <ContentSection title="招生信息">
+    <AdmissionBatches
+      :key="major.id"
+      :major-id="major.id"
+      @count="(count) => (hasBatches = count > 0)"
+    />
+    <ContentSection v-if="!hasBatches" title="旧考试与通用招生资料">
       <template #actions>
         <RouterLink :to="`/japan-grad/analysis/${major.id}`">
           智能导入 ↗

@@ -3,7 +3,7 @@
 ## 当前状态
 
 - 日期：2026-11-15；分支：共享核心及私有平台均为 `refactor/juai-1.0`；私有平台无代码修改。
-- 当前授权：仅阶段 1、2。阶段 3–7 未启动，不部署服务器，不修改数据库结构。
+- 当前授权：用户要求继续，进入阶段 3。允许兼容数据库迁移及基础 API；阶段 4–7 未启动，不部署服务器。
 - 统一需求：`requirements/PRODUCT_REQUIREMENTS.md` + `requirements/UI_REQUIREMENTS.md`；问题 0–14 逐项依赖见 REFACTOR_PLAN。
 - 阶段 1：已完成；独立提交 `5b5ef0f3f`（docs(project): audit and plan the unified JUAI 1.0 refactor）。
 - 阶段 2：代表性原型、规范、浏览器验收和检查完成；对应提交标题 `feat(project): establish the JUAI 1.0 design system and representative previews`。全量业务尚未完工。
@@ -54,4 +54,19 @@
 
 ## 下一次恢复上下文
 
-先读 AGENTS、两份 requirements、DESIGN_SYSTEM、UI_GUIDELINES，再读本文件和 REFACTOR_PLAN。当前应停在阶段 2 交付，只有用户继续授权后才开展阶段 3。下一步依赖：现有目录稳定标识、招生批次与范围、内诺三态、成员人数和动态语言、统一文件引用/配额、账号双邮箱验证等兼容迁移和 API。不要把原型中的未确认值当成已完成业务字段；不要部署这次开发分支到生产。
+先读 AGENTS、两份 requirements、DESIGN_SYSTEM、UI_GUIDELINES，再读本文件和 REFACTOR_PLAN。用户已经授权并完成阶段3基础能力。后续恢复时先核对 PHASE3_FOUNDATION，再进入下一阶段。既有依赖规划：现有目录稳定标识、招生批次与范围、内诺三态、成员人数和动态语言、统一文件引用/配额、账号双邮箱验证等兼容迁移和 API。不要把原型中的未确认值当成已完成业务字段；不要部署这次开发分支到生产。
+
+## 阶段 3（基础能力完成）
+
+- 新备份 `../git-backups/juai-1.0-phase3-20261115/`：SQLite quick_check=ok，完整工作区副本及两仓库 bundle。
+- 先在临时副本验证迁移；不删除旧字段/记录。目录沿用已有 819 条；新增结构化数据与旧资料区分，不自动推定批次和人数。
+
+
+### 阶段 3 结果与恢复点
+
+- 新增兼容迁移17/18；招生批次/内诺三态、成员构成、动态语言、目录稳定关联、统一普通文件与配额、账号双邮箱安全已接入真实 API。
+- 详细新增 API、备份/恢复、验证与剩余范围见 [PHASE3_FOUNDATION.md](PHASE3_FOUNDATION.md)。
+- 本地真实工作区已升级；50 张旧业务/历史表逐行保持一致（另 schema_migrations 新增17/18）。测试写入仅在临时副本。
+- 核心72测试、私有平台11测试、前端11测试通过；专门补充 HTTP 改密/配额与邮箱换绑原子验证。
+- 本阶段提交标题：核心 `feat(project): add compatible product foundation APIs and editors`；平台 `feat: enforce verified email changes and pin product foundation core`。
+- 第4–7阶段尚未开始；没有线上部署。下一步是将已具备基础 API 的大学/研究科/专攻/研究室/教师页面按设计系统正式重构，而非继续堆叠旧展示。

@@ -112,6 +112,7 @@ const { page, pageSize, total, paged } = usePagination(visibleSchools, [
       <div>
         <div class="university-identity">
           <UniversityLogo
+            :catalog-id="university.catalogId"
             :logo-id="university.logoId"
             :name="university.name"
             large

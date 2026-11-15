@@ -24,6 +24,13 @@ export function saveProjectedRecord(
   const spec = specs[table];
   const row = { id: record.id, ...encode(spec, record) };
   if (table === 'document_records') {
+    if (
+      db
+        .prepare('PRAGMA table_info(document_records)')
+        .all()
+        .some((c) => c.name === 'workspace_owner')
+    )
+      row.workspace_owner = record.ownerType === 'workspace' ? 1 : null;
     row.owner_major_id = record.ownerType === 'major' ? record.ownerId : null;
     row.owner_professor_id =
       record.ownerType === 'professor' && !record.experienceId

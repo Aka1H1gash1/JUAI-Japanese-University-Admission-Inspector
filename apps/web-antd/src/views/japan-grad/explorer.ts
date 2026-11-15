@@ -49,6 +49,8 @@ export function professorInitials(name: string) {
 }
 
 export interface University {
+  catalogId?: string;
+  schoolCode?: string;
   id: string;
   name: string;
   japaneseName: string;
@@ -729,8 +731,17 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           )
         )
           throw new Error('费用请填写 0-999,999,999 之间的整数日元，或留空。');
+        const previous = universities.value.find((item) => item.id === id);
         const value: University = {
           ...common,
+          catalogId:
+            fields.catalogId === undefined
+              ? previous?.catalogId
+              : get('catalogId'),
+          schoolCode:
+            fields.schoolCode === undefined
+              ? previous?.schoolCode
+              : get('schoolCode'),
           website,
           location: get('location'),
           category,

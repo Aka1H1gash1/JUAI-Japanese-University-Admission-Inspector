@@ -47,6 +47,7 @@ async function removeTarget() {
       />
       <div class="directory-identity">
         <UniversityLogo
+          :catalog-id="target.university.catalogId"
           :logo-id="target.university.logoId"
           :name="target.university.name"
         />
@@ -81,8 +82,8 @@ async function removeTarget() {
       <RouterLink
         :to="`${labPath(target)}?tab=materials`"
         class="journey-entry-materials"
-        >
-<span>材料准备</span><strong>{{
+      >
+        <span>材料准备</span><strong>{{
           materials.count ? `${materials.percent}%` : '未建清单'
         }}</strong><meter
           min="0"
@@ -90,21 +91,21 @@ async function removeTarget() {
           :value="materials.percent"
           :aria-label="`${target.lab.name}材料准备进度`"
         ></meter><small>{{ materials.done }}/{{ materials.count }} 项</small>
-</RouterLink>
+      </RouterLink>
       <div class="journey-entry-intent">
         <Button
           type="text"
           :loading="toggling"
           :aria-label="`移出想考：${target.lab.name}`"
           @click="removeTarget"
-          >
-<ExplorerIcon name="heart" />
+        >
+          <ExplorerIcon name="heart" />
 </Button><RouterLink
           :to="labPath(target)"
           :aria-label="`查看${target.lab.name}研究室详情`"
-          >
-<ExplorerIcon name="chevron" />
-</RouterLink>
+        >
+          <ExplorerIcon name="chevron" />
+        </RouterLink>
       </div>
     </div>
     <div class="journey-entry-bottom">
@@ -115,7 +116,7 @@ async function removeTarget() {
       </div>
       <nav :aria-label="`${target.lab.name}快捷操作`">
         <Button type="text" @click="emit('contact', target.lab.id)">
-考学经历
+          考学经历
 </Button><RouterLink :to="`${labPath(target)}?tab=materials`">材料</RouterLink><RouterLink :to="`${labPath(target)}?tab=todos`">待办</RouterLink>
       </nav>
     </div>

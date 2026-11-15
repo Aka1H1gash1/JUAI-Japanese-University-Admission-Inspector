@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 const defaults = () => ({
   displayName: '',
   email: '',
@@ -5,6 +6,7 @@ const defaults = () => ({
   major: '',
   education: '',
   language: '',
+  languageRecords: [],
   interests: '',
   notes: '',
   admissionYear: new Date().getFullYear() + 1,
@@ -41,7 +43,11 @@ export function createWorkspaceSettingsService({
     const row = db
       .prepare('SELECT data FROM workspace_preferences WHERE id=1')
       .get();
-    return row ? JSON.parse(row.data) : { version: 0, profile: defaults() };
+    const value = row
+      ? JSON.parse(row.data)
+      : { version: 0, profile: defaults() };
+    value.profile.languageRecords ??= [];
+    return value;
   };
   return {
     async handle(req, res, route) {
@@ -55,7 +61,7 @@ export function createWorkspaceSettingsService({
         const previous = read();
         if (input?.version !== previous.version)
           fail('设置已被其他页面更新，请刷新后再保存。', 409);
-        const profile = {};
+        const profile = { ...previous.profile };
         for (const [key, max] of Object.entries(limits)) {
           const value = input.profile?.[key];
           if (typeof value !== 'string' || value.length > max)
@@ -66,10 +72,56 @@ export function createWorkspaceSettingsService({
         if (!Number.isInteger(year) || year < 1900 || year > 2200)
           fail('请填写有效的默认入学年份。');
         profile.admissionYear = year;
+        if (input.profile?.languageRecords !== undefined) {
+          const rows = input.profile.languageRecords;
+          if (!Array.isArray(rows) || rows.length > 100)
+            fail('语言成绩记录最多 100 条。');
+          const ids = new Set();
+          profile.languageRecords = rows.map((row) => {
+            if (
+              !row ||
+              typeof row !== 'object' ||
+              typeof row.type !== 'string' ||
+              !row.type.trim() ||
+              row.type.length > 100 ||
+              typeof row.result !== 'string' ||
+              !row.result.trim() ||
+              row.result.length > 240
+            )
+              fail('请填写考试名称和成绩。');
+            const id = row.id || randomUUID();
+            if (
+              typeof id !== 'string' ||
+              !/^[\w-]{1,100}$/.test(id) ||
+              ids.has(id)
+            )
+              fail('语言成绩标识重复或无效。');
+            ids.add(id);
+            const date = row.date ?? '';
+            if (
+              typeof date !== 'string' ||
+              (date &&
+                (!/^\d{4}-\d{2}-\d{2}$/.test(date) ||
+                  Number.isNaN(Date.parse(date)) ||
+                  new Date(date).toISOString().slice(0, 10) !== date))
+            )
+              fail('考试日期无效。');
+            return {
+              id,
+              type: row.type.trim(),
+              result: row.result.trim(),
+              date,
+            };
+          });
+        }
         const result = { version: previous.version + 1, profile };
-        db.prepare(
-          'INSERT INTO workspace_preferences VALUES (1,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data',
-        ).run(JSON.stringify(result));
+        transaction(() => {
+          if (read().version !== input.version)
+            fail('设置已更新，请刷新。', 409);
+          db.prepare(
+            'INSERT INTO workspace_preferences VALUES (1,?) ON CONFLICT(id) DO UPDATE SET data=excluded.data',
+          ).run(JSON.stringify(result));
+        });
         json(res, result);
         return true;
       }

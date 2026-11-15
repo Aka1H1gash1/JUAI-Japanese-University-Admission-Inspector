@@ -105,9 +105,11 @@ const {
           class="experience-university-card"
         >
           <div class="experience-university-top">
-            <UniversityLogo :logo-id="u.logoId" :name="u.name" /><span
-              class="experience-university-count"
-              >{{ counts[u.id]?.total || 0 }} 篇</span>
+            <UniversityLogo
+              :catalog-id="u.catalogId"
+              :logo-id="u.logoId"
+              :name="u.name"
+            /><span class="experience-university-count">{{ counts[u.id]?.total || 0 }} 篇</span>
           </div>
           <h2>{{ u.name }}</h2>
           <p v-if="u.japaneseName && u.japaneseName !== u.name">
@@ -163,6 +165,7 @@ const {
       <header class="experience-hub-heading is-university">
         <div class="experience-selected-university">
           <UniversityLogo
+            :catalog-id="university.catalogId"
             :logo-id="university.logoId"
             :name="university.name"
             large

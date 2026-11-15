@@ -85,9 +85,9 @@ const { page, pageSize, total, paged } = usePagination(visibleUniversities, [
         <Button
           :disabled="!store.universities.length"
           @click="reportOpen = true"
-          >
-导出大学信息
-</Button>
+        >
+          导出大学信息
+        </Button>
         <Button
           type="primary"
           size="large"
@@ -148,6 +148,7 @@ const { page, pageSize, total, paged } = usePagination(visibleUniversities, [
           />
           <div class="directory-identity">
             <UniversityLogo
+              :catalog-id="university.catalogId"
               :logo-id="university.logoId"
               :name="university.name"
             />

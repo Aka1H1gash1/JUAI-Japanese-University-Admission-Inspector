@@ -5,6 +5,7 @@ import { useRoute } from 'vue-router';
 import { App, Button } from 'ant-design-vue';
 
 import EntityEditor from '../components/entity-editor.vue';
+import LabMembers from '../components/lab-members.vue';
 import ResearchLabTeachers from '../components/research-lab-teachers.vue';
 import { useExplorerStore, websiteUrl } from '../explorer';
 import { labContext, majorPath } from '../lab-targets';
@@ -83,36 +84,7 @@ async function toggle() {
           description="可以记录研究主题、位置和其他关注信息。"
         />
       </ContentSection>
-      <ContentSection title="成员构成">
-        <EmptyState
-          title="暂无可靠的成员人数"
-          icon="user"
-          description="日本学生、外国学生及中国学生人数尚未记录。"
-        />
-        <p
-          v-if="
-            target.lab.foreignStudentStatus === 'yes' ||
-            target.lab.foreignStudentStatus === 'no'
-          "
-          class="juai-prose"
-        >
-          {{
-            target.lab.foreignStudentStatus === 'yes'
-              ? '已记录有外国学生'
-              : '已记录无外国学生'
-          }}
-        </p>
-        <p v-if="target.lab.foreignStudentNotes" class="juai-prose">
-          {{ target.lab.foreignStudentNotes }}
-        </p>
-        <a
-          v-if="websiteUrl(target.lab.foreignStudentSource || '')"
-          class="juai-link-row"
-          :href="websiteUrl(target.lab.foreignStudentSource || '')"
-          target="_blank"
-          rel="noopener noreferrer"
-          >查看成员信息来源 ↗</a>
-      </ContentSection>
+      <LabMembers :key="target.lab.id" :lab-id="target.lab.id" />
     </div>
     <div class="juai-teachers-panel">
       <ResearchLabTeachers
