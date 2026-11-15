@@ -2,13 +2,22 @@
 import type { CollectionStatus } from './collection-types';
 import type { Profile } from './profile-types';
 
-import { computed, ref } from 'vue';
-import { useRoute } from 'vue-router';
+import { computed, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
-import { App, Button, Input, InputNumber, Tabs } from 'ant-design-vue';
+import { useStorage } from '@vueuse/core';
+import {
+  App,
+  Button,
+  Input,
+  InputNumber,
+  Segmented,
+  Tabs,
+} from 'ant-design-vue';
 
 import JgLoader from './components/jg-loader.vue';
 import PersonalProfile from './components/personal-profile.vue';
+import PageHeading from './design-system/page-heading.vue';
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
 import { serverMode } from './runtime-capabilities';
@@ -25,16 +34,39 @@ interface BrowserRuntime {
   workspace: string;
 }
 const route = useRoute();
+const router = useRouter();
+// Keep the browser implementation available without exposing its settings entry.
+const browserToolsVisible = false;
+const appearance = useStorage<'dark' | 'light' | 'system'>(
+  'japangrad-appearance',
+  'system',
+);
+const availableTabs = serverMode
+  ? ['profile', 'appearance']
+  : ['profile', 'appearance', 'mobile', 'runtime'];
 const workspace = useExplorerStore();
 const { message } = App.useApp();
 const busy = ref(false);
 const errorMessage = ref('');
 const loading = ref(false);
 const tab = ref(
-  typeof route.query.tab === 'string' &&
-    ['browser', 'mobile', 'runtime'].includes(route.query.tab)
+  typeof route.query.tab === 'string' && availableTabs.includes(route.query.tab)
     ? route.query.tab
     : 'profile',
+);
+watch(tab, (value) => {
+  void router.replace({
+    query: { ...route.query, tab: value === 'profile' ? undefined : value },
+  });
+});
+watch(
+  () => route.query.tab,
+  (value) => {
+    tab.value =
+      typeof value === 'string' && availableTabs.includes(value)
+        ? value
+        : 'profile';
+  },
 );
 const browser = ref<CollectionStatus['browser']>();
 const runtime = ref<BrowserRuntime>();
@@ -63,13 +95,11 @@ async function load() {
   loading.value = true;
   errorMessage.value = '';
   try {
-    const [settings, state] = await Promise.all([
-      localApi<{ version: number; profile: Profile }>('/settings'),
-      localApi<CollectionStatus>('/collection/status'),
-    ]);
+    const settings = await localApi<{ version: number; profile: Profile }>(
+      '/settings',
+    );
     version.value = settings.version;
     profile.value = settings.profile;
-    browser.value = state.browser;
   } catch (error) {
     errorMessage.value =
       error instanceof Error ? error.message : '设置读取失败。';
@@ -202,13 +232,16 @@ async function shutdownRuntime() {
 }
 </script>
 <template>
-  <section class="workspace-settings">
-    <header>
-      <div>
-        <h1>{{ tab === 'profile' ? '个人档案' : '设置' }}</h1>
-      </div>
-      <RouterLink to="/japan-grad/ai">AI 接入与 API 配置 ↗</RouterLink>
-    </header>
+  <section class="workspace-settings juai-design">
+    <PageHeading
+      :title="tab === 'profile' ? '个人档案' : '设置'"
+      description="你的学术背景、申请目标与工作区偏好。"
+    >
+      <template #actions>
+        <a v-if="serverMode" href="/account">账号与安全 ↗</a>
+        <RouterLink to="/japan-grad/ai">AI 配置 ↗</RouterLink>
+      </template>
+    </PageHeading>
     <p v-if="errorMessage" class="form-error" role="alert">
       {{ errorMessage }}
     </p>
@@ -223,7 +256,22 @@ async function shutdownRuntime() {
           @save="save"
         />
       </Tabs.TabPane>
-      <Tabs.TabPane key="browser" tab="浏览器连接">
+      <Tabs.TabPane key="appearance" tab="显示偏好">
+        <section class="settings-panel">
+          <h2>外观</h2>
+          <p>应用到当前浏览器的所有工作区页面。</p>
+          <Segmented
+            v-model:value="appearance"
+            aria-label="界面主题"
+            :options="[
+              { value: 'system', label: '跟随系统' },
+              { value: 'light', label: '浅色' },
+              { value: 'dark', label: '深色' },
+            ]"
+          />
+        </section>
+      </Tabs.TabPane>
+      <Tabs.TabPane v-if="browserToolsVisible" key="browser" tab="浏览器连接">
         <section v-if="serverMode" class="settings-panel">
           <h2>连接你的 Chrome</h2>
           <p>下载轻量连接器后，在设备连接页确认配对与授权。</p>
@@ -337,7 +385,7 @@ async function shutdownRuntime() {
             <div class="settings-browser-state">
               <i></i>开发服务器 / 旧桌面版不提供手机访问开关
             </div>
-            <p>该功能将随 JUAI v1.2 本地浏览器版提供。</p>
+            <p>当前运行环境不提供此开关。</p>
           </template>
           <p v-if="runtimeMessage && tab === 'mobile'" role="status">
             {{ runtimeMessage }}
@@ -423,7 +471,7 @@ async function shutdownRuntime() {
 </template>
 <style scoped>
 .workspace-settings {
-  max-width: 1080px;
+  max-width: 1040px;
   padding-bottom: 34px;
   margin: auto;
 }
@@ -455,7 +503,11 @@ async function shutdownRuntime() {
 }
 
 .settings-panel {
-  padding: 21px;
+  max-width: 760px;
+  padding: 24px;
+  margin-right: auto;
+  margin-left: auto;
+  overflow-wrap: anywhere;
   background: var(--jg-surface);
   border: 1px solid var(--jg-line);
   border-radius: 10px;
@@ -475,13 +527,13 @@ async function shutdownRuntime() {
 
 .settings-panel h2 {
   margin: 0 0 10px;
-  font-size: 18px;
+  font-size: var(--juai-font-section);
 }
 
 .settings-panel p,
 .settings-panel li {
-  font-size: 11px;
-  line-height: 1.9;
+  font-size: 13px;
+  line-height: 1.8;
   color: var(--jg-muted);
 }
 

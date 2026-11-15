@@ -7,11 +7,16 @@ import { computed, ref, watch } from 'vue';
 import { App, Button, Input, Modal, Progress, Select } from 'ant-design-vue';
 
 import DocumentArchive from './components/document-archive.vue';
+import ExplorerIcon from './components/explorer-icon.vue';
+import JgLoader from './components/jg-loader.vue';
 import ListPagination from './components/list-pagination.vue';
 import PersonalFileUpload from './components/personal-file-upload.vue';
+import EmptyState from './design-system/empty-state.vue';
+import PageHeading from './design-system/page-heading.vue';
 import { documentReaderPath, fileSize, fileUrl, kindLabels } from './documents';
 import { useExplorerStore } from './explorer';
 import { jsonOptions, localApi } from './local-api';
+import { vAccessibleSelect } from './select-accessibility';
 import { usePagination } from './use-pagination';
 const props = defineProps<{ university?: string; guidelinesOnly?: boolean }>();
 const store = useExplorerStore();
@@ -21,33 +26,65 @@ const majorId = ref<string>();
 const year = ref<number>();
 const kind = ref<string>(props.guidelinesOnly ? 'guidelines' : '');
 const query = ref('');
+const scope = ref('all');
+const advancedFilters = ref(false);
+const loading = ref(false);
+const percent = computed(() =>
+  storage.value?.quota === 0
+    ? 100
+    : Math.min(
+        100,
+        Math.round(
+          ((storage.value?.used || 0) / (storage.value?.quota || 1)) * 100,
+        ),
+      ),
+);
+
 const files = ref<StoredDocument[]>([]);
 const storage = ref<StorageQuota>();
 const personalUpload = ref(false);
+const uploadBusy = ref(false);
 const { modal, message } = App.useApp();
 async function removeFile(file: StoredDocument) {
-  const refs = await localApi<Array<{ label: string }>>(
-    `/documents/${file.id}/references`,
-  );
-  if (refs.length > 0) {
-    message.error(`文件仍被引用：${refs.map((r) => r.label).join('、')}`);
-    return;
+  try {
+    const refs = await localApi<Array<{ label: string }>>(
+      `/documents/${file.id}/references`,
+    );
+    if (refs.length > 0) {
+      modal.info({
+        title: '文件仍在使用',
+        content: `请先解除以下引用：${refs.map((r) => r.label).join('、')}`,
+        okText: '知道了',
+      });
+      return;
+    }
+    modal.confirm({
+      title: `删除「${file.title}」？`,
+      content: '文件将移入可恢复区。',
+      okText: '删除',
+      cancelText: '取消',
+      okButtonProps: { danger: true },
+      async onOk() {
+        try {
+          await localApi(`/documents/${file.id}`, jsonOptions('DELETE', {}));
+          message.success('文件已移入可恢复区。');
+          await load();
+        } catch (error) {
+          message.error(error instanceof Error ? error.message : '删除失败');
+          throw error;
+        }
+      },
+    });
+  } catch (error) {
+    message.error(
+      error instanceof Error ? error.message : '引用检查失败，请重试',
+    );
   }
-  modal.confirm({
-    title: `删除「${file.title}」？`,
-    content: '文件将移入可恢复区。',
-    okText: '删除',
-    cancelText: '取消',
-    okButtonProps: { danger: true },
-    async onOk() {
-      await localApi(`/documents/${file.id}`, jsonOptions('DELETE', {}));
-      await load();
-    },
-  });
 }
 const loadError = ref('');
 const upload = ref(false);
 async function load() {
+  loading.value = true;
   try {
     const [index, quota] = await Promise.all([
       localApi<StoredDocument[]>('/documents/index'),
@@ -58,6 +95,8 @@ async function load() {
     loadError.value = '';
   } catch (error) {
     loadError.value = error instanceof Error ? error.message : '文件读取失败';
+  } finally {
+    loading.value = false;
   }
 }
 void load();
@@ -104,6 +143,8 @@ const rows = computed(() =>
     .map((file) => ({ file, ...context(file) }))
     .filter(
       (r) =>
+        (scope.value !== 'personal' || r.file.ownerType === 'workspace') &&
+        (scope.value !== 'linked' || r.file.ownerType !== 'workspace') &&
         (!universityId.value || r.university?.id === universityId.value) &&
         (!schoolId.value || r.school?.id === schoolId.value) &&
         (!majorId.value || r.major?.id === majorId.value) &&
@@ -125,8 +166,18 @@ const years = computed(() =>
     .toSorted((a, b) => b - a)
     .map((value) => ({ value, label: `${value} 年` })),
 );
+function clearFilters() {
+  query.value = '';
+  scope.value = 'all';
+  universityId.value = props.university;
+  schoolId.value = undefined;
+  majorId.value = undefined;
+  year.value = undefined;
+  kind.value = props.guidelinesOnly ? 'guidelines' : '';
+}
 const { page, pageSize, total, paged } = usePagination(rows, [
   query,
+  scope,
   universityId,
   schoolId,
   majorId,
@@ -135,272 +186,476 @@ const { page, pageSize, total, paged } = usePagination(rows, [
 ]);
 </script>
 <template>
-  <section class="explorer-page file-manager">
-    <header class="collection-heading">
-      <h1>{{ guidelinesOnly ? '募集要项总览' : '文件管理' }}</h1>
-
-      <div>
-        <Button @click="load">刷新</Button>
+  <section class="file-manager juai-design">
+    <PageHeading
+      :title="guidelinesOnly ? '募集要项总览' : '文件管理'"
+      description="统一保存和查找你的申请资料，文件可在申请目标中关联使用。"
+    >
+      <template #actions>
+        <Button :loading="loading" @click="load">刷新</Button>
         <Button
           v-if="!guidelinesOnly"
-          :disabled="!majorId"
-          @click="upload = !upload"
+          type="primary"
+          @click="personalUpload = true"
         >
-          上传到所选专攻
+          <ExplorerIcon name="plus" />上传文件
         </Button>
-      </div>
-    </header>
+      </template>
+    </PageHeading>
     <section v-if="storage" class="storage-summary" aria-label="存储空间">
-      <div>
-        <strong>存储空间</strong><span>{{ fileSize(storage.used) }} 已使用 · 总配额
-          {{ storage.quota === null ? '不限制' : fileSize(storage.quota)
-          }}<template v-if="storage.remaining !== null">
-            · 剩余 {{ fileSize(storage.remaining) }}</template></span>
+      <div class="storage-caption">
+        <strong>存储空间</strong><span>{{
+          storage.quota === null
+            ? '不限制总配额'
+            : `共 ${fileSize(storage.quota)}`
+        }}</span>
       </div>
-      <Progress
-        v-if="storage.quota !== null"
-        :percent="
-          Math.min(100, Math.round((storage.used / storage.quota) * 100))
-        "
-        :show-info="false"
-      /><Button @click="personalUpload = true">上传个人文件</Button>
+      <div class="storage-meter">
+        <Progress
+          v-if="storage.quota !== null"
+          :percent="percent"
+          :show-info="false"
+          :status="percent >= 100 ? 'exception' : 'normal'"
+          :aria-label="`存储空间已使用 ${percent}%`"
+        />
+        <p>
+          <strong>{{ fileSize(storage.used) }}</strong> 已使用<span
+            v-if="storage.remaining !== null"
+          >
+            · 剩余 {{ fileSize(storage.remaining) }}</span>
+        </p>
+      </div>
     </section>
-    <Modal v-model:open="personalUpload" title="上传个人文件" :footer="null">
+    <p v-if="loadError" class="form-error" role="alert">
+      {{ loadError }} <Button size="small" @click="load">重试</Button>
+    </p>
+    <div class="file-toolbar">
+      <div
+        v-if="!guidelinesOnly"
+        class="file-scopes"
+        role="group"
+        aria-label="文件范围"
+      >
+        <button
+          v-for="item in [
+            { value: 'all', label: '全部文件' },
+            { value: 'personal', label: '个人文件' },
+            { value: 'linked', label: '院校资料' },
+          ]"
+          :key="item.value"
+          :aria-pressed="scope === item.value"
+          :class="{ active: scope === item.value }"
+          @click="scope = item.value"
+        >
+          {{ item.label }}
+        </button>
+      </div>
+      <Input
+        v-model:value="query"
+        aria-label="搜索文件"
+        placeholder="搜索名称或所属专攻"
+        allow-clear
+      >
+        <template #prefix><ExplorerIcon name="search" /></template>
+      </Input>
+      <Button
+        :aria-expanded="advancedFilters"
+        @click="advancedFilters = !advancedFilters"
+      >
+        筛选与归档
+      </Button>
+    </div>
+    <section
+      v-if="advancedFilters"
+      class="file-filter-panel"
+      aria-label="文件筛选"
+    >
+      <div class="file-filters">
+        <Select
+          v-if="!university"
+          v-accessible-select
+          v-model:value="universityId"
+          allow-clear
+          aria-label="筛选大学"
+          placeholder="全部大学"
+          :options="
+            store.universities.map((u) => ({ value: u.id, label: u.name }))
+          "
+        />
+        <Select
+          v-accessible-select
+          v-model:value="schoolId"
+          allow-clear
+          aria-label="筛选研究科"
+          placeholder="全部研究科"
+          :options="schools.map((s) => ({ value: s.id, label: s.name }))"
+        />
+        <Select
+          v-accessible-select
+          v-model:value="majorId"
+          allow-clear
+          aria-label="筛选专攻"
+          placeholder="全部专攻"
+          :options="majors.map((m) => ({ value: m.id, label: m.name }))"
+        />
+        <Select
+          v-accessible-select
+          v-model:value="year"
+          allow-clear
+          aria-label="筛选年份"
+          placeholder="全部年份"
+          :options="years"
+        />
+        <Select
+          v-if="!guidelinesOnly"
+          v-accessible-select
+          v-model:value="kind"
+          aria-label="筛选文件类型"
+          :options="[
+            { value: '', label: '全部类型' },
+            ...Object.entries(kindLabels).map(([value, label]) => ({
+              value,
+              label,
+            })),
+          ]"
+        />
+      </div>
+      <div class="file-filter-actions">
+        <Button @click="clearFilters">重置筛选</Button><Button
+          v-if="!guidelinesOnly"
+          :disabled="!majorId"
+          @click="upload = true"
+        >
+          向所选专攻归档
+</Button><span>个人文件上传无需关联专攻。</span>
+      </div>
+    </section>
+    <details v-if="guidelinesOnly" class="file-exam-history">
+      <summary>查看原有考试记录</summary>
+      <div v-for="major in majors" :key="major.id">
+        <article
+          v-for="exam in major.examHistory.filter(
+            (e) => !year || Number(e.year) === year,
+          )"
+          :key="exam.id"
+        >
+          <RouterLink
+            :to="`/japan-grad/universities/${store.schools.find((s) => s.id === major.schoolId)?.universityId}/schools/${major.schoolId}/majors/${major.id}`"
+          >
+            {{ major.name }} · {{ exam.year }} {{ exam.session }}
+          </RouterLink>
+          <p>{{ exam.subjects || '科目未确认' }}</p>
+          <small>{{
+            [exam.writtenDate, exam.interviewDate]
+              .filter(Boolean)
+              .join(' / ') || '日期未确认'
+          }}</small>
+        </article>
+      </div>
+    </details>
+    <div class="file-list-caption">
+      <h2>
+        文件 <span>{{ total }}</span>
+      </h2>
+      <span>按记录年份排序</span>
+    </div>
+    <JgLoader v-if="loading && !files.length" text="正在读取文件" />
+    <div v-else-if="rows.length" class="file-list">
+      <article v-for="row in paged" :key="row.file.id" class="file-entry">
+        <div class="file-kind" aria-hidden="true">
+          {{ row.file.filename.split('.').at(-1)?.toUpperCase() || 'FILE' }}
+        </div>
+        <div class="file-identity">
+          <RouterLink :to="documentReaderPath(row.file.id)">
+            {{ row.file.title }}
+          </RouterLink>
+          <p>
+            {{
+              row.file.ownerType === 'workspace'
+                ? '个人文件'
+                : [row.university?.name, row.school?.name, row.major?.name]
+                    .filter(Boolean)
+                    .join(' / ') || '所属信息待确认'
+            }}
+          </p>
+          <small>{{ row.file.filename }} · {{ kindLabels[row.file.kind] }}</small>
+        </div>
+        <div class="file-meta">
+          <span>{{ fileSize(row.file.size) }}</span><time v-if="row.file.createdAt" :datetime="row.file.createdAt">{{
+            row.file.createdAt.slice(0, 10)
+          }}</time><span v-else>时间未记录</span>
+        </div>
+        <div class="file-actions">
+          <a
+            :href="fileUrl(row.file.id)"
+            download
+            :aria-label="`下载${row.file.title}`"
+            >下载</a><Button
+            type="text"
+            danger
+            :aria-label="`删除${row.file.title}`"
+            @click="removeFile(row.file)"
+          >
+            删除
+          </Button>
+        </div>
+      </article>
+    </div>
+    <EmptyState
+      v-else-if="!loadError"
+      :title="files.length ? '没有符合筛选条件的文件' : '还没有保存文件'"
+      description="个人文件可直接上传；院校资料也会在这里统一显示。"
+    >
+      <Button v-if="files.length" @click="clearFilters">重置筛选</Button><Button v-else-if="!guidelinesOnly" @click="personalUpload = true">
+        上传第一份文件
+      </Button>
+    </EmptyState>
+    <ListPagination
+      v-model:page="page"
+      v-model:page-size="pageSize"
+      :total="total"
+    />
+    <Modal
+      v-model:open="personalUpload"
+      title="上传个人文件"
+      :footer="null"
+      :closable="!uploadBusy"
+      :mask-closable="!uploadBusy"
+      :keyboard="!uploadBusy"
+      destroy-on-close
+    >
       <PersonalFileUpload
+        @busy="uploadBusy = $event"
         @uploaded="
           personalUpload = false;
           load();
         "
       />
     </Modal>
-    <div class="file-filters">
-      <Select
-        v-if="!university"
-        v-model:value="universityId"
-        allow-clear
-        placeholder="全部大学"
-        :options="
-          store.universities.map((u) => ({ value: u.id, label: u.name }))
-        "
+    <Modal
+      v-model:open="upload"
+      title="专攻文件归档"
+      :width="900"
+      :footer="null"
+      destroy-on-close
+    >
+      <DocumentArchive
+        v-if="majorId"
+        :key="majorId"
+        owner-type="major"
+        :owner-id="majorId"
+        @changed="load"
       />
-      <Select
-        v-model:value="schoolId"
-        allow-clear
-        placeholder="全部研究科"
-        :options="schools.map((s) => ({ value: s.id, label: s.name }))"
-      />
-      <Select
-        v-model:value="majorId"
-        allow-clear
-        placeholder="全部专攻"
-        :options="
-          majors.map((m) => ({
-            value: m.id,
-            label: schoolId
-              ? m.name
-              : `${store.schools.find((s) => s.id === m.schoolId)?.name} / ${m.name}`,
-          }))
-        "
-      />
-      <Select
-        v-model:value="year"
-        allow-clear
-        placeholder="全部年份"
-        :options="years"
-      />
-      <Select
-        v-if="!guidelinesOnly"
-        v-model:value="kind"
-        :options="[
-          { value: '', label: '全部类型' },
-          ...Object.entries(kindLabels).map(([value, label]) => ({
-            value,
-            label,
-          })),
-        ]"
-      />
-      <Input v-model:value="query" placeholder="搜索文件" allow-clear />
-    </div>
-    <p v-if="loadError" role="alert">{{ loadError }}</p>
-    <div v-if="guidelinesOnly" class="file-table-scroll">
-      <table class="file-table">
-        <thead>
-          <tr>
-            <th>研究科</th>
-            <th>专攻</th>
-            <th>考试年份</th>
-            <th>考试科目</th>
-            <th>考试时间</th>
-            <th>专攻档案</th>
-          </tr>
-        </thead>
-        <tbody>
-          <template v-for="major in majors" :key="major.id">
-            <tr
-              v-for="exam in major.examHistory.filter(
-                (e) => !year || Number(e.year) === year,
-              )"
-              :key="exam.id"
-            >
-              <td>
-                {{ store.schools.find((s) => s.id === major.schoolId)?.name }}
-              </td>
-              <td>{{ major.name }}</td>
-              <td>{{ exam.year }} {{ exam.session }}</td>
-              <td>{{ exam.subjects || '待补充' }}</td>
-              <td>
-                {{
-                  [exam.writtenDate, exam.interviewDate]
-                    .filter(Boolean)
-                    .join(' / ') || '待补充'
-                }}
-              </td>
-              <td>
-                <RouterLink
-                  :to="`/japan-grad/universities/${universityId}/schools/${major.schoolId}/majors/${major.id}`"
-                >
-                  查看详情 →
-                </RouterLink>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
-    <DocumentArchive
-      v-if="upload && majorId"
-      :key="majorId"
-      owner-type="major"
-      :owner-id="majorId"
-      @changed="load"
-    />
-    <div class="file-table-scroll">
-      <table class="file-table">
-        <thead>
-          <tr>
-            <th>大学</th>
-            <th>研究科</th>
-            <th>专攻</th>
-            <th>年份</th>
-            <th>类型</th>
-            <th>文件</th>
-            <th>大小</th>
-            <th>上传时间</th>
-            <th>操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="row in paged" :key="row.file.id">
-            <td>{{ row.university?.name || '—' }}</td>
-            <td>{{ row.school?.name || '—' }}</td>
-            <td>{{ row.major?.name || '—' }}</td>
-            <td>{{ row.file.year }}</td>
-            <td>
-              {{
-                row.file.ownerType === 'workspace'
-                  ? '个人文件'
-                  : kindLabels[row.file.kind]
-              }}
-            </td>
-            <td>
-              <RouterLink :to="documentReaderPath(row.file.id)">
-                {{ row.file.title }}
-</RouterLink><small>{{ row.file.filename }}</small>
-            </td>
-            <td>{{ fileSize(row.file.size) }}</td>
-            <td>{{ row.file.createdAt?.slice(0, 10) }}</td>
-            <td>
-              <a :href="fileUrl(row.file.id)" download>下载</a>
-              <Button type="text" danger @click="removeFile(row.file)">
-                删除
-              </Button>
-            </td>
-          </tr>
-          <tr v-if="!rows.length">
-            <td colspan="7">暂无匹配文件，请选择专攻上传。</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-    <ListPagination
-      v-model:page="page"
-      v-model:page-size="pageSize"
-      :total="total"
-    />
+    </Modal>
   </section>
 </template>
 <style scoped>
-.file-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin: 17px 0;
-}
-
-.file-filters > * {
-  flex: 1;
-  min-width: 128px;
-}
-
-.file-table-scroll {
-  overflow-x: auto;
-}
-
-.file-table {
-  width: 100%;
-  min-width: 722px;
-  font-size: 11px;
-  border-collapse: collapse;
-}
-
-.file-table th,
-.file-table td {
-  padding: 12px 10px;
-  vertical-align: top;
-  text-align: left;
-  border-bottom: 1px solid var(--jg-line);
-}
-
-.file-table th {
-  white-space: nowrap;
+.storage-summary {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 32px;
+  padding: 20px 24px;
+  margin: 16px 0 28px;
   background: var(--jg-subtle);
+  border-radius: var(--juai-radius);
 }
 
-.file-table a {
-  color: var(--jg-accent-text);
+.storage-caption {
+  display: grid;
+  gap: 4px;
+  align-content: center;
 }
 
-.file-table small {
-  display: block;
-  margin-top: 4px;
+.storage-caption span,
+.storage-meter p,
+.file-meta,
+.file-list-caption > span {
+  font-size: 12px;
   color: var(--jg-muted);
 }
 
-.file-manager:deep(h1) {
-  font-size: 20px;
-}
-</style>
-
-<style scoped>
-.storage-summary {
-  display: grid;
-  gap: 12px;
-  padding: 20px;
-  margin-bottom: 24px;
-  background: var(--jg-surface);
-  border: 1px solid var(--jg-line);
-  border-radius: 10px;
+.storage-meter p {
+  margin: 4px 0 0;
 }
 
-.storage-summary > div {
+.storage-meter strong {
+  font-size: 16px;
+  font-variant-numeric: tabular-nums;
+  color: var(--jg-text);
+}
+
+.file-toolbar {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 12px;
+  align-items: center;
+}
+
+.file-toolbar > .ant-input-affix-wrapper {
+  flex: 1;
+  min-width: 180px;
+}
+
+.file-scopes {
+  display: flex;
+  gap: 4px;
+  margin-right: auto;
+}
+
+.file-scopes button {
+  padding: 7px 12px;
+  color: var(--jg-secondary);
+  border-radius: 6px;
+}
+
+.file-scopes .active {
+  font-weight: 600;
+  color: var(--jg-accent-text);
+  background: var(--jg-subtle);
+}
+
+.file-filter-panel {
+  padding: 16px;
+  margin-top: 16px;
+  background: var(--jg-surface);
+  border: 1px solid var(--jg-line);
+  border-radius: var(--juai-radius);
+}
+
+.file-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.file-filter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.file-filter-actions span {
+  font-size: 12px;
+  color: var(--jg-muted);
+}
+
+.file-list-caption {
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
+  margin: 28px 0 8px;
+}
+
+.file-list-caption h2 {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.file-list-caption h2 span {
+  margin-left: 8px;
+  font-size: 12px;
+  color: var(--jg-muted);
+}
+
+.file-entry {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) 110px auto;
+  gap: 16px;
+  align-items: center;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--jg-line);
+}
+
+.file-kind {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--jg-accent-text);
+  background: var(--jg-subtle);
+  border-radius: 6px;
+}
+
+.file-identity {
+  min-width: 0;
+}
+
+.file-identity > a {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.file-identity p {
+  margin: 4px 0;
+  font-size: 12px;
+  color: var(--jg-secondary);
+}
+
+.file-identity small {
+  font-size: 11px;
+  color: var(--jg-muted);
+}
+
+.file-meta {
+  display: grid;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
   font-size: 12px;
 }
 
-.storage-summary .ant-btn {
-  justify-self: start;
+.file-exam-history {
+  margin-top: 24px;
+  font-size: 12px;
+}
+
+.file-exam-history summary {
+  cursor: pointer;
+}
+
+.file-exam-history article {
+  padding: 16px 0;
+}
+
+@media (max-width: 720px) {
+  .storage-summary {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .file-toolbar > .ant-input-affix-wrapper {
+    flex-basis: 100%;
+    order: 2;
+  }
+
+  .file-entry {
+    grid-template-columns: 36px minmax(0, 1fr);
+    gap: 8px 12px;
+  }
+
+  .file-meta {
+    display: flex;
+    flex-wrap: wrap;
+    grid-column: 2;
+    gap: 12px;
+  }
+
+  .file-actions {
+    grid-column: 2;
+  }
+
+  .file-scopes button {
+    min-height: 40px;
+    padding: 6px 8px;
+  }
 }
 </style>

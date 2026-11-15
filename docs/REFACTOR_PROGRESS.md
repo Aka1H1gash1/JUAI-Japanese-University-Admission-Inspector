@@ -2,8 +2,8 @@
 
 ## 当前状态
 
-- 日期：2026-11-15；分支：共享核心及私有平台均为 `refactor/juai-1.0`；私有平台已固定到第三阶段核心。
-- 当前授权：用户要求继续，进入阶段 4，重构基础实体页面；阶段 5–7 未启动，不部署服务器。
+- 日期：2026-11-16；分支：共享核心及私有平台均为 `refactor/juai-1.0`；阶段1–5已完成，私有平台固定核心21c5d2cfa。
+- 当前授权：连续完成阶段6、7。正在阶段6统一剩余页面；阶段7验收、备份后部署服务器，禁止跳过兼容迁移与隔离验证。
 - 统一需求：`requirements/PRODUCT_REQUIREMENTS.md` + `requirements/UI_REQUIREMENTS.md`；问题 0–14 逐项依赖见 REFACTOR_PLAN。
 - 阶段 1：已完成；独立提交 `5b5ef0f3f`（docs(project): audit and plan the unified JUAI 1.0 refactor）。
 - 阶段 2：代表性原型、规范、浏览器验收和检查完成；对应提交标题 `feat(project): establish the JUAI 1.0 design system and representative previews`。全量业务尚未完工。
@@ -105,3 +105,13 @@
 核心80项、前端14项、平台11项测试及类型/构建通过；本地服务5667和前端5188已接入第五阶段，生产未部署。核心提交标题 `feat(project): add application workspaces and scoped mail assistance`；私有平台固定对应核心。
 
 下一次继续进入第六阶段全局统一；先核对本文件最后交付状态、第五阶段文档与最新commit。禁止再次修改已提交迁移19，不抓取大学目录，不自动发送邮件，不调用付费模型做UI验收。
+
+## 阶段6（进行中）
+
+用户授权连续完成至第7阶段。阶段6基线核心21c5d2cfa、平台6c33278；一致性备份 ../git-backups/juai-1.0-phase6-20261116/，60表quick_check=ok，两个Git bundle保留。重点为文件管理、总览布局、设置/语言能力、导航及平台账号页。当前不修改数据库结构、不部署。
+
+### 第六阶段交付与恢复点
+
+全局页面统一完成，详见 [PHASE6_GLOBAL_UI.md](PHASE6_GLOBAL_UI.md)。核心80、前端42、平台11项回归、类型/构建及原有hooks通过。正式本地60张表逐行未变。私有平台设备/导出入口隐藏，底层保留。阶段6提交标题 `feat(project): unify workspace navigation and remaining task pages`；平台固定对应核心。
+
+用户已授权连续完成第七阶段，不在此等待再次确认。下一步从生产完整备份的副本验证schema16→19迁移、文件完整性与用户隔离，再提交发布元数据、推送CI构建、备份及服务器部署。不得真实付费调用AI或向教授发送邮件。

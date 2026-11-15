@@ -2,7 +2,7 @@
 import { ref } from 'vue';
 
 import { Button, Input } from 'ant-design-vue';
-const emit = defineEmits<{ uploaded: [] }>();
+const emit = defineEmits<{ uploaded: []; busy: [value: boolean] }>();
 const busy = ref(false);
 const errorMessage = ref('');
 const selected = ref<File>();
@@ -10,6 +10,7 @@ const title = ref('');
 async function upload() {
   if (!selected.value || busy.value) return;
   busy.value = true;
+  emit('busy', true);
   errorMessage.value = '';
   try {
     const f = selected.value;
@@ -39,6 +40,7 @@ async function upload() {
     errorMessage.value = error instanceof Error ? error.message : '上传失败';
   } finally {
     busy.value = false;
+    emit('busy', false);
   }
 }
 </script>

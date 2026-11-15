@@ -24,7 +24,6 @@ import {
   CONTACT_RESULT_LABELS,
   dayNumber,
   japanToday,
-  materialProgress,
   validPlannerDay,
 } from './application-planning';
 import EntityCreateFlow from './components/entity-create-flow.vue';
@@ -111,7 +110,6 @@ const progressByLab = computed(
         target.lab.id,
         {
           ...applicationStage(target),
-          materials: materialProgress(target.lab.tasks),
         },
       ]),
     ),
@@ -234,7 +232,10 @@ function fillGap(gap: InformationGap) {
 </script>
 
 <template>
-  <section class="explorer-page overview-page">
+  <section
+    class="explorer-page overview-page juai-design"
+    :class="{ 'is-calendar': isCalendar }"
+  >
     <header class="overview-heading">
       <div>
         <h1 class="workspace-title">
@@ -256,14 +257,6 @@ function fillGap(gap: InformationGap) {
         :today="today"
         @todo="openTask"
       />
-      <section v-else class="overview-panel">
-        <header class="overview-section-heading"><h2>日程与待办</h2></header>
-        <p style="padding: 20px">
-          <RouterLink to="/japan-grad/calendar">
-            前往日历管理日期、待办与提醒 →
-          </RouterLink>
-        </p>
-      </section>
 
       <section
         v-if="isCalendar"

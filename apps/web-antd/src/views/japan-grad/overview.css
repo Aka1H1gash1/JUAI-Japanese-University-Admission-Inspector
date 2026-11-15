@@ -983,3 +983,33 @@
     border-bottom: 1px solid var(--jg-line);
   }
 }
+
+/* The overview leads with application progress; dates live in the calendar. */
+.overview-page:not(.is-calendar) .overview-grid {
+  grid-template-areas: 'progress gaps';
+  grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
+  gap: 32px;
+}
+
+.overview-page:not(.is-calendar) .overview-progress-panel,
+.overview-page:not(.is-calendar) .overview-gaps {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.overview-page:not(.is-calendar) .overview-gaps {
+  padding-left: 24px;
+  border-left: 1px solid var(--jg-line);
+}
+
+@media (max-width: 900px) {
+  .overview-page:not(.is-calendar) .overview-grid {
+    grid-template-areas: 'progress' 'gaps';
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .overview-page:not(.is-calendar) .overview-gaps {
+    padding-left: 0;
+    border-left: 0;
+  }
+}

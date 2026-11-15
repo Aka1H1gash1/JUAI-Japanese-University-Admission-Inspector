@@ -3,7 +3,13 @@ import type { Profile } from '../profile-types';
 
 import { computed, ref, watch } from 'vue';
 
-import { Button, Input, InputNumber, Modal } from 'ant-design-vue';
+import {
+  AutoComplete,
+  Button,
+  Input,
+  InputNumber,
+  Modal,
+} from 'ant-design-vue';
 
 import ContentSection from '../design-system/content-section.vue';
 
@@ -14,6 +20,14 @@ const props = defineProps<{
 }>();
 const emit = defineEmits<{ save: [profile: Profile] }>();
 const editing = ref(false);
+const languageOptions = [
+  'JLPT',
+  'TOEIC',
+  'TOEFL',
+  'IELTS',
+  'CET-4',
+  'CET-6',
+].map((value) => ({ value }));
 const draft = ref<Profile>({ ...props.profile });
 const submitted = ref(false);
 const initials = computed(() =>
@@ -64,6 +78,12 @@ function addLanguage() {
 }
 function submit() {
   if (props.busy) return;
+  if (
+    draft.value.languageRecords?.some(
+      (record) => !record.type.trim() || !record.result.trim(),
+    )
+  )
+    return;
   submitted.value = true;
   emit('save', structuredClone(JSON.parse(JSON.stringify(draft.value))));
 }
@@ -154,11 +174,18 @@ function submit() {
               }}</small></span><strong>{{ record.result }}</strong>
           </li>
         </ul>
-        <ul v-if="languages.length" class="profile-scores legacy-scores">
-          <li v-for="(language, index) in languages" :key="index">
-            <span>{{ language.name }}</span><strong v-if="language.score">{{ language.score }}</strong>
-          </li>
-        </ul>
+        <details
+          v-if="languages.length"
+          class="legacy-language"
+          :open="!profile.languageRecords?.length"
+        >
+          <summary>原有语言成绩</summary>
+          <ul class="profile-scores legacy-scores">
+            <li v-for="(language, index) in languages" :key="index">
+              <span>{{ language.name }}</span><strong v-if="language.score">{{ language.score }}</strong>
+            </li>
+          </ul>
+        </details>
         <div
           v-if="!languages.length && !profile.languageRecords?.length"
           class="profile-empty"
@@ -236,14 +263,16 @@ function submit() {
           :key="record.id"
           class="language-editor-row"
         >
-          <label>考试名称<Input
+          <label>考试名称<AutoComplete
               v-model:value="record.type"
               :disabled="busy"
               :maxlength="100"
-              placeholder="JLPT / TOEIC / 其他考试"
+              placeholder="选择或输入其他考试"
+              :options="languageOptions"
           /></label>
           <label>等级或分数<Input
               v-model:value="record.result"
+              required
               :disabled="busy"
               :maxlength="240"
           /></label>
@@ -263,6 +292,17 @@ function submit() {
           添加语言能力
         </Button>
       </fieldset>
+      <p
+        v-if="
+          draft.languageRecords?.some(
+            (record) => !record.type.trim() || !record.result.trim(),
+          )
+        "
+        class="form-error"
+        role="status"
+      >
+        请填写每条语言记录的考试名称与成绩，或删除空记录。
+      </p>
       <fieldset :disabled="busy">
         <legend>申请与研究</legend>
         <div class="profile-editor-grid">
@@ -319,6 +359,13 @@ function submit() {
   margin-top: 4px;
   font-size: 11px;
   color: var(--jg-muted);
+}
+
+.legacy-language summary {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--jg-muted);
+  cursor: pointer;
 }
 
 .legacy-scores {

@@ -2,6 +2,8 @@
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 
+import { Dropdown, Menu } from 'ant-design-vue';
+
 import { useCollectionJobsStore } from '../collection-jobs';
 import { useExplorerStore } from '../explorer';
 import ExplorerIcon from './explorer-icon.vue';
@@ -18,7 +20,17 @@ const store = useExplorerStore();
 const jobs = useCollectionJobsStore();
 const route = useRoute();
 
+const overflowPaths = [
+  '/japan-grad/experiences',
+  '/japan-grad/special-programs',
+];
 const primary = computed(() => [
+  {
+    to: '/japan-grad/overview',
+    label: '申请总览',
+    icon: 'home',
+    active: route.path === '/japan-grad/overview',
+  },
   {
     to: '/japan-grad/labs',
     label: '老师/研究室',
@@ -38,12 +50,6 @@ const primary = computed(() => [
     active: route.path === '/japan-grad/files',
   },
   {
-    to: '/japan-grad/overview',
-    label: '申请总览',
-    icon: 'home',
-    active: route.path === '/japan-grad/overview',
-  },
-  {
     to: '/japan-grad/universities',
     label: '大学清单',
     icon: 'grid',
@@ -55,7 +61,9 @@ const primary = computed(() => [
     label: '修考之路',
     icon: 'book',
     count: store.labs.filter((item) => item.wantApply).length,
-    active: route.path === '/japan-grad/journey',
+    active:
+      route.path === '/japan-grad/journey' ||
+      route.path.startsWith('/japan-grad/applications/'),
   },
   {
     to: '/japan-grad/special-programs',
@@ -65,6 +73,13 @@ const primary = computed(() => [
   },
 ]);
 const secondary = computed(() => [
+  {
+    to: '/japan-grad/calendar',
+    label: '日历',
+    icon: 'book',
+    count: undefined,
+    active: route.path === '/japan-grad/calendar',
+  },
   {
     to: '/japan-grad/collection',
     label: '网址解析',
@@ -91,7 +106,9 @@ const secondary = computed(() => [
   <div class="jg-nav" :class="`is-${variant}`">
     <nav class="jg-nav-group" aria-label="工作区导航">
       <RouterLink
-        v-for="item in primary"
+        v-for="item in primary.filter(
+          (entry) => variant === 'drawer' || !overflowPaths.includes(entry.to),
+        )"
         :key="item.to"
         :to="item.to"
         class="jg-nav-link"
@@ -103,6 +120,33 @@ const secondary = computed(() => [
           item.label
         }}</span><small v-if="item.count">{{ item.count }}</small>
       </RouterLink>
+      <Dropdown v-if="variant === 'bar'" :trigger="['click']">
+        <button
+          class="jg-nav-link"
+          :class="{
+            'is-active': primary.some(
+              (item) => overflowPaths.includes(item.to) && item.active,
+            ),
+          }"
+          aria-label="更多工作区页面"
+        >
+          更多 <ExplorerIcon name="chevron" />
+        </button>
+        <template #overlay>
+          <Menu>
+            <Menu.Item
+              v-for="item in primary.filter((entry) =>
+                overflowPaths.includes(entry.to),
+              )"
+              :key="item.to"
+            >
+              <RouterLink :to="item.to">
+                {{ item.label }}
+              </RouterLink>
+            </Menu.Item>
+          </Menu>
+        </template>
+      </Dropdown>
     </nav>
     <nav class="jg-nav-group is-secondary" aria-label="管理">
       <h2 v-if="variant === 'drawer'" class="jg-nav-heading">管理</h2>

@@ -39,6 +39,7 @@ import './quick-jump.css';
 import './density.css';
 import './design-system/tokens.css';
 import './design-system/entity-pages.css';
+import './design-system/workspace-pages.css';
 
 const jobs = useCollectionJobsStore();
 const { message } = App.useApp();
@@ -177,6 +178,8 @@ const parentNavigation = computed(() => {
       ? { path: `${majorPath}/labs/${parentLabId}`, label: '研究室' }
       : { path: majorPath, label: '专攻' };
   }
+  if (route.path.startsWith('/japan-grad/applications/'))
+    return { path: '/japan-grad/journey', label: '修考之路' };
   if (labId) return { path: majorPath, label: '专攻' };
   if (majorId) return { path: schoolPath, label: '研究科' };
   if (schoolId) return { path: universityPath, label: '大学详情' };
@@ -264,6 +267,8 @@ const saveLabel = computed(() => {
   return '';
 });
 const contextLabel = computed(() => {
+  if (route.path === '/japan-grad/calendar') return '日历与待办';
+  if (route.path.startsWith('/japan-grad/applications/')) return '申请工作台';
   if (route.path === '/japan-grad/settings') {
     return '设置';
   }
