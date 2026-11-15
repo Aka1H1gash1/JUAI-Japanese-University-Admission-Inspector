@@ -20,6 +20,7 @@ import {
   catalogUniversities,
   findCatalogUniversity,
   loadUniversityCatalog,
+  matchCatalogUniversities,
 } from '../university-catalog';
 import {
   DEFAULT_UNIVERSITY_FEES,
@@ -47,6 +48,15 @@ const form = ref<EditorFields>({});
 let initialForm = '';
 const feedback = ref('');
 const selectedCatalogId = ref<string>();
+const confirmCustomUniversity = ref(false);
+const directoryMatches = computed(() =>
+  matchCatalogUniversities(form.value.japaneseName || form.value.name || ''),
+);
+watch(
+  () => [form.value.name, form.value.japaneseName],
+  () => (confirmCustomUniversity.value = false),
+);
+
 const catalogOptions = computed(() =>
   catalogUniversities.value.map((item) => ({
     value: item.id,
@@ -85,6 +95,7 @@ function chooseCatalog(value: unknown) {
     japaneseName: item.japaneseName,
     category: item.category,
     website: item.website,
+    location: item.address || '',
     ...universityGeography({
       region: item.region,
       prefecture: item.prefecture,
@@ -232,6 +243,7 @@ watch(open, (value) => {
   if (!value) return;
   feedback.value = '';
   selectedCatalogId.value = undefined;
+  confirmCustomUniversity.value = false;
   if (props.kind === 'university') void loadUniversityCatalog();
   automaticFees.clear();
   form.value = {
@@ -256,6 +268,7 @@ watch(open, (value) => {
     dormitoryWebsite: '',
     logoId: '',
     research: '',
+    description: '',
     title: '',
     laboratory: '',
     labId: props.kind === 'professor' ? (props.parentId ?? '') : '',
@@ -314,6 +327,19 @@ function requestClose() {
 }
 
 async function save() {
+  if (
+    props.kind === 'university' &&
+    !form.value.catalogId &&
+    !confirmCustomUniversity.value
+  ) {
+    feedback.value =
+      directoryMatches.value.length === 1
+        ? '请选择或确认关联大学目录。'
+        : '请核对大学身份，并确认按未关联目录的资料保存。';
+    return;
+  }
+  if (props.kind === 'university' && !form.value.catalogId)
+    form.value.catalogId = '';
   if (store.saving || uploadingLogo.value) return;
   const name = form.value.name?.trim();
   if (!name) {
@@ -473,6 +499,28 @@ async function save() {
           <p v-else>
             选择后自动填写名称、类型、地区与官网；未收录校徽的大学显示默认图标。
           </p>
+        </div>
+        <div
+          v-if="kind === 'university' && !form.catalogId && form.name?.trim()"
+          class="field full juai-inline-notice"
+        >
+          <template v-if="directoryMatches.length === 1">
+            <p>
+              名称匹配到「{{ directoryMatches[0]?.name }}」，请确认大学身份。
+            </p>
+            <Button @click="chooseCatalog(directoryMatches[0]?.id)">
+              关联这所大学
+            </Button>
+          </template>
+          <p v-else>
+            {{
+              directoryMatches.length
+                ? '名称对应多个目录条目，请在上方选择准确的大学。'
+                : '目录尚未唯一匹配，请核对名称与官网。'
+            }}
+          </p>
+          <label><input v-model="confirmCustomUniversity" type="checkbox" />
+            已核对，按未关联目录的大学资料保存</label>
         </div>
         <div
           v-if="kind === 'university'"
@@ -799,6 +847,23 @@ async function save() {
           </div>
         </template>
         <template v-if="kind === 'lab'">
+          <div class="field full">
+            <label for="entity-lab-description">研究室介绍</label><Input.TextArea
+              id="entity-lab-description"
+              v-model:value="form.description"
+              :maxlength="8000"
+              :rows="4"
+              :disabled="store.saving"
+            />
+          </div>
+          <div class="field full">
+            <label for="entity-lab-location">研究室位置</label><Input
+              id="entity-lab-location"
+              v-model:value="form.location"
+              :maxlength="500"
+              :disabled="store.saving"
+            />
+          </div>
           <div class="field">
             <label for="entity-lab-foreign">有无外国人学生</label><Select
               id="entity-lab-foreign"

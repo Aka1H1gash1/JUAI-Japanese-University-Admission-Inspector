@@ -3,6 +3,7 @@ import { ref } from 'vue';
 export interface CatalogUniversity {
   id: string;
   schoolCode: string;
+  address?: string;
   englishName?: string;
   name: string;
   japaneseName: string;
@@ -55,9 +56,9 @@ function normalize(value: string) {
   return value.normalize('NFKC').replaceAll(/\s/g, '').toLowerCase();
 }
 
-export function findCatalogUniversity(name: string) {
+export function matchCatalogUniversities(name: string) {
   const key = normalize(name);
-  if (!key) return undefined;
+  if (!key) return [];
   const matches = catalogUniversities.value.filter((item) =>
     [
       item.name,
@@ -66,6 +67,11 @@ export function findCatalogUniversity(name: string) {
       ...(item.aliases ?? []),
     ].some((value) => normalize(value) === key),
   );
+  return matches;
+}
+
+export function findCatalogUniversity(name: string) {
+  const matches = matchCatalogUniversities(name);
   return matches.length === 1 ? matches[0] : undefined;
 }
 
@@ -74,4 +80,25 @@ export function catalogLogoUrl(logo: CatalogUniversity['logo']) {
   return logo?.url.startsWith('/university-catalog/logos/')
     ? `${import.meta.env.BASE_URL}${logo.url.slice(1)}`
     : '';
+}
+
+export function universityDisplayGeography(value: {
+  catalogId?: string;
+  name: string;
+  japaneseName?: string;
+  location?: string;
+  region?: string;
+  prefecture?: string;
+}) {
+  if (value.location?.trim()) return value;
+  const record = value.catalogId
+    ? catalogUniversities.value.find((item) => item.id === value.catalogId)
+    : findCatalogUniversity(value.japaneseName || value.name);
+  if (!record) return value;
+  return {
+    ...value,
+    region: value.region || record.region,
+    prefecture: value.prefecture || record.prefecture,
+    location: record.address || '',
+  };
 }

@@ -3,8 +3,13 @@ defineProps<{ title: string; context?: string; description?: string }>();
 </script>
 <template>
   <header class="juai-page-heading">
+    <div v-if="$slots.identity" class="juai-heading-identity">
+      <slot name="identity"></slot>
+    </div>
     <div class="juai-heading-content">
-      <p v-if="context" class="juai-context">{{ context }}</p>
+      <slot name="context">
+        <p v-if="context" class="juai-context">{{ context }}</p>
+      </slot>
       <h1>{{ title }}</h1>
       <p v-if="description" class="juai-description">{{ description }}</p>
       <div v-if="$slots.meta" class="juai-heading-meta">
@@ -22,7 +27,12 @@ defineProps<{ title: string; context?: string; description?: string }>();
   gap: 24px;
   align-items: flex-start;
   justify-content: space-between;
-  padding: 8px 0 24px;
+  padding: 8px 0 12px;
+}
+
+.juai-heading-identity {
+  flex-shrink: 0;
+  padding-top: 28px;
 }
 
 .juai-heading-content {
@@ -69,11 +79,20 @@ defineProps<{ title: string; context?: string; description?: string }>();
 
 @media (max-width: 720px) {
   .juai-page-heading {
-    flex-direction: column;
+    flex-wrap: wrap;
     gap: 16px;
   }
 
+  .juai-heading-content {
+    flex-basis: calc(100% - 88px);
+  }
+
+  .juai-heading-identity {
+    padding-top: 24px;
+  }
+
   .juai-heading-actions {
+    width: 100%;
     padding-top: 0;
   }
 

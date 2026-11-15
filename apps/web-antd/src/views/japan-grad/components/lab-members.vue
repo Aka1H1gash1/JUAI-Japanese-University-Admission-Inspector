@@ -147,6 +147,7 @@ const chartReady = computed(
       target="_blank"
       rel="noopener noreferrer"
       >成员信息来源 ↗</a>
+    <slot name="legacy"></slot>
     <Modal
       v-model:open="open"
       title="编辑成员人数"

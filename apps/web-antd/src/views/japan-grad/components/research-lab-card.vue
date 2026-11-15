@@ -12,6 +12,7 @@ import { primaryProfessor, materialProgress } from '../application-planning';
 const props = defineProps<{
   labId: string;
   designPreview?: boolean;
+  compact?: boolean;
   showAffiliation?: boolean;
   selectable?: boolean;
   selected?: boolean;
@@ -95,13 +96,17 @@ async function toggle() {
       </p>
       <p class="lab-budget">{{ annualBudgetText(target.university) }}</p>
     </template>
-    <div v-if="!designPreview" class="planner-card-status">
+    <div v-if="!designPreview && !compact" class="planner-card-status">
       <span class="planner-muted"
         >联系状态 · {{ primaryProfessor(target)?.name || '老师待添加' }}</span
       ><ContactStatus :contact="primaryProfessor(target)?.contact" />
     </div>
     <div
-      v-if="!designPreview && (showAffiliation || target.lab.tasks?.length)"
+      v-if="
+        !designPreview &&
+        !compact &&
+        (showAffiliation || target.lab.tasks?.length)
+      "
       class="planner-card-material"
     >
       <span

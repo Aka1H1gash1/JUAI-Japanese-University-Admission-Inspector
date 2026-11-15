@@ -121,6 +121,8 @@ export interface AnalysisRecord {
 }
 
 export interface ResearchLab {
+  description?: string;
+  location?: string;
   foreignStudentStatus?: '' | 'no' | 'unknown' | 'yes';
   foreignStudentSource?: string;
   foreignStudentNotes?: string;
@@ -569,7 +571,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
   }
   function mutate<T>(
     work: () => T,
-    labPatch?: { id: string; fields: ('tasks' | 'wantApply')[] },
+    labPatch?: { id: string; fields: ('tasks' | 'timeline' | 'wantApply')[] },
   ): Promise<T> {
     const attempt = async (retriesLeft: number): Promise<T> => {
       if (!loaded.value)
@@ -800,6 +802,14 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
           ...common,
           website,
           majorId: parentId,
+          description:
+            fields.description === undefined
+              ? previous?.description
+              : get('description'),
+          location:
+            fields.location === undefined
+              ? previous?.location
+              : get('location'),
           research: get('research'),
           examNotes: get('examNotes'),
           applicationNotes: get('applicationNotes'),
@@ -930,6 +940,19 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
       person.contact = next;
       if (lab) lab.mainProfessorId = person.id;
     });
+  }
+  function setTimelineAutoSync(labId: string, enabled: boolean) {
+    return mutate(
+      () => {
+        const lab = labs.value.find((item) => item.id === labId);
+        if (!lab) throw new Error('研究室已不存在。');
+        lab.timeline = {
+          ...(lab.timeline || emptyTimeline()),
+          autoSyncExams: enabled,
+        };
+      },
+      { id: labId, fields: ['timeline'] },
+    );
   }
   function saveTimelineEvent(labId: string, entry: TimelineEntry) {
     return mutate(() => {
@@ -1261,6 +1284,7 @@ export const useExplorerStore = defineStore('japangrad-explorer', () => {
     updateContactExperience,
     createContactExperience,
     saveTimelineEvent,
+    setTimelineAutoSync,
     removeTimelineEvent,
     restoreTimelineSources,
     refresh,

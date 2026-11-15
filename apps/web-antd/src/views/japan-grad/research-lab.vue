@@ -1,29 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { App, Button, Divider, Switch, Tabs } from 'ant-design-vue';
+import { App } from 'ant-design-vue';
 
-import CollectedAdmissions from './components/collected-admissions.vue';
-import EntityEditor from './components/entity-editor.vue';
-import ExamHistory from './components/exam-history.vue';
-import ExplorerIcon from './components/explorer-icon.vue';
-import LabTasks from './components/lab-tasks.vue';
-import MajorAdmissions from './components/major-admissions.vue';
-import ResearchLabTeachers from './components/research-lab-teachers.vue';
-import LabPreview from './design-system/lab-preview.vue';
-import { useExplorerStore, websiteUrl } from './explorer';
-import {
-  annualBudgetText,
-  labContext,
-  labLanguageRequirements,
-  majorPath,
-} from './lab-targets';
-const store = useExplorerStore();
+import LabProfile from './components/lab-profile.vue';
+import { useExplorerStore } from './explorer';
+import { labContext, majorPath } from './lab-targets';
 const route = useRoute();
 const router = useRouter();
+const store = useExplorerStore();
 const { message, modal } = App.useApp();
-const editorOpen = ref(false);
 const target = computed(() => {
   const value = labContext(store, String(route.params.labId));
   return value &&
@@ -33,82 +20,6 @@ const target = computed(() => {
     ? value
     : undefined;
 });
-const tab = computed({
-  get: () => {
-    const value = String(route.query.tab);
-    if (value === 'tasks') return 'materials';
-    return ['admissions', 'materials', 'todos'].includes(value)
-      ? value
-      : 'teachers';
-  },
-  set: (value: string) => {
-    void router.replace({ query: { ...route.query, tab: value } });
-  },
-});
-const materialCount = computed(
-  () =>
-    target.value?.lab.tasks?.filter((item) => item.kind === 'material')
-      .length ?? 0,
-);
-const todoCount = computed(
-  () =>
-    target.value?.lab.tasks?.filter((item) => item.kind === 'todo').length ?? 0,
-);
-const toggling = ref(false);
-async function toggle() {
-  if (!target.value || toggling.value) return;
-  toggling.value = true;
-  try {
-    await store.toggleWantApply(target.value.lab.id);
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : '保存失败。');
-  } finally {
-    toggling.value = false;
-  }
-}
-
-async function toggleAutoSync() {
-  if (!target.value) return;
-
-  // 使用和其他保存方法相同的模式
-  const labId = target.value.lab.id;
-  const currentValue = target.value.lab.timeline?.autoSyncExams ?? true;
-
-  try {
-    // 找到研究室并更新
-    const lab = store.labs.find((l) => l.id === labId);
-    if (!lab) throw new Error('研究室已不存在。');
-
-    // 确保timeline存在
-    if (!lab.timeline) {
-      lab.timeline = {
-        events: [],
-        hiddenSources: [],
-        version: 0,
-        autoSyncExams: true,
-      };
-    }
-
-    // 切换开关
-    lab.timeline.autoSyncExams = !currentValue;
-
-    // 保存（这会触发mutate）
-    // 由于直接修改了store中的对象，我们只需要触发一次保存
-    // 用toggleWantApply两次来模拟保存操作
-    const wantApply = lab.wantApply;
-    lab.wantApply = !wantApply;
-    await store.toggleWantApply(labId);
-    lab.wantApply = wantApply;
-    await store.toggleWantApply(labId);
-
-    message.success(
-      lab.timeline.autoSyncExams ? '已开启考试时间同步' : '已关闭考试时间同步',
-    );
-  } catch (error) {
-    message.error(error instanceof Error ? error.message : '保存失败。');
-  }
-}
-
 function remove() {
   const value = target.value;
   if (!value) return;
@@ -127,184 +38,9 @@ function remove() {
 }
 </script>
 <template>
-  <!-- eslint-disable vue/html-closing-bracket-newline, vue/multiline-html-element-content-newline -->
-  <LabPreview v-if="target && route.query.design === '1'" />
-  <section v-else-if="target" class="explorer-page research-lab-page">
-    <nav class="explorer-breadcrumb" aria-label="当前位置">
-      <RouterLink to="/japan-grad/universities">大学清单</RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink
-        :to="`/japan-grad/universities/${target.university.id}`"
-      >
-        {{ target.university.name }} </RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink
-        :to="`/japan-grad/universities/${target.university.id}/schools/${target.school.id}`"
-      >
-        {{ target.school.name }} </RouterLink
-      ><ExplorerIcon name="chevron" /><RouterLink :to="majorPath(target)">
-        {{ target.major.name }} </RouterLink
-      ><ExplorerIcon name="chevron" /><span>{{ target.lab.name }}</span>
-    </nav>
-    <header class="page-heading detail-heading">
-      <div>
-        <h1>{{ target.lab.name }}</h1>
-        <p class="page-description">
-          {{
-            [target.lab.japaneseName, target.major.name]
-              .filter(Boolean)
-              .join(' / ')
-          }}
-        </p>
-      </div>
-      <div class="detail-actions">
-        <Button
-          class="icon-button lab-intent-button"
-          :class="{ 'is-wanted': target.lab.wantApply }"
-          :aria-pressed="target.lab.wantApply"
-          :loading="toggling"
-          @click="toggle"
-        >
-          <ExplorerIcon name="heart" />{{
-            target.lab.wantApply ? '已标记想考' : '标记为想考'
-          }} </Button
-        ><Button class="icon-button" @click="editorOpen = true">
-          <ExplorerIcon name="edit" />编辑研究室 </Button
-        ><Button aria-label="删除研究室" @click="remove">
-          <ExplorerIcon name="trash" />
-        </Button>
-      </div>
-    </header>
-    <section class="entity-overview" aria-label="研究室资料">
-      <div class="overview-meta">
-        <span
-          ><ExplorerIcon name="book" />{{
-            target.lab.research || '研究方向待补充'
-          }}</span
-        ><a
-          v-if="websiteUrl(target.lab.website)"
-          :href="websiteUrl(target.lab.website)"
-          target="_blank"
-          rel="noopener noreferrer"
-          ><ExplorerIcon name="globe" />研究室官网<ExplorerIcon name="link"
-        /></a>
-      </div>
-      <p v-if="target.lab.notes" class="overview-notes">
-        {{ target.lab.notes }}
-      </p>
-      <div class="lab-overview-footer">
-        <span>年度开销：{{ annualBudgetText(target.university) }}</span
-        ><RouterLink to="/japan-grad/journey">前往修考之路 →</RouterLink>
-      </div>
-    </section>
-    <CollectedAdmissions kind="lab" :id="target.lab.id" />
-    <CollectedAdmissions
-      kind="major"
-      :id="target.major.id"
-      title="所属专攻的募集要项（共享）"
-    />
-    <Tabs v-model:active-key="tab" class="professor-workspace-tabs">
-      <Tabs.TabPane key="teachers" :tab="`老师（${target.professors.length}）`">
-        <ResearchLabTeachers
-          v-if="tab === 'teachers'"
-          :key="target.lab.id"
-          :lab-id="target.lab.id"
-        />
-      </Tabs.TabPane>
-      <Tabs.TabPane key="admissions" tab="报考信息">
-        <template v-if="tab === 'admissions'">
-          <section class="lab-admission-notes">
-            <h2>研究室报考说明</h2>
-            <p>
-              下方时间与科目来自所属专攻「{{
-                target.major.name
-              }}」，请结合研究室的特殊要求确认。
-            </p>
-            <dl>
-              <div>
-                <dt>
-                  语言要求
-                  <small
-                    >（{{
-                      target.lab.languageRequirements?.trim()
-                        ? '研究室单独要求'
-                        : '参考所属专攻'
-                    }}）</small
-                  >
-                </dt>
-                <dd>
-                  {{ labLanguageRequirements(target) || '尚未填写语言要求' }}
-                </dd>
-              </div>
-              <div>
-                <dt>考试特殊说明</dt>
-                <dd>{{ target.lab.examNotes || '尚未记录额外考核要求' }}</dd>
-              </div>
-              <div>
-                <dt>出愿特殊说明</dt>
-                <dd>
-                  {{ target.lab.applicationNotes || '尚未记录额外出愿要求' }}
-                </dd>
-              </div>
-            </dl>
-            <Button @click="editorOpen = true">编辑特殊说明</Button>
-
-            <Divider />
-
-            <div class="lab-timeline-settings">
-              <h3>日程设置</h3>
-              <div class="setting-item">
-                <div class="setting-label">
-                  <strong>同步考试时间到日程</strong>
-                  <p class="setting-description">
-                    修改专攻考试时间时，自动更新此研究室的日程
-                  </p>
-                </div>
-                <Switch
-                  :checked="target.lab.timeline?.autoSyncExams ?? true"
-                  :loading="store.saving"
-                  @change="toggleAutoSync"
-                />
-              </div>
-            </div>
-          </section>
-          <MajorAdmissions
-            :key="`admissions-${target.major.id}`"
-            :major-id="target.major.id"
-          /><ExamHistory
-            :key="`exams-${target.major.id}`"
-            :major-id="target.major.id"
-          />
-        </template>
-      </Tabs.TabPane>
-      <Tabs.TabPane key="materials" :tab="`材料（${materialCount}）`">
-        <LabTasks
-          v-if="tab === 'materials'"
-          :key="`${target.lab.id}-materials`"
-          :lab-id="target.lab.id"
-          kind="material"
-        />
-      </Tabs.TabPane>
-      <Tabs.TabPane key="todos" :tab="`待办（${todoCount}）`">
-        <LabTasks
-          v-if="tab === 'todos'"
-          :key="`${target.lab.id}-todos`"
-          :lab-id="target.lab.id"
-          kind="todo"
-        />
-      </Tabs.TabPane>
-    </Tabs>
-    <EntityEditor
-      v-model:open="editorOpen"
-      kind="lab"
-      :entity-id="target.lab.id"
-      :parent-id="target.major.id"
-      :parent-name="target.major.name"
-    />
-  </section>
+  <LabProfile v-if="target" :key="target.lab.id" @remove="remove" />
   <section v-else class="search-empty">
     <h1>这个研究室已不存在</h1>
-    <p>请返回大学清单重新选择。</p>
-    <RouterLink to="/japan-grad/universities" class="back-link">
-      返回大学清单 →
-    </RouterLink>
+    <RouterLink to="/japan-grad/universities">返回大学清单 →</RouterLink>
   </section>
 </template>

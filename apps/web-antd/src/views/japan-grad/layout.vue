@@ -38,6 +38,7 @@ import './affiliation-cards.css';
 import './quick-jump.css';
 import './density.css';
 import './design-system/tokens.css';
+import './design-system/entity-pages.css';
 
 const jobs = useCollectionJobsStore();
 const { message } = App.useApp();

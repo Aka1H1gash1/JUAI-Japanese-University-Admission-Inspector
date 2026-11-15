@@ -21,6 +21,11 @@ import { useExplorerStore } from '../explorer';
 import { jsonOptions, localApi } from '../local-api';
 import { requireValue } from '../required-value';
 import { vAccessibleSelect } from '../select-accessibility';
+import {
+  catalogUniversities,
+  findCatalogUniversity,
+  loadUniversityCatalog,
+} from '../university-catalog';
 import JgLoader from './jg-loader.vue';
 const props = defineProps<{
   detail: CollectionDetail;
@@ -30,6 +35,27 @@ const emit = defineEmits<{ applied: []; refresh: [] }>();
 const store = useExplorerStore();
 const { message } = App.useApp();
 type Row = CollectedField & { selected: boolean; edited: string };
+const publicCatalogId = ref('');
+void loadUniversityCatalog();
+function selectPublicUniversity(value: unknown) {
+  publicCatalogId.value = typeof value === 'string' ? value : '';
+  const existing = store.universities.filter(
+    (u) =>
+      (u.catalogId || findCatalogUniversity(u.japaneseName || u.name)?.id) ===
+      publicCatalogId.value,
+  );
+  if (publicCatalogId.value && existing.length === 1)
+    choices.value.university = existing[0]?.id || '';
+}
+const catalogOptions = computed(() =>
+  catalogUniversities.value.map((u) => ({
+    value: u.id,
+    label: `${u.name} · ${u.prefecture}`,
+    search: [u.name, u.japaneseName, u.englishName || '', ...(u.aliases || [])]
+      .join(' ')
+      .toLowerCase(),
+  })),
+);
 const targetKind = ref<'unknown' | CollectionKind>('unknown');
 const includeProfessor = ref(false);
 const professorCandidate = computed(() =>
@@ -339,8 +365,16 @@ function reset() {
       !!d.year &&
       props.detail.job.draft?.admissions?.status !== 'uncertain',
   }));
+  publicCatalogId.value =
+    findCatalogUniversity(
+      props.detail.job.draft?.university.find(
+        (f) => f.field === 'japaneseName' || f.field === 'name',
+      )?.value || '',
+    )?.id || '';
   const saved = props.detail.job.importPlan?.selection;
   if (saved) {
+    publicCatalogId.value =
+      saved.createOptions?.university?.catalogId || publicCatalogId.value;
     wantApply.value = saved.createOptions?.lab?.wantApply ?? false;
     uploadedLogoId.value = saved.createOptions?.university?.logoId || '';
     confirmedScopes.value = saved.confirmedScopes ?? [];
@@ -588,10 +622,18 @@ function selection(
       ...(targetKind.value === 'lab' && !choices.value.lab
         ? { lab: { wantApply: wantApply.value } }
         : {}),
-      ...(logoSelected.value &&
-      !choices.value.university &&
-      uploadedLogoId.value
-        ? { university: { logoId: uploadedLogoId.value } }
+      ...(!choices.value.university &&
+      (publicCatalogId.value || (logoSelected.value && uploadedLogoId.value))
+        ? {
+            university: {
+              ...(publicCatalogId.value
+                ? { catalogId: publicCatalogId.value }
+                : {}),
+              ...(logoSelected.value && uploadedLogoId.value
+                ? { logoId: uploadedLogoId.value }
+                : {}),
+            },
+          }
         : {}),
     },
     confirmedScopes: confirmedScopes.value,
@@ -846,6 +888,31 @@ async function apply() {
       <p v-if="detail.job.draft?.subject?.reason">
         {{ detail.job.draft.subject.reason }}
       </p>
+      <section
+        v-if="!choices.university && activeKinds.includes('university')"
+        class="juai-inline-notice"
+      >
+        <label>确认公共大学目录<Select
+            v-accessible-select
+            :value="publicCatalogId || undefined"
+            :options="catalogOptions"
+            show-search
+            allow-clear
+            :disabled="busy"
+            aria-label="确认导入大学目录"
+            :filter-option="
+              (input, option) =>
+                String(option?.search || '').includes(input.toLowerCase())
+            "
+            @change="selectPublicUniversity"
+        /></label>
+        <p v-if="!publicCatalogId">
+          目录尚未唯一确认，请核对真实大学身份后选择；未关联目录时仍须逐项确认来源，不能猜测关联。
+        </p>
+        <p v-else>
+          目录关联只用于新大学的身份与校徽；已有用户资料仅关联，不覆盖。
+        </p>
+      </section>
       <div class="collection-generation-chain">
         <a
           v-for="item in generationPlan"

@@ -116,7 +116,7 @@ export interface CollectionImportSelection {
   includeProfessor?: boolean;
   createOptions?: {
     lab?: { wantApply: boolean };
-    university?: { logoId: string };
+    university?: { logoId?: string; catalogId?: string };
   };
   confirmedScopes?: string[];
   resources?: {

@@ -2,8 +2,8 @@
 
 ## 当前状态
 
-- 日期：2026-11-15；分支：共享核心及私有平台均为 `refactor/juai-1.0`；私有平台无代码修改。
-- 当前授权：用户要求继续，进入阶段 3。允许兼容数据库迁移及基础 API；阶段 4–7 未启动，不部署服务器。
+- 日期：2026-11-15；分支：共享核心及私有平台均为 `refactor/juai-1.0`；私有平台已固定到第三阶段核心。
+- 当前授权：用户要求继续，进入阶段 4，重构基础实体页面；阶段 5–7 未启动，不部署服务器。
 - 统一需求：`requirements/PRODUCT_REQUIREMENTS.md` + `requirements/UI_REQUIREMENTS.md`；问题 0–14 逐项依赖见 REFACTOR_PLAN。
 - 阶段 1：已完成；独立提交 `5b5ef0f3f`（docs(project): audit and plan the unified JUAI 1.0 refactor）。
 - 阶段 2：代表性原型、规范、浏览器验收和检查完成；对应提交标题 `feat(project): establish the JUAI 1.0 design system and representative previews`。全量业务尚未完工。
@@ -70,3 +70,17 @@
 - 核心72测试、私有平台11测试、前端11测试通过；专门补充 HTTP 改密/配额与邮箱换绑原子验证。
 - 本阶段提交标题：核心 `feat(project): add compatible product foundation APIs and editors`；平台 `feat: enforce verified email changes and pin product foundation core`。
 - 第4–7阶段尚未开始；没有线上部署。下一步是将已具备基础 API 的大学/研究科/专攻/研究室/教师页面按设计系统正式重构，而非继续堆叠旧展示。
+
+## 阶段4（已完成）
+
+- 基线核心6983a8a92、平台8065105；数据与两仓库bundle已备份到 `../git-backups/juai-1.0-phase4-20261115/`，quick_check=ok。
+- 本次将实体原型设为正式默认页面，保留旧深链接和业务操作，关联招生批次与文件。不会部署生产或改写旧迁移。
+
+
+## 阶段4完成与恢复点
+
+大学清单及五类实体详情现为正式默认页面；专攻批次/文件范围、研究室阅读资料与成员、教师分区已接通。详细变更、数据保护、截图和边界见 [PHASE4_ENTITY_PAGES.md](PHASE4_ENTITY_PAGES.md)。
+
+核心76项、前端14项、平台11项回归通过。无新DDL，原有资料不迁移或删除。核心提交标题 `feat(project): ship the JUAI 1.0 entity reading pages`；私有平台固定对应核心提交。本地预览仍使用5188/5667，线上未部署。
+
+下一次继续时进入第五阶段：独立申请工作台、材料与ZIP、教授联络/邮件AI及对应页面；先读需求与计划，使用本阶段备份和固定提交作为基线。

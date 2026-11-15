@@ -1,7 +1,9 @@
 <script setup lang="ts">
+import type { StoredDocument } from '../documents';
 import type { AdmissionBatch } from '../foundation-types';
 
-import { computed, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button, Input, InputNumber, Modal, Select } from 'ant-design-vue';
 
@@ -9,9 +11,15 @@ import ContentSection from '../design-system/content-section.vue';
 import DateMarker from '../design-system/date-marker.vue';
 import { websiteUrl } from '../explorer';
 import { jsonOptions, localApi } from '../local-api';
-const props = defineProps<{ majorId: string }>();
-const emit = defineEmits<{ count: [value: number] }>();
+import { vAccessibleSelect } from '../select-accessibility';
+const props = defineProps<{ majorId: string; files?: StoredDocument[] }>();
+const emit = defineEmits<{
+  count: [value: number];
+  selected: [batch: AdmissionBatch | undefined];
+}>();
 const { modal } = App.useApp();
+const route = useRoute();
+const router = useRouter();
 const busy = ref(false);
 const errorMessage = ref('');
 const loading = ref(false);
@@ -41,30 +49,67 @@ const blank = (): AdmissionBatch => ({
 const draft = ref(blank());
 const api = () =>
   `/foundation/majors/${encodeURIComponent(props.majorId)}/batches`;
+let generation = 0;
+onBeforeUnmount(() => generation++);
 async function load() {
+  const current = ++generation;
   loading.value = true;
   try {
-    rows.value = await localApi<AdmissionBatch[]>(api());
+    const result = await localApi<AdmissionBatch[]>(api());
+    if (current !== generation) return;
+    rows.value = result;
     emit('count', rows.value.length);
+    emit('selected', selected.value);
     errorMessage.value = '';
   } catch (error) {
-    errorMessage.value =
-      error instanceof Error ? error.message : '批次读取失败';
+    if (current === generation)
+      errorMessage.value =
+        error instanceof Error ? error.message : '批次读取失败';
   } finally {
-    loading.value = false;
+    if (current === generation) loading.value = false;
   }
 }
 watch(
   () => props.majorId,
   () => {
     rows.value = [];
-    selectedId.value = '';
+    selectedId.value =
+      typeof route.query.batch === 'string' ? route.query.batch : '';
     void load();
   },
   { immediate: true },
 );
+watch(
+  () => route.query.batch,
+  (value) => {
+    selectedId.value = typeof value === 'string' ? value : '';
+    emit('selected', selected.value);
+  },
+);
+function choose(value: unknown) {
+  selectedId.value = String(value);
+  void router.replace({ query: { ...route.query, batch: selectedId.value } });
+  emit('selected', selected.value);
+}
+async function attachFile(id: string, expectedBatchId?: string) {
+  const current = selected.value;
+  if (expectedBatchId && current?.id !== expectedBatchId)
+    throw new Error('当前批次已改变，请手动关联文件。');
+  if (!current) return;
+  await localApi(
+    `${api()}/${current.id}`,
+    jsonOptions('PUT', {
+      ...current,
+      documentIds: [...new Set([...(current.documentIds || []), id])],
+    }),
+  );
+  await load();
+}
+defineExpose({ attachFile });
 function edit(existing?: AdmissionBatch) {
-  draft.value = existing ? { ...existing } : blank();
+  draft.value = existing
+    ? { ...existing, documentIds: [...(existing.documentIds || [])] }
+    : blank();
   errorMessage.value = '';
   open.value = true;
 }
@@ -77,6 +122,7 @@ async function save() {
       jsonOptions(d.id ? 'PUT' : 'POST', d),
     );
     selectedId.value = saved.id;
+    void router.replace({ query: { ...route.query, batch: saved.id } });
     open.value = false;
     await load();
   } catch (error) {
@@ -110,10 +156,7 @@ const consentLabels = {
 };
 </script>
 <template>
-  <ContentSection
-    title="招生批次"
-    :subtitle="selected ? undefined : '按入学年度、批次和考试类别独立记录'"
-  >
+  <ContentSection title="招生信息">
     <template #actions>
       <Button @click="edit()">新增批次</Button><Button v-if="selected" @click="edit(selected)"> 编辑本批次 </Button>
     </template>
@@ -123,8 +166,9 @@ const consentLabels = {
     </p>
     <template v-if="selected">
       <Select
+        v-accessible-select
         :value="selectedId || selected.id"
-        @change="(v) => (selectedId = String(v))"
+        @change="choose"
         :options="
           rows.map((r) => ({
             value: r.id,
@@ -174,9 +218,15 @@ const consentLabels = {
           >本批次来源 ↗</a><Button type="text" danger @click="remove">删除本批次</Button>
       </div>
     </template>
-    <p v-else-if="!loading && !errorMessage" class="juai-scope-note">
-      尚未建立结构化招生批次。下方保留旧考试和通用资料，不会自动把考试年份当作入学年度。
+    <p
+      v-else-if="!loading && !errorMessage && !$slots.legacy"
+      class="juai-scope-note"
+    >
+      尚未添加招生批次。请核对入学年度、考试类别与适用范围后新增。
     </p>
+    <div v-if="!selected && !loading && !errorMessage">
+      <slot name="legacy"></slot>
+    </div>
     <Modal
       v-model:open="open"
       :title="draft.id ? '编辑招生批次' : '新增招生批次'"
@@ -262,6 +312,18 @@ const consentLabels = {
               :maxlength="4000"
               :rows="2"
               :disabled="busy"
+          /></label>
+          <label style="grid-column: 1/-1">关联本专攻文件<Select
+              v-model:value="draft.documentIds"
+              mode="multiple"
+              :disabled="busy"
+              :options="
+                (files || []).map((f) => ({
+                  value: f.id,
+                  label: `${f.title} · ${f.year}`,
+                }))
+              "
+              placeholder="选择募集要项、相关文件或过去问"
           /></label>
         </div>
         <p v-if="errorMessage" role="alert" class="form-error">

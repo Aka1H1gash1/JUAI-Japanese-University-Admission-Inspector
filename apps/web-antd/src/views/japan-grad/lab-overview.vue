@@ -193,7 +193,10 @@ function openExport() {
           <RouterLink :to="path(e)">{{ e.title }}</RouterLink>
         </h2>
         <p v-if="e.professor" class="overview-teacher-lab">
-          {{ e.target.lab.name }} · {{ e.professor.title }}
+          <RouterLink :to="labPath(e.target)">
+            {{ e.target.lab.name }}
+          </RouterLink>
+          · {{ e.professor.title }}
         </p>
         <p class="overview-affiliation">
           {{ e.target.university.name }} / {{ e.target.school.name }} /
@@ -265,7 +268,9 @@ function openExport() {
               />
             </td>
             <td>
-              <RouterLink :to="path(e)">{{ e.title }}</RouterLink><small v-if="e.professor">{{ e.target.lab.name }}</small>
+              <RouterLink :to="path(e)">{{ e.title }}</RouterLink><small v-if="e.professor"><RouterLink :to="labPath(e.target)">{{
+                  e.target.lab.name
+                }}</RouterLink></small>
             </td>
             <td>
               {{ e.target.university.name

@@ -13,7 +13,7 @@ import {
 import { planCollectionResources } from './collection-import-resources.mjs';
 import { matchCollectionEntities } from './collection-matching.mjs';
 import { emptyContactRecord } from './planning-fields.mjs';
-import { catalogMatches } from './university-catalog.mjs';
+import { catalogMatches, catalogUniversity } from './university-catalog.mjs';
 
 const parents = {
   school: ['university', 'universityId'],
@@ -100,13 +100,19 @@ export function buildCollectionImportPlan({
     required.includes('lab') ? ['lab', 'university'] : ['university'],
   );
   if (selection.createOptions?.university) {
-    exactKeys(selection.createOptions.university, ['logoId']);
+    exactKeys(selection.createOptions.university, ['logoId', 'catalogId']);
     if (
+      selection.createOptions.university.logoId !== undefined &&
       !/^[a-f0-9-]{36}\.(png|jpg|webp)$/.test(
         selection.createOptions.university.logoId,
       )
     )
       throw importError('校徽选择不合法。');
+    if (
+      selection.createOptions.university.catalogId !== undefined &&
+      !catalogUniversity(selection.createOptions.university.catalogId)
+    )
+      throw importError('请重新选择有效的大学目录条目。');
     if (selection.entities.university.action !== 'create')
       throw importError('已有大学不能修改校徽。');
   }
@@ -295,7 +301,26 @@ export function buildCollectionImportPlan({
         ...choice.fields,
       };
       if (kind === 'university') {
-        const catalog = catalogMatches(entity.name, entity.japaneseName);
+        const explicit = selection.createOptions?.university?.catalogId;
+        const catalog = explicit
+          ? [catalogUniversity(explicit)]
+          : catalogMatches(entity.name, entity.japaneseName);
+        if (
+          catalog.length === 1 &&
+          data.universities.some((u) => {
+            const candidates = catalogMatches(u.name, u.japaneseName);
+            return (
+              (u.catalogId ||
+                (candidates.length === 1 ? candidates[0].id : '')) ===
+              catalog[0].id
+            );
+          })
+        )
+          throw importError(
+            '该目录大学已存在，请关联已有记录。',
+            'DUPLICATE_RECORD',
+            409,
+          );
         if (catalog.length === 1) {
           entity.catalogId = catalog[0].id;
           entity.schoolCode = catalog[0].schoolCode;
@@ -310,7 +335,7 @@ export function buildCollectionImportPlan({
         };
       if (kind === 'lab')
         entity.wantApply = selection.createOptions?.lab?.wantApply ?? false;
-      if (kind === 'university' && selection.createOptions?.university)
+      if (kind === 'university' && selection.createOptions?.university?.logoId)
         entity.logoId = selection.createOptions.university.logoId;
       additions[collectionCollections[kind]].push(entity);
       assigned[kind] = id;

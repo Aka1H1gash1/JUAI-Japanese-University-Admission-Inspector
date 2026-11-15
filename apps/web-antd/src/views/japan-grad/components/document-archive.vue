@@ -28,12 +28,14 @@ import { requireValue } from '../required-value';
 import { vAccessibleSelect } from '../select-accessibility';
 import ExplorerIcon from './explorer-icon.vue';
 
-const emit = defineEmits<{ changed: [] }>();
 const props = defineProps<{
   ownerType: 'major' | 'professor';
   ownerId: string;
   onlyKind?: 'guidelines' | 'question';
+  sectionKind?: 'files' | 'questions';
+  initialId?: string;
 }>();
+const emit = defineEmits<{ changed: []; uploaded: [record: StoredDocument] }>();
 const { message, modal } = App.useApp();
 const documents = ref<StoredDocument[]>([]);
 const loading = ref(false);
@@ -114,13 +116,57 @@ const allGroups = computed(() =>
         },
       ],
 );
-const groups = computed(() =>
-  allGroups.value.filter(
-    (group) => !props.onlyKind || group.kind === props.onlyKind,
-  ),
-);
+const archiveTitle = computed(() => {
+  if (props.sectionKind === 'files') return '文件';
+  if (props.sectionKind === 'questions') return '过去问';
+  if (props.onlyKind) return kindLabels[props.onlyKind];
+  return isPaper.value ? '论文库' : '专攻文件';
+});
+const groups = computed(() => {
+  if (props.sectionKind === 'files')
+    return [
+      {
+        kind: 'guidelines' as const,
+        title: '文件',
+        description: '募集要项与相关资料。',
+      },
+    ];
+  if (props.sectionKind === 'questions')
+    return [
+      {
+        kind: 'question' as const,
+        title: '过去问',
+        description: '历年试题与对应答案。',
+      },
+    ];
+  return allGroups.value.filter(
+    (g) => !props.onlyKind || g.kind === props.onlyKind,
+  );
+});
+const matchesGroup = (item: StoredDocument, kind: DocumentKind) =>
+  props.sectionKind === 'files'
+    ? ['guidelines', 'other'].includes(item.kind)
+    : item.kind === kind;
 const recordsFor = (kind: DocumentKind) =>
-  visible.value.filter((item) => item.kind === kind);
+  visible.value.filter((item) => matchesGroup(item, kind));
+const archiveCount = computed(
+  () =>
+    documents.value.filter((item) =>
+      groups.value.some((g) => matchesGroup(item, g.kind)),
+    ).length,
+);
+watch(
+  () => props.initialId,
+  () => {
+    const item = documents.value.find((d) => d.id === props.initialId);
+    if (item) select(item);
+  },
+);
+function kindLabel(value: DocumentKind) {
+  return props.sectionKind === 'files' && value === 'other'
+    ? '相关文件'
+    : kindLabels[value];
+}
 function yearLabel(kind: DocumentKind) {
   if (kind === 'guidelines') return '招生年度';
   if (kind === 'paper') return '发表年份';
@@ -148,6 +194,8 @@ async function load() {
         props.ownerType === 'professor'
           ? rows.filter((row) => row.kind === 'paper')
           : rows;
+    const focus = documents.value.find((d) => d.id === props.initialId);
+    if (current === generation && focus) select(focus);
   } catch (error) {
     if (current === generation)
       feedback.value =
@@ -164,6 +212,7 @@ watch(
     detailOpen.value = false;
     selectedId.value = '';
     editOpen.value = false;
+    emit('changed');
     uploadOpen.value = false;
     void load();
   },
@@ -292,6 +341,8 @@ async function saveUpload() {
     )
       documents.value.push(record);
     uploadOpen.value = false;
+    emit('changed');
+    emit('uploaded', record);
     message.success('文件已保存到本地工作区。');
   } catch (error) {
     uploadError.value =
@@ -315,12 +366,14 @@ async function saveEdit() {
       `/documents/${item.id}`,
       jsonOptions('PATCH', {
         title: item.title,
+        filename: item.filename,
         authors: item.authors,
         venue: item.venue,
         notes: item.notes,
       }),
     );
     replace(updated);
+    emit('changed');
     editOpen.value = false;
     message.success('资料已保存。');
   } catch (error) {
@@ -329,7 +382,31 @@ async function saveEdit() {
     editBusy.value = false;
   }
 }
-function remove(record: StoredDocument) {
+async function remove(record: StoredDocument) {
+  try {
+    const targets = [
+      record,
+      ...documents.value.filter((item) => item.questionId === record.id),
+    ];
+    const responses = await Promise.all(
+      targets.map((item) =>
+        localApi<Array<{ label: string }>>(`/documents/${item.id}/references`),
+      ),
+    );
+    const refs = responses.flat();
+    if (refs.length > 0) {
+      modal.warning({
+        zIndex: 1300,
+        title: '文件仍被招生批次引用',
+        content: `请先编辑对应批次并解除文件关联：${refs.map((item) => item.label).join('、')}`,
+      });
+      return;
+    }
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '引用检查失败');
+    return;
+  }
+
   modal.confirm({
     zIndex: 1300,
     title: `移除「${record.title}」？`,
@@ -350,6 +427,7 @@ function remove(record: StoredDocument) {
           (item) => !result.removed.includes(item.id),
         );
         if (result.removed.includes(selectedId.value)) detailOpen.value = false;
+        emit('changed');
         message.success('已移入本地回收目录。');
       } catch (error) {
         feedback.value =
@@ -366,16 +444,10 @@ function remove(record: StoredDocument) {
     class="document-archive"
     :aria-label="isPaper ? '老师论文库' : '专攻考试资料库'"
   >
-    <header class="archive-heading">
+    <header v-if="!sectionKind" class="archive-heading">
       <div>
         <h2>
-          {{ onlyKind ? kindLabels[onlyKind] : isPaper ? '论文库' : '专攻文件'
-          }}<span>{{
-            documents.filter(
-              (item) =>
-                item.kind !== 'answer' && (!onlyKind || item.kind === onlyKind),
-            ).length
-          }}</span>
+          {{ archiveTitle }}<span>{{ archiveCount }}</span>
         </h2>
         <p>
           {{
@@ -418,7 +490,8 @@ function remove(record: StoredDocument) {
             <h3>
               {{ group.title
               }}<span>{{
-                documents.filter((item) => item.kind === group.kind).length
+                documents.filter((item) => matchesGroup(item, group.kind))
+                  .length
               }}</span>
             </h3>
             <p>{{ group.description }}</p>
@@ -445,13 +518,10 @@ function remove(record: StoredDocument) {
             <RouterLink
               :to="documentReaderPath(item.id)"
               class="archive-card-reader-link"
-              :aria-label="`阅读${kindLabels[item.kind]}：${item.title}`"
+              :aria-label="`阅读${kindLabel(item.kind)}：${item.title}`"
             />
             <div class="archive-selection-top">
-              <span class="entity-symbol"><ExplorerIcon name="book" /></span
-              ><span class="archive-selection-year"
-                >{{ item.year }}<small>{{ yearLabel(item.kind) }}</small></span
-              >
+              <span class="entity-symbol"><ExplorerIcon name="book" /></span><span class="archive-selection-year">{{ item.year }}<small>{{ yearLabel(item.kind) }}</small></span>
               <button
                 class="archive-card-metadata"
                 :aria-label="`查看或编辑资料：${item.title}`"
@@ -479,8 +549,7 @@ function remove(record: StoredDocument) {
                 item.kind === 'question'
                   ? `${answersFor(item.id).length} 份对应答案`
                   : `${fileFormat(item.filename)} · 本地保存`
-              }}</span
-              ><span>阅读与笔记<ExplorerIcon name="arrow" /></span>
+              }}</span><span>阅读与笔记<ExplorerIcon name="arrow" /></span>
             </div>
           </article>
         </div>
@@ -504,15 +573,14 @@ function remove(record: StoredDocument) {
     <Drawer
       v-model:open="detailOpen"
       :z-index="1100"
-      :title="selected ? kindLabels[selected.kind] : '资料详情'"
+      :title="selected ? kindLabel(selected.kind) : '资料详情'"
       :width="Math.min(720, viewportWidth)"
       :destroy-on-close="true"
       class="archive-detail-drawer"
     >
       <div v-if="selected" class="archive-document-details">
         <div class="archive-detail-heading">
-          <span class="entity-symbol"><ExplorerIcon name="book" /></span
-          ><span class="archive-kind">{{ kindLabels[selected.kind] }}</span>
+          <span class="entity-symbol"><ExplorerIcon name="book" /></span><span class="archive-kind">{{ kindLabel(selected.kind) }}</span>
           <h2>{{ selected.title }}</h2>
           <p>{{ yearLabel(selected.kind) }} · {{ selected.year }}</p>
         </div>
@@ -602,13 +670,11 @@ function remove(record: StoredDocument) {
                   class="archive-link"
                   :to="documentReaderPath(answer.id)"
                 >
-                  阅读答案与笔记 → </RouterLink
-                ><Button size="small" @click="edit(answer)">编辑</Button
-                ><a
+                  阅读答案与笔记 →
+</RouterLink><Button size="small" @click="edit(answer)">编辑</Button><a
                   class="archive-link"
                   :href="`${fileUrl(answer.id)}?download=1`"
-                  >下载</a
-                ><Button
+                  >下载</a><Button
                   size="small"
                   type="text"
                   danger
@@ -623,10 +689,7 @@ function remove(record: StoredDocument) {
           <p v-else class="archive-answer-empty">尚未上传对应答案。</p>
         </section>
         <div class="archive-card-actions">
-          <Button @click="edit(selected)">编辑资料</Button
-          ><a class="archive-link" :href="`${fileUrl(selected.id)}?download=1`"
-            >下载原文件</a
-          ><Button
+          <Button @click="edit(selected)">编辑资料</Button><a class="archive-link" :href="`${fileUrl(selected.id)}?download=1`">下载原文件</a><Button
             type="text"
             danger
             :aria-label="`移除文件：${selected.title}`"
@@ -640,7 +703,7 @@ function remove(record: StoredDocument) {
     <Modal
       v-model:open="uploadOpen"
       :z-index="1200"
-      :title="kind === 'answer' ? '上传对应答案' : `新增${kindLabels[kind]}`"
+      :title="kind === 'answer' ? '上传对应答案' : `新增${kindLabel(kind)}`"
       :width="620"
       :footer="null"
       :mask-closable="!uploading"
@@ -654,6 +717,18 @@ function remove(record: StoredDocument) {
       >
         <p class="form-context">选择一个文件，补充年份和标题后保存。</p>
         <div class="form-fields archive-upload-fields">
+          <div v-if="sectionKind === 'files'" class="field full">
+            <label for="archive-kind">文件类型</label><Select
+              v-accessible-select
+              id="archive-kind"
+              v-model:value="kind"
+              :disabled="uploading"
+              :options="[
+                { value: 'guidelines', label: '募集要项' },
+                { value: 'other', label: '其他相关文件' },
+              ]"
+            />
+          </div>
           <div class="field full">
             <label for="archive-file">资料文件 <span>*</span></label>
             <div
@@ -671,16 +746,10 @@ function remove(record: StoredDocument) {
                 aria-label="拖拽或选择资料文件"
                 @click="fileInput?.click()"
               >
-                <span class="archive-dropzone-icon"
-                  ><ExplorerIcon name="upload"
-                /></span>
-                <strong
-                  >{{ dragging ? '松开即可选择文件' : '拖拽文件到这里，或'
-                  }}<span v-if="!dragging">点击选择</span></strong
-                >
-                <span class="archive-dropzone-hint"
-                  >每次 1 个文件 · PDF / DOC / DOCX / MD / TXT</span
-                >
+                <span class="archive-dropzone-icon"><ExplorerIcon name="upload" /></span>
+                <strong>{{ dragging ? '松开即可选择文件' : '拖拽文件到这里，或'
+                  }}<span v-if="!dragging">点击选择</span></strong>
+                <span class="archive-dropzone-hint">每次 1 个文件 · PDF / DOC / DOCX / MD / TXT</span>
                 <small>单个文件最大 50 MB</small>
               </button>
               <input
@@ -700,12 +769,9 @@ function remove(record: StoredDocument) {
                 fileFormat(selectedFile.name)
               }}</span>
               <div>
-                <strong>{{ selectedFile.name }}</strong
-                ><span
-                  >{{ fileSize(selectedFile.size) }} · 1 个文件{{
+                <strong>{{ selectedFile.name }}</strong><span>{{ fileSize(selectedFile.size) }} · 1 个文件{{
                     uploading ? ' · 正在保存…' : ' · 待保存'
-                  }}</span
-                >
+                  }}</span>
               </div>
               <Button
                 type="text"
@@ -727,16 +793,14 @@ function remove(record: StoredDocument) {
             </div>
           </div>
           <div class="field">
-            <label for="archive-year"
-              >{{
+            <label for="archive-year">{{
                 kind === 'guidelines'
                   ? '招生年度'
                   : kind === 'paper'
                     ? '发表年份'
                     : '考试年份'
               }}
-              *</label
-            ><input
+              *</label><input
               id="archive-year"
               v-model.number="year"
               type="number"
@@ -747,8 +811,7 @@ function remove(record: StoredDocument) {
             />
           </div>
           <div class="field">
-            <label for="archive-title">资料标题 *</label
-            ><Input
+            <label for="archive-title">资料标题 *</label><Input
               id="archive-title"
               v-model:value="title"
               :maxlength="240"
@@ -766,8 +829,7 @@ function remove(record: StoredDocument) {
           <span>{{
             selectedFile ? '1 个文件待保存' : '每次上传一个文件'
           }}</span>
-          <Button :disabled="uploading" @click="uploadOpen = false">取消</Button
-          ><Button
+          <Button :disabled="uploading" @click="uploadOpen = false">取消</Button><Button
             type="primary"
             html-type="submit"
             :loading="uploading"
@@ -795,25 +857,31 @@ function remove(record: StoredDocument) {
       >
         <div class="form-fields">
           <div class="field full">
-            <label for="archive-edit-title">标题 *</label
-            ><Input
+            <label for="archive-edit-title">标题 *</label><Input
               id="archive-edit-title"
               v-model:value="editing.title"
               :maxlength="240"
             />
           </div>
+          <div class="field full">
+            <label for="archive-edit-filename">下载文件名</label><Input
+              id="archive-edit-filename"
+              v-model:value="editing.filename"
+              :maxlength="240"
+              :disabled="editBusy"
+            />
+            <p>保留原扩展名；原文件内容与阅读笔记不变。</p>
+          </div>
           <template v-if="editing.kind === 'paper'">
             <div class="field">
-              <label for="paper-authors">作者</label
-              ><Input
+              <label for="paper-authors">作者</label><Input
                 id="paper-authors"
                 v-model:value="editing.authors"
                 :maxlength="500"
               />
             </div>
             <div class="field">
-              <label for="paper-venue">期刊 / 会议</label
-              ><Input
+              <label for="paper-venue">期刊 / 会议</label><Input
                 id="paper-venue"
                 v-model:value="editing.venue"
                 :maxlength="500"
@@ -823,8 +891,7 @@ function remove(record: StoredDocument) {
           <div class="field full">
             <label for="archive-notes">{{
               editing.kind === 'paper' ? '阅读笔记' : '资料备注'
-            }}</label
-            ><Input.TextArea
+            }}</label><Input.TextArea
               id="archive-notes"
               v-model:value="editing.notes"
               :rows="4"
@@ -834,8 +901,7 @@ function remove(record: StoredDocument) {
         </div>
         <p v-if="editError" role="alert" class="form-error">{{ editError }}</p>
         <div class="form-footer">
-          <Button :disabled="editBusy" @click="editOpen = false">取消</Button
-          ><Button type="primary" html-type="submit" :loading="editBusy">
+          <Button :disabled="editBusy" @click="editOpen = false">取消</Button><Button type="primary" html-type="submit" :loading="editBusy">
             保存资料
           </Button>
         </div>

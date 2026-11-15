@@ -5,8 +5,9 @@ import { useRoute, useRouter } from 'vue-router';
 import { App, Button } from 'ant-design-vue';
 
 import EntityEditor from './components/entity-editor.vue';
-import ExplorerIcon from './components/explorer-icon.vue';
 import ProfessorDetails from './components/professor-details.vue';
+import ContextTrail from './design-system/context-trail.vue';
+import PageHeading from './design-system/page-heading.vue';
 import { professorInitials, useExplorerStore } from './explorer';
 import { labContext, labPath } from './lab-targets';
 
@@ -15,6 +16,18 @@ const route = useRoute();
 const router = useRouter();
 const { message, modal } = App.useApp();
 const editorOpen = ref(false);
+const toggling = ref(false);
+async function favorite() {
+  if (!professor.value || toggling.value) return;
+  toggling.value = true;
+  try {
+    await store.toggleFavorite(professor.value.id);
+  } catch (error) {
+    message.error(error instanceof Error ? error.message : '保存失败');
+  } finally {
+    toggling.value = false;
+  }
+}
 const university = computed(() =>
   store.universities.find((item) => item.id === route.params.universityId),
 );
@@ -93,64 +106,53 @@ function removeProfessor() {
 <template>
   <section
     v-if="professor && lab && major && school && university"
-    class="explorer-page professor-page"
+    class="juai-design juai-stack professor-page"
   >
-    <nav class="explorer-breadcrumb" aria-label="当前位置">
-      <RouterLink to="/japan-grad/universities">大学清单</RouterLink><ExplorerIcon name="chevron" />
-      <RouterLink :to="`/japan-grad/universities/${university.id}`">
-        {{ university.name }}
-</RouterLink><ExplorerIcon name="chevron" />
-      <RouterLink
-        :to="`/japan-grad/universities/${university.id}/schools/${school.id}`"
-      >
-        {{ school.name }}
-</RouterLink><ExplorerIcon name="chevron" />
-      <RouterLink :to="majorUrl">{{ major.name }}</RouterLink><ExplorerIcon name="chevron" /><RouterLink :to="labUrl">
-        {{ lab.name }}
-</RouterLink><ExplorerIcon name="chevron" /><span>{{ professor.name }}</span>
-    </nav>
-    <header class="page-heading detail-heading professor-page-heading">
-      <div>
-        <div class="professor-page-identity">
-          <span
-            class="entity-symbol teacher-symbol professor-avatar"
-            aria-hidden="true"
-            >{{ professorInitials(professor.name) }}</span>
-          <div>
-            <h1>{{ professor.name }}</h1>
-            <p class="page-description">
-              {{
-                [professor.japaneseName, professor.title, lab.name]
-                  .filter(Boolean)
-                  .join(' / ') || '职称与研究室待补充'
-              }}
-            </p>
-          </div>
-        </div>
-      </div>
-      <div class="detail-actions">
+    <PageHeading
+      :title="professor.name"
+      :description="
+        [
+          professor.title,
+          professor.japaneseName !== professor.name
+            ? professor.japaneseName
+            : '',
+        ]
+          .filter(Boolean)
+          .join(' · ') || '职称未确认'
+      "
+    >
+      <template #identity>
+        <span class="juai-professor-avatar" aria-hidden="true">{{
+          professorInitials(professor.name)
+        }}</span>
+      </template>
+      <template #context>
+        <ContextTrail
+          :items="[
+            { label: '大学清单', to: '/japan-grad/universities' },
+            {
+              label: university.name,
+              to: `/japan-grad/universities/${university.id}`,
+            },
+            {
+              label: school.name,
+              to: `/japan-grad/universities/${university.id}/schools/${school.id}`,
+            },
+            { label: major.name, to: majorUrl },
+            { label: lab.name, to: labUrl },
+          ]"
+        />
+      </template>
+      <template #actions>
         <Button
-          class="icon-button favorite-button"
-          :class="{ 'is-favorite': professor.favorite }"
           :aria-pressed="professor.favorite"
-          @click="store.toggleFavorite(professor.id)"
+          :loading="toggling"
+          @click="favorite"
         >
-          <ExplorerIcon name="star" />{{
-            professor.favorite ? '已标记为心仪老师' : '标记为心仪老师'
-          }}
-        </Button>
-        <Button class="icon-button" @click="editorOpen = true">
-          <ExplorerIcon name="edit" />编辑资料
-        </Button>
-        <Button
-          class="icon-button"
-          aria-label="删除老师"
-          @click="removeProfessor"
-        >
-          <ExplorerIcon name="trash" />
-        </Button>
-      </div>
-    </header>
+          {{ professor.favorite ? '已标记心仪' : '标记心仪' }}
+</Button><Button @click="editorOpen = true">编辑资料</Button><Button type="text" danger @click="removeProfessor"> 删除 </Button>
+      </template>
+    </PageHeading>
     <ProfessorDetails :key="professor.id" :professor-id="professor.id" />
     <EntityEditor
       v-model:open="editorOpen"
@@ -172,3 +174,18 @@ function removeProfessor() {
     </RouterLink>
   </section>
 </template>
+
+<style scoped>
+.juai-professor-avatar {
+  display: grid;
+  place-items: center;
+  width: 60px;
+  height: 60px;
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--jg-accent-text);
+  background: var(--jg-subtle);
+  border: 1px solid var(--jg-line);
+  border-radius: 50%;
+}
+</style>

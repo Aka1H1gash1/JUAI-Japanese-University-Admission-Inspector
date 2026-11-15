@@ -44,8 +44,8 @@ const labs = computed(() =>
 <template>
   <div class="juai-design juai-stack">
     <PageHeading
-      title="JUAI 1.0 · 设计预览"
-      context="阶段 3 / 基础能力接入"
+      title="JUAI 1.0 · 页面验收入口"
+      context="阶段 4 / 正式实体页面"
       description="个人档案、招生信息与研究室三种信息结构，使用当前工作区真实资料。"
     />
     <ContentSection title="个人档案" subtitle="身份优先，阅读与编辑分离">
@@ -60,7 +60,7 @@ const labs = computed(() =>
             <RouterLink :to="{ path: item.path, query: { design: '1' } }">
               <strong>{{ item.title }}</strong>
               <p>{{ item.context }}</p>
-              <span>查看原型 →</span>
+              <span>查看页面 →</span>
             </RouterLink>
           </li>
         </ul>
@@ -75,7 +75,7 @@ const labs = computed(() =>
             <RouterLink :to="{ path: item.path, query: { design: '1' } }">
               <strong>{{ item.title }}</strong>
               <p>{{ item.context }}</p>
-              <span>查看原型 →</span>
+              <span>查看页面 →</span>
             </RouterLink>
           </li>
         </ul>
@@ -83,7 +83,7 @@ const labs = computed(() =>
       </ContentSection>
     </div>
     <p class="juai-scope-note">
-      招生批次、内诺三态、成员人数及动态语言记录已接入本地数据库；其余业务页面按后续阶段继续重构，尚未部署至服务器。
+      大学清单、大学、研究科、专攻、研究室与教师页面已使用正式阅读布局；申请工作台与全局剩余页面将在后续阶段继续重构。尚未部署至服务器。
     </p>
   </div>
 </template>

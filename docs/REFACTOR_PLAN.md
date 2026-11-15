@@ -55,3 +55,5 @@
 `explorer.ts` / `workspace-repository.mjs`、`EntityEditor`、`ExamHistory`、`MajorAdmissions`、`DocumentArchive`、`ResearchLabCollection`、`ResearchLabTeachers`、阅读器、create_only 导入、平台邮件验证、配额校验、用户隔离和发布流水线。不要建立第二套存储或重复抓取目录。
 
 旧设计说明 `design/REDESIGN.md` 和旧进度 `docs/japangrad/PROGRESS.md` 保留历史；其中橙绿旧品牌及「大学显示招生总览」等已被本次合并需求替代，新实现以这两份需求快照及本计划为准。
+
+第四阶段正式页面已交付，验收和剩余业务边界见 PHASE4_ENTITY_PAGES.md；下一阶段为第五阶段，生产部署仍待第七阶段。

@@ -240,6 +240,14 @@ export function validateExplorer(data) {
   }
   if (data.professors.some((item) => typeof item.favorite !== 'boolean'))
     fail('心仪标记格式错误。');
+  if (
+    data.labs?.some(
+      (lab) =>
+        (lab.description !== undefined && !text(lab.description, 8000)) ||
+        (lab.location !== undefined && !text(lab.location, 500)),
+    )
+  )
+    fail('研究室介绍或位置格式不正确。');
   if (data.labs?.some((item) => typeof item.wantApply !== 'boolean'))
     fail('研究室的想考标记格式错误。');
   if (
@@ -418,17 +426,35 @@ export async function createLocalApp({
               university.name,
               university.japaneseName,
             );
-            if (!university.catalogId && found.length === 1) {
+            if (university.catalogId === undefined && found.length === 1) {
               university.catalogId = found[0].id;
               university.schoolCode = found[0].schoolCode;
             }
+            const identity =
+              university.catalogId || (found.length === 1 ? found[0].id : '');
+            if (
+              identity &&
+              data.universities.some((other) => {
+                if (other.id === university.id) return false;
+                const candidates = catalogMatches(
+                  other.name,
+                  other.japaneseName,
+                );
+                return (
+                  (other.catalogId ||
+                    (candidates.length === 1 ? candidates[0].id : '')) ===
+                  identity
+                );
+              })
+            )
+              fail('这所大学已存在，请关联已有记录。', 409);
             const names = new Set(
               [university.name, university.japaneseName]
                 .filter(Boolean)
                 .map((v) => v.normalize('NFKC').trim().toLowerCase()),
             );
             if (
-              data.universities.some(
+              previous.universities.some(
                 (u) =>
                   u.id !== university.id &&
                   [u.name, u.japaneseName]
@@ -962,6 +988,8 @@ export async function createLocalApp({
               for (const key of [
                 'timeline',
                 'tasks',
+                'description',
+                'location',
                 'foreignStudentStatus',
                 'foreignStudentSource',
                 'foreignStudentNotes',
@@ -1057,6 +1085,13 @@ export async function createLocalApp({
             validateExplorer(data);
             transaction(() => {
               // Remove metadata atomically with parent records. Original files remain recoverable on disk.
+              for (const batch of db
+                .prepare('SELECT id,major_id FROM admission_batches')
+                .all())
+                if (!majors.has(batch.major_id))
+                  db.prepare('DELETE FROM admission_batches WHERE id=?').run(
+                    batch.id,
+                  );
               for (const row of db
                 .prepare('SELECT id, owner_type, owner_id FROM documents')
                 .all()) {
@@ -1345,6 +1380,22 @@ export async function createLocalApp({
                   fail('资料字段格式不合法。');
                 record[field] = input[field].trim();
               }
+            }
+            if (input.filename !== undefined) {
+              if (!text(input.filename, 240) || !input.filename.trim())
+                fail('请填写有效文件名。');
+              const next = input.filename.trim();
+              if (
+                /[\\/<>:"|?*]/.test(next) ||
+                [...next].some(
+                  (c) =>
+                    (c.codePointAt(0) ?? 0) < 32 || c.codePointAt(0) === 127,
+                ) ||
+                path.extname(next).toLowerCase() !==
+                  path.extname(record.filename).toLowerCase()
+              )
+                fail('文件名不能包含路径或特殊控制字符，且不能更改文件格式。');
+              record.filename = next;
             }
             if (record.kind === 'consent')
               Object.assign(

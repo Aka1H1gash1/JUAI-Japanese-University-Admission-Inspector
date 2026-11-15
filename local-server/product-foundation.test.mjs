@@ -333,3 +333,159 @@ test('configured platform quota is returned and enforced on the canonical upload
     await once(app, 'close');
   }
 });
+
+test('lab description and location survive legacy saves; timeline settings do not toggle application intent', async () => {
+  const f = await fixture();
+  try {
+    const state = await (await f.call('/workspace')).json();
+    const lab = state.data.labs[0];
+    lab.description = '已核实的研究室介绍';
+    lab.location = '真实楼宇信息';
+    assert.equal(
+      (
+        await f.call('/workspace', 'PUT', {
+          revision: state.revision,
+          data: state.data,
+        })
+      ).status,
+      200,
+    );
+    const legacy = await (await f.call('/workspace')).json();
+    delete legacy.data.labs[0].description;
+    delete legacy.data.labs[0].location;
+    assert.equal(
+      (
+        await f.call('/workspace', 'PUT', {
+          revision: legacy.revision,
+          data: legacy.data,
+        })
+      ).status,
+      200,
+    );
+    const current = await (await f.call('/workspace')).json();
+    assert.equal(current.data.labs[0].description, '已核实的研究室介绍');
+    assert.equal(current.data.labs[0].location, '真实楼宇信息');
+    const wanted = current.data.labs[0].wantApply;
+    const row = current.data.labs[0];
+    assert.equal(
+      (
+        await f.call(`/workspace/labs/${lab.id}`, 'PATCH', {
+          revision: current.entityRevisions.labs[lab.id],
+          patch: {
+            timeline: {
+              events: [],
+              hiddenSources: [],
+              version: 0,
+              ...row.timeline,
+              autoSyncExams: false,
+            },
+          },
+        })
+      ).status,
+      200,
+    );
+    const result = await (await f.call('/workspace')).json();
+    assert.equal(result.data.labs[0].wantApply, wanted);
+    assert.equal(result.data.labs[0].timeline.autoSyncExams, false);
+    result.data.labs[0].description = { bad: true };
+    assert.equal(
+      (
+        await f.call('/workspace', 'PUT', {
+          revision: result.revision,
+          data: result.data,
+        })
+      ).status,
+      400,
+    );
+  } finally {
+    await f.stop();
+  }
+});
+
+test('explicit parent deletion releases batch references atomically and retains original file bytes', async () => {
+  const f = await fixture();
+  try {
+    const file = await (await f.upload('major', 'm1')).json();
+    const batch = await (
+      await f.call('/foundation/majors/m1/batches', 'POST', {
+        label: '待删除批次',
+        documentIds: [file.id],
+      })
+    ).json();
+    assert.deepEqual(batch.documentIds, [file.id]);
+    const state = await (await f.call('/workspace')).json();
+    for (const key of [
+      'universities',
+      'schools',
+      'majors',
+      'labs',
+      'professors',
+    ])
+      state.data[key] = [];
+    assert.equal(
+      (
+        await f.call('/workspace', 'PUT', {
+          revision: state.revision,
+          data: state.data,
+        })
+      ).status,
+      200,
+    );
+    assert.deepEqual(await (await f.call('/documents/index')).json(), []);
+    const { readFile } = await import('node:fs/promises');
+    assert.ok((await readFile(path.join(f.workspace, file.path))).length > 0);
+    const db = new DatabaseSync(path.join(f.workspace, 'workspace.db'), {
+      readOnly: true,
+    });
+    assert.equal(
+      db.prepare('SELECT COUNT(*) AS n FROM document_references').get().n,
+      0,
+    );
+    assert.deepEqual(db.prepare('PRAGMA foreign_key_check').all(), []);
+    db.close();
+  } finally {
+    await f.stop();
+  }
+});
+
+test('renaming a download preserves document identity, original bytes and references', async () => {
+  const f = await fixture();
+  try {
+    const file = await (await f.upload('major', 'm1')).json();
+    const before = await (await f.call(`/documents/${file.id}/file`)).text();
+    const renamed = await (
+      await f.call(`/documents/${file.id}`, 'PATCH', {
+        filename: '申请资料（确认版）.txt',
+        title: '新的显示标题',
+      })
+    ).json();
+    assert.equal(renamed.id, file.id);
+    assert.equal(renamed.path, file.path);
+    assert.equal(renamed.sha256, file.sha256);
+    const response = await f.call(`/documents/${file.id}/file`);
+    assert.equal(await response.text(), before);
+    assert.ok(
+      response.headers
+        .get('content-disposition')
+        .includes(encodeURIComponent('申请资料（确认版）.txt')),
+    );
+    assert.equal(
+      (
+        await f.call(`/documents/${file.id}`, 'PATCH', {
+          filename: '../other.txt',
+        })
+      ).status,
+      400,
+    );
+    assert.equal(
+      (
+        await f.call(`/documents/${file.id}`, 'PATCH', {
+          filename: 'wrong.pdf',
+        })
+      ).status,
+      400,
+    );
+  } finally {
+    await f.stop();
+  }
+});

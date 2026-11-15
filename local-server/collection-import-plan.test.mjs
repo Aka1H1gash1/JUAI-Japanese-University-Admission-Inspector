@@ -127,3 +127,20 @@ test('professors sharing a lab URL with different names are not the same identit
   };
   assert.deepEqual(matchCollectionEntities(data, { draft }).professor, []);
 });
+
+test('manual directory selection is stable, create-only and rejects an existing directory identity', async () => {
+  const { universityCatalog } = await import('./university-catalog.mjs');
+  const entry = universityCatalog.find((u) => u.japaneseName === '東京大学');
+  const input = fixture();
+  input.selection.createOptions = { university: { catalogId: entry.id } };
+  const result = buildCollectionImportPlan(input);
+  assert.equal(result.additions.universities[0].catalogId, entry.id);
+  assert.equal(result.additions.universities[0].name, '新大学');
+  input.data.universities[0].catalogId = entry.id;
+  assert.throws(
+    () => buildCollectionImportPlan(input),
+    (error) => error.code === 'DUPLICATE_RECORD',
+  );
+  input.selection.createOptions.university.catalogId = 'unknown-directory-id';
+  assert.throws(() => buildCollectionImportPlan(input));
+});

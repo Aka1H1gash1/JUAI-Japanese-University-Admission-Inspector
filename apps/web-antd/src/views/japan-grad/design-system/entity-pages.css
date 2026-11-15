@@ -1,0 +1,201 @@
+.juai-entity-hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.55fr);
+  gap: 24px;
+}
+
+.juai-entity-facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20px;
+  margin: 0;
+}
+
+.juai-entity-facts dt {
+  font-size: 11px;
+  color: var(--jg-muted);
+}
+
+.juai-entity-facts dd {
+  margin: 6px 0 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--jg-text);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.juai-subsection {
+  padding-top: 20px;
+  margin-top: 20px;
+  border-top: 1px solid var(--jg-line);
+}
+
+.juai-subsection h3 {
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.juai-entity-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.juai-entity-toolbar .ant-input-affix-wrapper {
+  max-width: 360px;
+}
+
+.juai-fee-value {
+  font-size: 28px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--jg-accent-text);
+}
+
+.juai-budget-list {
+  display: grid;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.juai-budget-list > div {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.juai-budget-list dt {
+  color: var(--jg-muted);
+}
+
+.juai-budget-list dd {
+  margin: 0;
+}
+
+.juai-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--jg-secondary);
+}
+
+.juai-tags > span {
+  padding: 3px 8px;
+  background: var(--jg-subtle);
+  border-radius: 4px;
+}
+
+.juai-university-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.juai-university-entry {
+  position: relative;
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+  padding: 24px;
+  background: var(--jg-surface);
+  border: 1px solid var(--jg-line);
+  border-radius: var(--juai-radius);
+}
+
+.juai-university-entry.is-selected {
+  border-color: var(--jg-accent);
+}
+
+.juai-university-identity {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  min-width: 0;
+  padding-right: 28px;
+}
+
+.juai-university-identity > div {
+  min-width: 0;
+}
+
+.juai-university-identity h2 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.juai-university-identity p {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--jg-muted);
+}
+
+.juai-university-entry > a:first-child {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.juai-university-entry .ant-checkbox-wrapper {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 2;
+}
+
+.juai-university-entry .juai-tags {
+  padding-left: 64px;
+}
+
+.juai-university-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding-top: 16px;
+  font-size: 11px;
+  color: var(--jg-muted);
+  border-top: 1px solid var(--jg-line);
+}
+
+.juai-university-footer span:last-child {
+  margin-left: auto;
+  color: var(--jg-accent-text);
+}
+
+.juai-inline-notice {
+  padding: 12px 16px;
+  margin: 0 0 16px;
+  font-size: 12px;
+  line-height: 1.7;
+  background: var(--jg-subtle);
+  border-radius: 6px;
+}
+
+@media (max-width: 720px) {
+  .juai-entity-hero,
+  .juai-university-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .juai-entity-facts {
+    gap: 16px;
+  }
+
+  .juai-university-entry {
+    padding: 20px;
+  }
+
+  .juai-university-entry .ant-checkbox-wrapper {
+    top: 20px;
+    right: 20px;
+  }
+}

@@ -10,8 +10,12 @@ import ProfileExportDialog from './components/profile-export-dialog.vue';
 import UniversityComparison from './components/university-comparison.vue';
 import UniversityLogo from './components/university-logo.vue';
 import { useExplorerStore } from './explorer';
-import { geographySearchTerms, universityLocation } from './japan-geography';
+import {
+  compactUniversityLocation,
+  geographySearchTerms,
+} from './japan-geography';
 import { vAccessibleSelect } from './select-accessibility';
+import { universityDisplayGeography } from './university-catalog';
 import { usePagination } from './use-pagination';
 
 const store = useExplorerStore();
@@ -76,10 +80,10 @@ const { page, pageSize, total, paged } = usePagination(visibleUniversities, [
 </script>
 
 <template>
-  <section class="explorer-page university-collection-page directory-page">
-    <header class="page-heading workspace-page-heading">
+  <section class="juai-design juai-stack university-collection-page">
+    <header class="juai-entity-toolbar">
       <div>
-        <h1 class="workspace-title">大学清单</h1>
+        <h1 class="workspace-title" style="font-size: 28px">大学清单</h1>
       </div>
       <div class="detail-actions">
         <Button
@@ -131,22 +135,18 @@ const { page, pageSize, total, paged } = usePagination(visibleUniversities, [
         </Button>
       </div>
 
-      <div v-if="visibleUniversities.length" class="university-directory">
-        <div class="university-directory-head" aria-hidden="true">
-          <span>大学</span><span>所在地 / 类型</span><span>QS 世界排名</span><span>日本排名</span><span>已整理资料</span><span>对比</span>
-        </div>
+      <div v-if="visibleUniversities.length" class="juai-university-grid">
         <article
           v-for="university in paged"
           :key="university.id"
-          class="university-directory-entry"
+          class="juai-university-entry"
           :class="{ 'is-selected': selectedIds.includes(university.id) }"
         >
           <RouterLink
             :to="`/japan-grad/universities/${university.id}`"
-            class="directory-entry-link"
             :aria-label="`查看${university.name}详情`"
           />
-          <div class="directory-identity">
+          <div class="juai-university-identity">
             <UniversityLogo
               :catalog-id="university.catalogId"
               :logo-id="university.logoId"
@@ -164,45 +164,22 @@ const { page, pageSize, total, paged } = usePagination(visibleUniversities, [
               </p>
             </div>
           </div>
-          <div class="directory-field">
-            <span class="directory-mobile-label">所在地 / 类型</span><strong>{{
-              universityLocation(university) || '所在地待补充'
-            }}</strong><small>{{
-              ['国立', '公立', '国公立'].includes(university.category)
-                ? '国公立'
-                : university.category || '类型待补充'
-            }}</small>
+          <div class="juai-tags">
+            <span>{{ university.category || '类型未确认' }}</span><span>{{
+              compactUniversityLocation(
+                universityDisplayGeography(university),
+              ) || '所在地未确认'
+            }}</span>
           </div>
-          <div class="directory-field">
-            <span class="directory-mobile-label">QS 世界排名</span><strong>{{ university.qsRank || '—' }}</strong><small>{{ university.qsYear || '年份待补充' }}</small>
-          </div>
-          <div
-            class="directory-field"
-            :title="university.japanRankSource || '日本排名需注明榜单来源'"
-          >
-            <span class="directory-mobile-label">日本排名</span><strong>{{ university.japanRank || '—' }}</strong><small>{{
-              [university.japanRankSource, university.japanRankYear]
-                .filter(Boolean)
-                .join(' · ') || '来源待补充'
-            }}</small>
-          </div>
-          <div class="directory-field directory-profile-count">
-            <strong>{{ store.schoolsFor(university.id).length }} 个研究科</strong><small>{{ store.universityLabs(university.id).length }} 个研究室 ·
-              {{ store.universityProfessors(university.id).length }}
-              位老师</small>
+          <div class="juai-university-footer">
+            <span>{{ store.schoolsFor(university.id).length }} 个研究科</span><span>{{ store.universityMajors(university.id).length }} 个专攻</span><span>查看大学 →</span>
           </div>
           <Checkbox
-            class="directory-compare"
             :checked="selectedIds.includes(university.id)"
             :aria-label="`加入对比：${university.name}`"
             @change="toggleCompare(university.id)"
           />
         </article>
-        <p class="directory-list-count">
-          {{ visibleUniversities.length }} 所大学{{
-            query ? ` · 共 ${store.universities.length} 所` : ''
-          }}
-        </p>
       </div>
       <div v-else class="search-empty">
         <ExplorerIcon name="search" />

@@ -4,50 +4,48 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button, Input } from 'ant-design-vue';
 
-import CollectedAdmissions from './components/collected-admissions.vue';
 import EntityCreateFlow from './components/entity-create-flow.vue';
 import EntityEditor from './components/entity-editor.vue';
 import ExperiencePosts from './components/experience-posts.vue';
-import ExplorerIcon from './components/explorer-icon.vue';
 import ListPagination from './components/list-pagination.vue';
+import ContentSection from './design-system/content-section.vue';
+import ContextTrail from './design-system/context-trail.vue';
+import EmptyState from './design-system/empty-state.vue';
+import EntityLinks from './design-system/entity-links.vue';
+import PageHeading from './design-system/page-heading.vue';
 import { useExplorerStore, websiteUrl } from './explorer';
 import { usePagination } from './use-pagination';
-
-const store = useExplorerStore();
-const { message, modal } = App.useApp();
 const route = useRoute();
 const router = useRouter();
+const store = useExplorerStore();
+const { message, modal } = App.useApp();
 const university = computed(() =>
-  store.universities.find((item) => item.id === route.params.universityId),
+  store.universities.find((u) => u.id === route.params.universityId),
 );
 const school = computed(() =>
   store.schools.find(
-    (item) =>
-      item.id === route.params.schoolId &&
-      item.universityId === university.value?.id,
+    (s) =>
+      s.id === route.params.schoolId && s.universityId === university.value?.id,
   ),
 );
+const majorEditorOpen = ref(false);
 const query = ref('');
 const schoolEditorOpen = ref(false);
-const majorEditorOpen = ref(false);
-const visibleMajors = computed(() => {
-  const keyword = query.value.trim().toLowerCase();
-  return store
-    .majorsFor(school.value?.id ?? '')
-    .filter((item) =>
-      [item.name, item.japaneseName, item.research, item.notes].some((value) =>
-        value.toLowerCase().includes(keyword),
-      ),
+const visibleMajors = computed(() =>
+  store
+    .majorsFor(school.value?.id || '')
+    .filter((m) =>
+      [m.name, m.japaneseName, m.research, m.notes]
+        .join(' ')
+        .toLowerCase()
+        .includes(query.value.trim().toLowerCase()),
     )
-    .toReversed();
-});
+    .toReversed(),
+);
 watch(
   () => route.params.schoolId,
-  () => {
-    query.value = '';
-  },
+  () => (query.value = ''),
 );
-
 function deleteSchool() {
   if (!school.value) return;
   const id = school.value.id;
@@ -65,140 +63,92 @@ function deleteSchool() {
     },
   });
 }
+
 const { page, pageSize, total, paged } = usePagination(visibleMajors, [
   query,
-  () => route.params.schoolId,
+  () => school.value?.id,
 ]);
+const majorLinks = computed(() =>
+  paged.value.map((m) => ({
+    id: m.id,
+    title: m.name,
+    subtitle: m.research || m.japaneseName,
+    to: `/japan-grad/universities/${university.value?.id}/schools/${school.value?.id}/majors/${m.id}`,
+    meta: `${store.labsFor(m.id).length} 个研究室`,
+  })),
+);
 </script>
-
 <template>
-  <section v-if="school && university" class="explorer-page">
-    <nav class="explorer-breadcrumb" aria-label="当前位置">
-      <RouterLink to="/japan-grad/universities">大学清单</RouterLink><ExplorerIcon name="chevron" /><RouterLink
-        :to="`/japan-grad/universities/${university.id}`"
-      >
-        {{ university.name }}
-</RouterLink><ExplorerIcon name="chevron" /><span>{{ school.name }}</span>
-    </nav>
-    <header class="page-heading detail-heading">
-      <div>
-        <h1>{{ school.name }}</h1>
-        <p class="page-description">
-          {{
-            [university.name, school.japaneseName].filter(Boolean).join(' / ')
-          }}
-        </p>
-      </div>
-      <div class="detail-actions">
-        <Button class="icon-button" @click="schoolEditorOpen = true">
-          <ExplorerIcon name="edit" />编辑研究科
-</Button><Button
-          class="icon-button"
-          aria-label="删除研究科"
-          @click="deleteSchool"
-        >
-          <ExplorerIcon name="trash" />
-        </Button>
-      </div>
-    </header>
-    <section class="entity-overview" aria-label="研究科资料">
-      <div class="overview-meta">
-        <span><ExplorerIcon name="book" />{{
-            school.research || '研究领域尚未填写'
-          }}</span><a
+  <section v-if="school && university" class="juai-design juai-stack">
+    <PageHeading
+      :title="school.name"
+      :description="
+        school.japaneseName !== school.name ? school.japaneseName : undefined
+      "
+    >
+      <template #context>
+        <ContextTrail
+          :items="[
+            { label: '大学清单', to: '/japan-grad/universities' },
+            {
+              label: university.name,
+              to: `/japan-grad/universities/${university.id}`,
+            },
+          ]"
+        />
+</template><template #meta>
+        <a
           v-if="websiteUrl(school.website)"
           :href="websiteUrl(school.website)"
           target="_blank"
           rel="noopener noreferrer"
-          ><ExplorerIcon name="globe" />访问研究科官网<ExplorerIcon name="link" /></a>
+          >研究科官网 ↗</a>
+</template><template #actions>
+        <Button @click="schoolEditorOpen = true">编辑研究科</Button><Button type="text" danger @click="deleteSchool"> 删除 </Button>
+      </template>
+    </PageHeading>
+    <ContentSection title="研究领域">
+      <p class="juai-research-topic">
+        {{ school.research || '研究领域尚未记录' }}
+      </p>
+      <p v-if="school.notes" class="juai-prose">
+        {{ school.notes }}
+      </p>
+    </ContentSection>
+    <ContentSection :title="`专攻 · ${store.majorsFor(school.id).length}`">
+      <template #actions>
+        <Button type="primary" @click="majorEditorOpen = true">
+          新增专攻
+        </Button>
+      </template>
+      <div v-if="store.majorsFor(school.id).length" class="juai-entity-toolbar">
+        <Input
+          v-model:value="query"
+          allow-clear
+          placeholder="搜索专攻或研究方向"
+          aria-label="搜索专攻"
+        />
       </div>
-      <p v-if="school.notes" class="overview-notes">{{ school.notes }}</p>
-    </section>
-    <CollectedAdmissions kind="school" :id="school.id" />
-    <header class="collection-heading">
-      <div>
-        <h2>
-          专攻<span>{{ store.majorsFor(school.id).length }}</span>
-        </h2>
-        <p>专攻隶属于研究科，进入专攻后整理其中的研究室与老师。</p>
-      </div>
-      <Button
-        type="primary"
-        class="icon-button"
-        @click="majorEditorOpen = true"
-      >
-        <ExplorerIcon name="plus" />新增专攻
-      </Button>
-    </header>
-    <template v-if="store.majorsFor(school.id).length">
-      <Input
-        v-model:value="query"
-        allow-clear
-        class="explorer-search section-search"
-        placeholder="搜索专攻或研究方向"
-        aria-label="搜索专攻"
-      >
-        <template #prefix><ExplorerIcon name="search" /></template>
-      </Input>
-      <div
-        v-if="visibleMajors.length"
-        class="school-grid affiliation-card-grid"
-      >
-        <RouterLink
-          v-for="major in paged"
-          :key="major.id"
-          :to="`/japan-grad/universities/${university.id}/schools/${school.id}/majors/${major.id}`"
-          class="school-card major-card"
-        >
-          <div class="school-card-top">
-            <span class="entity-symbol"><ExplorerIcon name="book" /></span><ExplorerIcon name="arrow" />
-          </div>
-          <h3>{{ major.name }}</h3>
-          <p v-if="major.japaneseName" class="secondary-name">
-            {{ major.japaneseName }}
-          </p>
-          <p class="school-research">
-            {{ major.research || '研究方向待补充' }}
-          </p>
-          <p v-if="major.notes" class="card-notes">{{ major.notes }}</p>
-          <div class="school-card-bottom">
-            <span>{{ store.labsFor(major.id).length }} 个研究室</span><span
-              v-if="store.labsFor(major.id).some((item) => item.wantApply)"
-              class="favorite-count"
-              ><ExplorerIcon name="heart" />{{
-                store.labsFor(major.id).filter((item) => item.wantApply).length
-              }}
-              个想考</span><span class="open-label">查看研究室 →</span>
-          </div>
-        </RouterLink>
-      </div>
-      <div v-else class="search-empty">
-        <h2>没有找到相关专攻</h2>
-        <Button @click="query = ''">清除搜索</Button>
-      </div>
-    </template>
-    <section v-else class="collection-empty">
-      <span class="empty-symbol"><ExplorerIcon name="book" /></span>
-      <h3>添加第一个专攻</h3>
-      <p>先填写专攻名称，再整理感兴趣的研究室。</p>
-      <Button class="icon-button" @click="majorEditorOpen = true">
-        <ExplorerIcon name="plus" />添加专攻
-      </Button>
-    </section>
-    <ListPagination
-      v-model:page="page"
-      v-model:page-size="pageSize"
-      :total="total"
-    />
-    <ExperiencePosts :key="school.id" :school-id="school.id" />
+      <EntityLinks v-if="majorLinks.length" :items="majorLinks" /><EmptyState
+        v-else
+        :title="query ? '没有符合条件的专攻' : '尚未添加专攻'"
+      /><ListPagination
+        v-model:page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+      />
+    </ContentSection>
+    <details class="juai-history">
+      <summary>查看研究科考学经验</summary>
+      <ExperiencePosts :key="school.id" :school-id="school.id" />
+    </details>
     <EntityEditor
       v-model:open="schoolEditorOpen"
       kind="school"
       :entity-id="school.id"
       :parent-id="university.id"
       :parent-name="university.name"
-    />
-    <EntityCreateFlow
+    /><EntityCreateFlow
       v-model:open="majorEditorOpen"
       kind="major"
       :parent-id="school.id"
@@ -207,9 +157,6 @@ const { page, pageSize, total, paged } = usePagination(visibleMajors, [
   </section>
   <section v-else class="search-empty">
     <h1>这个研究科已不存在</h1>
-    <p>返回大学清单重新选择。</p>
-    <RouterLink to="/japan-grad/universities" class="back-link">
-      返回大学清单 →
-    </RouterLink>
+    <RouterLink to="/japan-grad/universities">返回大学清单 →</RouterLink>
   </section>
 </template>

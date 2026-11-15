@@ -3,8 +3,8 @@ import geography from '../../../../../local-server/japan-geography.json';
 export const JAPAN_REGIONS = geography.map((item) => item.name);
 export const JAPAN_PREFECTURES = geography.flatMap((item) =>
   item.prefectures.map(([name, japaneseName]) => ({
-    name: name!,
-    japaneseName: japaneseName!,
+    name: name ?? '',
+    japaneseName: japaneseName ?? '',
     region: item.name,
   })),
 );
@@ -26,7 +26,7 @@ const regionAliases: Record<string, string> = {
 };
 
 function prefectureAliases(item: (typeof JAPAN_PREFECTURES)[number]) {
-  return [...new Set([item.name, item.japaneseName])].flatMap((name) =>
+  return [...new Set([item.japaneseName, item.name])].flatMap((name) =>
     name === '北海道' ? [name] : [name, name.replace(/[都府县県]$/, '')],
   );
 }
@@ -84,7 +84,7 @@ export function universityAddress(value: UniversityGeography) {
 
 export function universityLocation(value: UniversityGeography) {
   return [
-    ...new Set([universityGeography(value).region, universityAddress(value)]),
+    ...new Set([universityAddress(value), universityGeography(value).region]),
   ]
     .filter(Boolean)
     .join(' / ');
@@ -102,4 +102,47 @@ export function geographyError(region: string, prefecture: string) {
   return match?.region === region
     ? ''
     : '请先选择所在地域，再选择该地域的都道府县。';
+}
+
+/** Compact display only; never writes inferred addresses back to records. */
+export function universityCity(value: UniversityGeography) {
+  let address = (value.location || '').trim();
+  const { prefecture } = universityGeography(value);
+  const known = findPrefecture(prefecture);
+  if (known)
+    for (const prefix of [known.name, known.japaneseName].toSorted(
+      (a, b) => b.length - a.length,
+    ))
+      if (address.startsWith(prefix)) {
+        address = address.slice(prefix.length).trim();
+        break;
+      }
+  const city = address.match(
+    /^(?:[\s/／,，]*)?([^\s\d/／,，-]{1,16}?(?:市|区|町|村))/u,
+  )?.[1];
+  if (city) return city;
+  if (
+    [
+      '东京',
+      '京都',
+      '仙台',
+      '名古屋',
+      '大阪',
+      '札幌',
+      '東京',
+      '横浜',
+      '横滨',
+      '神户',
+      '神戸',
+      '福冈',
+      '福岡',
+    ].includes(address)
+  )
+    return address;
+  return '';
+}
+export function compactUniversityLocation(value: UniversityGeography) {
+  return [universityGeography(value).region, universityCity(value)]
+    .filter(Boolean)
+    .join(' · ');
 }

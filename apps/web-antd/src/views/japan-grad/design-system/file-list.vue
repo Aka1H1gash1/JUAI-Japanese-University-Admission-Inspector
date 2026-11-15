@@ -10,7 +10,12 @@ import {
   requiresDownload,
 } from '../documents';
 import EmptyState from './empty-state.vue';
-defineProps<{ files: StoredDocument[]; loading?: boolean; error?: string }>();
+defineProps<{
+  files: StoredDocument[];
+  loading?: boolean;
+  error?: string;
+  emptyTitle?: string;
+}>();
 defineEmits<{ retry: [] }>();
 </script>
 <template>
@@ -33,6 +38,7 @@ defineEmits<{ retry: [] }>();
           }}<span v-if="file.kind === 'answer'"> · 对应答案</span>
         </p>
       </div>
+      <slot name="actions" :file="file"></slot>
       <a
         :href="fileUrl(file.id)"
         :aria-label="`下载 ${file.title || file.filename}`"
@@ -42,7 +48,7 @@ defineEmits<{ retry: [] }>();
   </ul>
   <EmptyState
     v-else
-    title="尚未保存文件"
+    :title="emptyTitle || '尚未保存文件'"
     description="上传后可在这里阅读或下载原件。"
   />
 </template>
