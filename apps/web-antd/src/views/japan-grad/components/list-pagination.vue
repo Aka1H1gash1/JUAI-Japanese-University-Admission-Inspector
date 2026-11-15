@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { Pagination } from 'ant-design-vue';
 
+import { vAccessibleSelect } from '../select-accessibility';
+
 defineProps<{ total: number }>();
 const page = defineModel<number>('page', { required: true });
 const pageSize = defineModel<number>('pageSize', { required: true });
@@ -15,6 +17,8 @@ const pageSize = defineModel<number>('pageSize', { required: true });
       条
     </span>
     <Pagination
+      v-accessible-select
+      aria-label="每页条数"
       v-model:current="page"
       v-model:page-size="pageSize"
       :total="total"

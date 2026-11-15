@@ -71,11 +71,12 @@
     "build:japangrad": "pnpm -F @vben/web-antd exec vite build --mode workspace",
     "start:japangrad": "node local-server/server.mjs --open",
     "test:japangrad": "node --test local-server/server.test.mjs",
-    "test:japangrad-ui": "node scripts/japangrad-smoke.mjs && node scripts/japangrad-archive-smoke.mjs",
+    "test:japangrad-ui": "node scripts/japangrad-product-smoke.mjs",
     "package:japangrad": "node scripts/package-japangrad.mjs",
     "start:browser": "node browser/launcher.mjs",
     "test:browser": "node --test browser/launcher.test.mjs",
-    "prepare:browser": "node browser/prepare.mjs"
+    "prepare:browser": "node browser/prepare.mjs",
+    "test:japangrad-ui:legacy": "node scripts/japangrad-smoke.mjs && node scripts/japangrad-archive-smoke.mjs"
   },
   "dependencies": {
     "sortablejs": "catalog:"
