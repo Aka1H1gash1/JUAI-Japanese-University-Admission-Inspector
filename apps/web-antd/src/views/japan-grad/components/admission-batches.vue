@@ -1,15 +1,24 @@
 <script setup lang="ts">
 import type { StoredDocument } from '../documents';
+import type { ExamHistoryRecord } from '../exam-history';
 import type { AdmissionBatch } from '../foundation-types';
 
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { App, Button, Input, InputNumber, Modal, Select } from 'ant-design-vue';
+import {
+  App,
+  Button,
+  Checkbox,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+} from 'ant-design-vue';
 
 import ContentSection from '../design-system/content-section.vue';
 import DateMarker from '../design-system/date-marker.vue';
-import { websiteUrl } from '../explorer';
+import { useExplorerStore, websiteUrl } from '../explorer';
 import { jsonOptions, localApi } from '../local-api';
 import { vAccessibleSelect } from '../select-accessibility';
 const props = defineProps<{ majorId: string; files?: StoredDocument[] }>();
@@ -47,6 +56,37 @@ const blank = (): AdmissionBatch => ({
   notes: '',
 });
 const draft = ref(blank());
+const store = useExplorerStore();
+const sourceOpen = ref(false);
+const sourceId = ref<string>();
+const sourceExam = ref<ExamHistoryRecord>();
+const scopeConfirmed = ref(false);
+const sourceExams = computed(
+  () =>
+    store.majors.find((major) => major.id === props.majorId)?.examHistory || [],
+);
+function chooseSource() {
+  sourceId.value = sourceExams.value[0]?.id;
+  sourceOpen.value = true;
+}
+function adoptSource() {
+  const record = sourceExams.value.find((entry) => entry.id === sourceId.value);
+  if (!record) return;
+  edit();
+  sourceExam.value = record;
+  scopeConfirmed.value = false;
+  draft.value = {
+    ...blank(),
+    label: record.session,
+    examDate: record.writtenDate || record.examDate || '',
+    interviewDate: record.interviewDate || '',
+    subjects: record.subjects || '',
+    sourceUrl: record.sourceUrl || '',
+    notes: record.notes || '',
+  };
+  sourceOpen.value = false;
+}
+
 const api = () =>
   `/foundation/majors/${encodeURIComponent(props.majorId)}/batches`;
 let generation = 0;
@@ -107,6 +147,8 @@ async function attachFile(id: string, expectedBatchId?: string) {
 }
 defineExpose({ attachFile });
 function edit(existing?: AdmissionBatch) {
+  sourceExam.value = undefined;
+  scopeConfirmed.value = false;
   draft.value = existing
     ? { ...existing, documentIds: [...(existing.documentIds || [])] }
     : blank();
@@ -114,6 +156,11 @@ function edit(existing?: AdmissionBatch) {
   open.value = true;
 }
 async function save() {
+  if (busy.value) return;
+  if (sourceExam.value && !scopeConfirmed.value) {
+    errorMessage.value = '请先核对考试类别、适用范围与年度。';
+    return;
+  }
   busy.value = true;
   try {
     const d = draft.value;
@@ -158,7 +205,9 @@ const consentLabels = {
 <template>
   <ContentSection title="招生信息">
     <template #actions>
-      <Button @click="edit()">新增批次</Button><Button v-if="selected" @click="edit(selected)"> 编辑本批次 </Button>
+      <Button @click="edit()">新增批次</Button><Button v-if="sourceExams.length" @click="chooseSource">
+从已解析考试建立
+</Button><Button v-if="selected" @click="edit(selected)"> 编辑本批次 </Button>
     </template>
     <p v-if="loading" role="status">正在读取招生批次…</p>
     <p v-if="errorMessage && !open" role="alert" class="form-error">
@@ -236,6 +285,21 @@ const consentLabels = {
       :mask-closable="!busy"
     >
       <form class="batch-editor" @submit.prevent="save">
+        <div
+          v-if="sourceExam"
+          class="juai-scope-note"
+          style="margin-bottom: 20px"
+        >
+          <p>
+            来源：实际考试 {{ sourceExam.year }} 年 ·
+            {{
+              sourceExam.session
+            }}。入学年度、考试类别及适用范围需分别核对；未知可留空。仅载入该条记录的日期、科目与来源，不覆盖旧记录或现有批次。
+          </p>
+          <Checkbox v-model:checked="scopeConfirmed" :disabled="busy">
+已核对该记录的年度、类别与适用范围，未确认项保持留空
+</Checkbox>
+        </div>
         <div class="batch-editor-grid">
           <label>入学年度<InputNumber
               :value="draft.admissionYear ?? undefined"
@@ -293,6 +357,8 @@ const consentLabels = {
               :disabled="busy"
           /></label>
           <label>内诺要求<Select
+              v-accessible-select
+              aria-label="内诺要求"
               v-model:value="draft.consent"
               :options="
                 Object.entries(consentLabels).map(([value, label]) => ({
@@ -314,6 +380,8 @@ const consentLabels = {
               :disabled="busy"
           /></label>
           <label style="grid-column: 1/-1">关联本专攻文件<Select
+              v-accessible-select
+              aria-label="关联本专攻文件"
               v-model:value="draft.documentIds"
               mode="multiple"
               :disabled="busy"
@@ -337,6 +405,30 @@ const consentLabels = {
       </form>
     </Modal>
   </ContentSection>
+  <Modal
+    v-model:open="sourceOpen"
+    title="从已解析考试建立招生批次"
+    :footer="null"
+  >
+    <p class="juai-scope-note">
+      选择一条已保存的考试记录，载入后核对入学年度与适用范围。原记录保留。
+    </p>
+    <Select
+      v-accessible-select
+      v-model:value="sourceId"
+      aria-label="选择已解析考试记录"
+      style="width: 100%; margin: 16px 0"
+      :options="
+        sourceExams.map((record) => ({
+          value: record.id,
+          label: `实际考试 ${record.year} 年 · ${record.session}`,
+        }))
+      "
+    />
+    <Button type="primary" :disabled="!sourceId" @click="adoptSource">
+载入并核对
+</Button>
+  </Modal>
 </template>
 <style scoped>
 .batch-editor {

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { once } from 'node:events';
 import { mkdir, mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { chromium } from 'playwright';
@@ -11,9 +12,12 @@ import { createLocalApp } from '../local-server/server.mjs';
 import { sampleData } from '../local-server/test-fixtures.mjs';
 
 // Only this new temporary workspace is written; fixture labels are never product data.
-const workspace = await mkdtemp('/private/tmp/juai-product-acceptance-');
+const workspace = await mkdtemp(
+  path.join(tmpdir(), 'juai-product-acceptance-'),
+);
 const artifacts =
-  process.env.ARTIFACT_DIR || '/private/tmp/juai-product-acceptance-artifacts';
+  process.env.ARTIFACT_DIR ||
+  path.join(tmpdir(), 'juai-product-acceptance-artifacts');
 await mkdir(artifacts, { recursive: true });
 const app = await createLocalApp({
   workspace,
@@ -31,9 +35,24 @@ async function api(route, method = 'GET', body) {
   assert.ok(response.ok, `${route}: ${response.status}`);
   return response.json();
 }
+const fixture = structuredClone(sampleData);
+fixture.majors[0].examHistory = [
+  {
+    id: 'qa-exam',
+    year: '2026',
+    session: '隔离AI考试记录',
+    subjects: '线性代数',
+    writtenDate: '2026-08-20',
+    interviewDate: '',
+    resultDate: '',
+    examDate: '',
+    sourceUrl: '',
+    notes: '原适用范围需要人工核对',
+  },
+];
 await api('/workspace', 'PUT', {
   revision: 0,
-  data: structuredClone(sampleData),
+  data: fixture,
 });
 const snapshot = await api('/workspace');
 const lab = snapshot.data.labs[0];
@@ -93,6 +112,41 @@ try {
       `Horizontal overflow: ${page.url()}`,
     );
   }
+  await visit('/japan-grad/universities/u1/schools/s1/majors/m1');
+  await page
+    .getByRole('button', { name: '从已解析考试建立', exact: true })
+    .click();
+  await modal()
+    .getByRole('button', { name: '载入并核对', exact: true })
+    .click();
+  assert.equal(await modal().getByRole('spinbutton').inputValue(), '');
+  assert.equal(
+    await modal()
+      .getByRole('textbox', { name: '考试科目', exact: true })
+      .inputValue(),
+    '线性代数',
+  );
+  await modal()
+    .getByRole('textbox', { name: '考试类别', exact: true })
+    .fill('外国人特别入试');
+  await modal()
+    .getByRole('textbox', { name: '适用范围', exact: true })
+    .fill('已核对：本专攻修士外国人申请');
+  await modal().getByRole('checkbox').check();
+  await modal()
+    .getByRole('button', { name: /保存/ })
+    .click();
+  await modal().waitFor({ state: 'hidden' });
+  const adopted = (await api('/foundation/majors/m1/batches')).find(
+    (entry) => entry.label === '隔离AI考试记录',
+  );
+  assert.equal(adopted.admissionYear, null);
+  assert.equal(adopted.examDate, '2026-08-20');
+  assert.equal(adopted.consent, 'unknown');
+  assert.equal((await api('/workspace')).data.majors[0].examHistory.length, 1);
+  console.log(
+    'PASS reviewed exam adoption, unknown admission year, retained original record',
+  );
   await visit('/japan-grad/settings');
   assert.equal(
     await page.getByRole('tab', { name: '浏览器连接', exact: true }).count(),
