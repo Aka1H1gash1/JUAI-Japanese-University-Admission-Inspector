@@ -54,6 +54,11 @@ const coreRoutes: RouteRecordRaw[] = [
         redirect: { name: 'ApplicationOverview' },
       },
       {
+        path: 'calendar',
+        component: () => import('#/views/japan-grad/overview.vue'),
+        meta: { title: '日历与待办' },
+      },
+      {
         name: 'ApplicationOverview',
         path: 'overview',
         component: () => import('#/views/japan-grad/overview.vue'),
@@ -66,6 +71,11 @@ const coreRoutes: RouteRecordRaw[] = [
         meta: {
           title: '大学选择与对比',
         },
+      },
+      {
+        path: 'applications/labs/:labId',
+        component: () => import('#/views/japan-grad/application-route.vue'),
+        meta: { title: '申请工作台' },
       },
       {
         name: 'ExamJourney',

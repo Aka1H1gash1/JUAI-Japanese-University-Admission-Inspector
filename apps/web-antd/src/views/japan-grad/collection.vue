@@ -11,6 +11,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { Button, Select } from 'ant-design-vue';
 
+import AiManagement from './ai-management.vue';
 import {
   COLLECTION_KINDS,
   COLLECTION_NAMES,
@@ -277,6 +278,10 @@ const generatedProfiles = computed(() => {
         </RouterLink>
       </div>
     </header>
+    <details class="collection-api-settings">
+      <summary>使用自己的 API</summary>
+      <AiManagement api-only />
+    </details>
     <p v-if="errorMessage" class="form-error" role="alert">
       {{ errorMessage }}
       <Button :loading="loading" @click="load">重试</Button>
@@ -399,12 +404,12 @@ const generatedProfiles = computed(() => {
             :disabled="busy || !legacyKind"
             :loading="busy"
             @click="upgradeLegacy"
-            >
-按只新增规则重新核对
-</Button>
+          >
+            按只新增规则重新核对
+          </Button>
           <Button :disabled="busy" @click="createOpen = true">
-新建明确任务
-</Button>
+            新建明确任务
+          </Button>
         </section>
         <p v-if="detail.job.error" class="form-error">
           {{ detail.job.error }}

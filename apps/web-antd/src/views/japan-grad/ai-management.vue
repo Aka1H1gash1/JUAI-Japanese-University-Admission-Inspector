@@ -17,6 +17,7 @@ import { requireValue } from './required-value';
 import { serverMode } from './runtime-capabilities';
 import { vAccessibleSelect } from './select-accessibility';
 
+defineProps<{ apiOnly?: boolean }>();
 const AdvancedSettings = defineAsyncComponent(
   () => import('./ai-management-advanced.vue'),
 );
@@ -282,7 +283,7 @@ const returnTo = computed(() =>
 
 <template>
   <section class="ai-connect-simple">
-    <header class="ai-simple-heading">
+    <header v-if="!apiOnly" class="ai-simple-heading">
       <div>
         <h1>选一种方式，就能开始<span>。</span></h1>
         <small>本地 Agent 或自己的 API，连接一次即可供各项 AI 功能使用。</small>
@@ -324,9 +325,9 @@ const returnTo = computed(() =>
       </div>
       <RouterLink v-if="ready" :to="returnTo">返回使用 ↗</RouterLink>
     </section>
-    <div class="ai-simple-choices">
+    <div class="ai-simple-choices" :class="{ 'api-only': apiOnly }">
       <article
-        v-if="!serverMode"
+        v-if="!serverMode && !apiOnly"
         class="ai-simple-card"
         :class="{ active: shared?.kind === 'codex' }"
       >
@@ -391,7 +392,7 @@ const returnTo = computed(() =>
         :class="{ active: shared && shared.kind !== 'codex' }"
       >
         <header>
-          <span class="ai-simple-icon"><ExplorerIcon name="globe" /></span><small>方式二</small><span
+          <span class="ai-simple-icon"><ExplorerIcon name="globe" /></span><small v-if="!apiOnly">方式二</small><span
             v-if="shared && shared.kind !== 'codex'"
             class="ai-simple-active"
             >当前选择</span>
@@ -496,3 +497,11 @@ const returnTo = computed(() =>
   </section>
 </template>
 <style scoped src="./ai-connection-simple.css"></style>
+
+<style scoped>
+.ai-simple-choices.api-only {
+  grid-template-columns: minmax(0, 560px);
+  justify-content: center;
+  margin: auto;
+}
+</style>

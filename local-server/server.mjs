@@ -14,6 +14,10 @@ import { isDeepStrictEqual } from 'node:util';
 import { createAdmissionAiService } from './admission-ai-service.mjs';
 import { createAiManagementService } from './ai-management-service.mjs';
 import { createAnalysisService } from './analysis-service.mjs';
+import {
+  createApplicationWorkspace,
+  migrateApplications,
+} from './application-workspace.mjs';
 import { createAssistantService } from './assistant-service.mjs';
 import { createCollectionService } from './collection-service.mjs';
 import { storeContent } from './content-store.mjs';
@@ -810,6 +814,24 @@ export async function createLocalApp({
     jsonBody,
     transaction,
   });
+  if (
+    !db.prepare('SELECT version FROM schema_migrations WHERE version=19').get()
+  ) {
+    if (!productBackup && !migrationBackup)
+      await createManualBackup(db, workspace, {
+        kind: 'before-applications19',
+      });
+    migrateApplications(db);
+  }
+  const applications = createApplicationWorkspace({
+    db,
+    fail,
+    json,
+    jsonBody,
+    transaction,
+    safeFile,
+    ai,
+  });
   const handler = async (req, res) => {
     try {
       const host = req.headers.host;
@@ -848,6 +870,7 @@ export async function createLocalApp({
         if (await ai.handle(req, res, route)) return;
         if (await settings.handle(req, res, route)) return;
         if (await foundation.handle(req, res, route)) return;
+        if (await applications.handle(req, res, route)) return;
         if (route === '/api/japangrad/storage' && req.method === 'GET')
           return json(res, await foundation.storage());
         if (await specialPrograms.handle(req, res, route)) return;
@@ -1085,6 +1108,13 @@ export async function createLocalApp({
             validateExplorer(data);
             transaction(() => {
               // Remove metadata atomically with parent records. Original files remain recoverable on disk.
+              for (const target of db
+                .prepare('SELECT id,lab_id FROM application_targets')
+                .all())
+                if (!data.labs.some((l) => l.id === target.lab_id))
+                  db.prepare('DELETE FROM application_targets WHERE id=?').run(
+                    target.id,
+                  );
               for (const batch of db
                 .prepare('SELECT id,major_id FROM admission_batches')
                 .all())
@@ -1103,6 +1133,15 @@ export async function createLocalApp({
                 )
                   db.prepare('DELETE FROM documents WHERE id = ?').run(row.id);
               }
+              for (const contact of db
+                .prepare(
+                  'SELECT target_id,professor_id FROM application_contacts',
+                )
+                .all())
+                if (!professors.has(contact.professor_id))
+                  db.prepare(
+                    'DELETE FROM application_contacts WHERE target_id=? AND professor_id=?',
+                  ).run(contact.target_id, contact.professor_id);
               for (const row of db
                 .prepare('SELECT id, professor_id FROM messages')
                 .all()) {
@@ -1309,7 +1348,10 @@ export async function createLocalApp({
         );
         if (refsMatch && req.method === 'GET') {
           document(refsMatch[1]);
-          return json(res, foundation.references(refsMatch[1]));
+          return json(res, [
+            ...foundation.references(refsMatch[1]),
+            ...applications.references(refsMatch[1]),
+          ]);
         }
         const fileMatch = route.match(
           /^\/api\/japangrad\/documents\/([\w-]+)(\/file)?$/,
@@ -1424,14 +1466,15 @@ export async function createLocalApp({
                 (item) =>
                   item.id === record.id || item.questionId === record.id,
               );
-            const references = related.flatMap((item) =>
-              foundation.references(item.id),
-            );
+            const references = related.flatMap((item) => [
+              ...foundation.references(item.id),
+              ...applications.references(item.id),
+            ]);
             if (references.length > 0) {
               res.writeHead(409, { 'Content-Type': 'application/json' });
               return res.end(
                 JSON.stringify({
-                  error: '文件仍被招生批次引用，请先解除引用。',
+                  error: '文件仍被业务记录引用，请先解除引用。',
                   references,
                 }),
               );
@@ -1492,6 +1535,11 @@ export async function createLocalApp({
             (input.followUpDate && !validPlannerDay(input.followUpDate))
           )
             fail('请填写主题、正文和有效日期。');
+          if (
+            (input.sender !== undefined && !text(input.sender, 300)) ||
+            (input.recipient !== undefined && !text(input.recipient, 300))
+          )
+            fail('邮件发件人或收件人字段无效。');
           const existing =
             mailMatch &&
             db
@@ -1510,6 +1558,14 @@ export async function createLocalApp({
             subject: input.subject.trim(),
             body: input.body,
             address: input.address.trim(),
+            sender:
+              input.sender ??
+              (existing ? JSON.parse(existing.data).sender : undefined) ??
+              '',
+            recipient:
+              input.recipient ??
+              (existing ? JSON.parse(existing.data).recipient : undefined) ??
+              '',
             date: input.date,
             notes: input.notes,
             nextAction: input.nextAction,
@@ -1639,6 +1695,7 @@ export async function createLocalApp({
     server.emit('close');
   };
   server.on('japangrad:shutdown', () => {
+    applications.close();
     collection.close();
     admissionAi.close();
     ai.close();
@@ -1647,6 +1704,7 @@ export async function createLocalApp({
     analysis.close();
   });
   server.on('close', () => {
+    applications.close();
     collection.close();
     admissionAi.close();
     ai.close();

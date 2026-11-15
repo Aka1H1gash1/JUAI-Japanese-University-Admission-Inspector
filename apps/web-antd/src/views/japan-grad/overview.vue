@@ -5,7 +5,7 @@ import type { LabTarget } from './lab-targets';
 import type { InformationGap } from './overview-data';
 
 import { computed, ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 import { useNow, useStorage } from '@vueuse/core';
 import {
@@ -45,6 +45,9 @@ import './overview.css';
 
 const store = useExplorerStore();
 const router = useRouter();
+const isCalendar = computed(() => useCalendarRoute.value);
+const route = useRoute();
+const useCalendarRoute = computed(() => route.path.endsWith('/calendar'));
 const { message } = App.useApp();
 const now = useNow({ interval: 60_000 });
 const today = computed(() => japanToday(now.value));
@@ -234,7 +237,12 @@ function fillGap(gap: InformationGap) {
   <section class="explorer-page overview-page">
     <header class="overview-heading">
       <div>
-        <h1 class="workspace-title">申请总览</h1>
+        <h1 class="workspace-title">
+          {{ isCalendar ? '日历与待办' : '申请总览' }}
+        </h1>
+        <RouterLink v-if="!isCalendar" to="/japan-grad/calendar">
+          日历与待办 →
+        </RouterLink>
       </div>
       <Button @click="pickerOpen = true">
         <ExplorerIcon name="heart" />想考研究室
@@ -242,9 +250,23 @@ function fillGap(gap: InformationGap) {
       </Button>
     </header>
     <div class="overview-grid">
-      <OverviewCalendar :events="events" :today="today" @todo="openTask" />
+      <OverviewCalendar
+        v-if="isCalendar"
+        :events="events"
+        :today="today"
+        @todo="openTask"
+      />
+      <section v-else class="overview-panel">
+        <header class="overview-section-heading"><h2>日程与待办</h2></header>
+        <p style="padding: 20px">
+          <RouterLink to="/japan-grad/calendar">
+            前往日历管理日期、待办与提醒 →
+          </RouterLink>
+        </p>
+      </section>
 
       <section
+        v-if="isCalendar"
         id="overview-tasks"
         class="overview-panel overview-todos"
         aria-labelledby="overview-tasks-heading"
@@ -334,6 +356,7 @@ function fillGap(gap: InformationGap) {
       </section>
 
       <section
+        v-if="!isCalendar"
         id="overview-progress"
         class="overview-panel overview-progress-panel"
         aria-labelledby="overview-labs-heading"
@@ -362,7 +385,9 @@ function fillGap(gap: InformationGap) {
                   :logo-id="target.university.logoId"
                 />
                 <div>
-                  <RouterLink :to="labPath(target)">
+                  <RouterLink
+                    :to="`/japan-grad/applications/labs/${target.lab.id}`"
+                  >
                     {{ target.lab.name }}
                   </RouterLink>
                   <p>
@@ -401,21 +426,10 @@ function fillGap(gap: InformationGap) {
               </ol>
               <div class="overview-lab-bottom">
                 <RouterLink
-                  :to="`${labPath(target)}?tab=materials`"
+                  :to="`/japan-grad/applications/labs/${target.lab.id}`"
                   class="overview-material-progress"
                 >
-                  <span>材料
-                    {{
-                      progressByLab.get(target.lab.id)!.materials.percent
-                    }}%</span><meter
-                    min="0"
-                    max="100"
-                    :value="progressByLab.get(target.lab.id)!.materials.percent"
-                    :aria-label="`${target.lab.name}材料准备进度`"
-                  ></meter><small>{{ progressByLab.get(target.lab.id)!.materials.done }}/{{
-                      progressByLab.get(target.lab.id)!.materials.count
-                    }}
-                    项</small>
+                  按申请目标查看材料进度 →
 </RouterLink><span
                   v-if="progressByLab.get(target.lab.id)!.result !== 'pending'"
                   class="overview-result"
@@ -425,7 +439,7 @@ function fillGap(gap: InformationGap) {
                     ]
                   }}</span><RouterLink
                   v-else
-                  :to="labPath(target)"
+                  :to="`/japan-grad/applications/labs/${target.lab.id}`"
                   class="overview-inline-link"
                 >
                   更新记录 <ExplorerIcon name="chevron" />
@@ -462,6 +476,7 @@ function fillGap(gap: InformationGap) {
       </section>
 
       <section
+        v-if="!isCalendar"
         class="overview-panel overview-gaps"
         aria-labelledby="overview-gaps-heading"
       >

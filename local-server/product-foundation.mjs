@@ -324,6 +324,17 @@ export function createProductFoundation({
       if (!Number.isInteger(input.version) || input.version < 0)
         fail('请提供有效的批次版本。');
       if (req.method === 'DELETE') {
+        if (
+          db
+            .prepare(
+              "SELECT name FROM sqlite_master WHERE name='application_targets'",
+            )
+            .get() &&
+          db
+            .prepare('SELECT 1 FROM application_targets WHERE batch_id=?')
+            .get(recordId)
+        )
+          fail('此批次已被申请目标引用，不能直接删除。', 409);
         transaction(() => {
           const result = db
             .prepare(

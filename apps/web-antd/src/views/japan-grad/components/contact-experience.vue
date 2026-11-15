@@ -29,7 +29,12 @@ import { vAccessibleSelect } from '../select-accessibility';
 import ConsentFiles from './consent-files.vue';
 import ContactStatusBadge from './contact-status.vue';
 import ProfessorMail from './professor-mail.vue';
-const props = defineProps<{ professorId?: string; labId?: string }>();
+const props = defineProps<{
+  professorId?: string;
+  labId?: string;
+  compact?: boolean;
+  initialExperienceId?: string;
+}>();
 const emit = defineEmits<{ saved: [] }>();
 const sources = useCommunicationsStore();
 const store = useExplorerStore();
@@ -144,7 +149,19 @@ function prepare() {
       store.labs.find((l) => l.id === props.labId)?.mainProfessorId ||
       people.value[0]?.id ||
       '';
-  if (!experiences.value.some((c) => c.experienceId === experienceId.value))
+  if (props.initialExperienceId) {
+    if (
+      !experiences.value.some(
+        (c) => c.experienceId === props.initialExperienceId,
+      )
+    ) {
+      experienceId.value = '';
+      return;
+    }
+    experienceId.value = props.initialExperienceId;
+  } else if (
+    !experiences.value.some((c) => c.experienceId === experienceId.value)
+  )
     experienceId.value = person.value?.contact?.experienceId || '';
   const current = live.value;
   if (!current?.experienceId) return;
@@ -183,6 +200,7 @@ function prepare() {
 }
 watch(
   () => [
+    props.initialExperienceId,
     people.value.map((p) => p.id).join('|'),
     personId.value,
     experienceId.value,
@@ -420,14 +438,18 @@ function summary(status: ContactStatus) {
 /></label><label>考学经历<Select
           v-accessible-select
           v-model:value="experienceId"
+          :disabled="busy || store.saving || !!initialExperienceId"
           :options="
             experiences.map((c) => ({
               value: c.experienceId,
               label: `${c.experienceTitle}${c.experienceId === person!.contact?.experienceId ? '（当前）' : '（历史）'}`,
             }))
           "
-          :disabled="busy || store.saving"
-/></label><Button :disabled="busy || store.saving || dirty" @click="newExperience">
+/></label><Button
+        v-if="!initialExperienceId"
+        :disabled="busy || store.saving || dirty"
+        @click="newExperience"
+      >
         新建一段经历
       </Button>
     </div>
@@ -582,6 +604,7 @@ function summary(status: ContactStatus) {
                 收到 {{ received.length }} 封
               </p>
               <ProfessorMail
+                v-if="!compact"
                 :professor-id="person.id"
                 :email="person.email"
                 :experience-id="experienceId"
@@ -898,9 +921,13 @@ function summary(status: ContactStatus) {
         aria-label="第一封信草稿正文"
       />
     </details>
-    <details v-if="viewStage !== 'replied'" class="experience-extra">
+    <details
+      v-if="!compact && viewStage !== 'replied'"
+      class="experience-extra"
+    >
       <summary>邮件往来 · {{ mailRows.length }} 封（自动关联）</summary>
       <ProfessorMail
+        v-if="!compact"
         :professor-id="person.id"
         :email="person.email"
         :experience-id="experienceId"
@@ -918,7 +945,7 @@ function summary(status: ContactStatus) {
           :disabled="busy"
       /></label>
     </div>
-    <details class="experience-extra">
+    <details v-if="!compact" class="experience-extra">
       <summary>完整经历总表</summary>
       <div class="experience-overview-scroll">
         <table class="experience-overview">

@@ -1,14 +1,15 @@
 <script setup lang="ts">
 import type { LabTarget } from '../lab-targets';
 
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 import { App, Button, Checkbox } from 'ant-design-vue';
 
-import { materialProgress, primaryProfessor } from '../application-planning';
+import { primaryProfessor } from '../application-planning';
 import { useExplorerStore } from '../explorer';
 import { universityLocation } from '../japan-geography';
-import { annualBudgetText, labPath } from '../lab-targets';
+import { annualBudgetText } from '../lab-targets';
+import { localApi } from '../local-api';
 import { APPLICATION_STAGES, applicationStage } from '../overview-progress';
 import ExplorerIcon from './explorer-icon.vue';
 import UniversityLogo from './university-logo.vue';
@@ -19,7 +20,22 @@ const store = useExplorerStore();
 const { message } = App.useApp();
 const toggling = ref(false);
 const stage = computed(() => applicationStage(props.target));
-const materials = computed(() => materialProgress(props.target.lab.tasks));
+const progress =
+  ref<Array<{ id: string; material_count: number; completed_count: number }>>();
+const progressError = ref(false);
+watch(
+  () => props.target.lab.id,
+  async (id) => {
+    progress.value = undefined;
+    progressError.value = false;
+    try {
+      progress.value = await localApi(`/applications/labs/${id}`);
+    } catch {
+      progressError.value = true;
+    }
+  },
+  { immediate: true },
+);
 const professor = computed(() => primaryProfessor(props.target));
 async function removeTarget() {
   if (toggling.value) return;
@@ -54,7 +70,9 @@ async function removeTarget() {
         <div>
           <p>{{ target.university.name }} · {{ target.major.name }}</p>
           <h2>
-            <RouterLink :to="labPath(target)">{{ target.lab.name }}</RouterLink>
+            <RouterLink :to="`/japan-grad/applications/labs/${target.lab.id}`">
+              {{ target.lab.name }}
+            </RouterLink>
           </h2>
           <p class="journey-entry-research" :title="target.lab.research">
             {{ target.lab.research || '研究方向待补充' }}
@@ -80,17 +98,19 @@ async function removeTarget() {
         <small>{{ stage.label }}{{ professor ? ` · ${professor.name}` : '' }}</small>
       </div>
       <RouterLink
-        :to="`${labPath(target)}?tab=materials`"
+        :to="`/japan-grad/applications/labs/${target.lab.id}`"
         class="journey-entry-materials"
       >
-        <span>材料准备</span><strong>{{
-          materials.count ? `${materials.percent}%` : '未建清单'
-        }}</strong><meter
-          min="0"
-          max="100"
-          :value="materials.percent"
-          :aria-label="`${target.lab.name}材料准备进度`"
-        ></meter><small>{{ materials.done }}/{{ materials.count }} 项</small>
+        <span>申请目标与材料</span><strong>{{
+          progress
+            ? `${progress.length} 个目标`
+            : progressError
+              ? '暂不可用'
+              : '读取中'
+        }}</strong><small v-if="progress">全部目标 {{ progress.reduce((n, t) => n + t.completed_count, 0) }}/{{
+            progress.reduce((n, t) => n + t.material_count, 0)
+          }}
+          项完成 · 按批次查看 →</small>
       </RouterLink>
       <div class="journey-entry-intent">
         <Button
@@ -101,7 +121,7 @@ async function removeTarget() {
         >
           <ExplorerIcon name="heart" />
 </Button><RouterLink
-          :to="labPath(target)"
+          :to="`/japan-grad/applications/labs/${target.lab.id}`"
           :aria-label="`查看${target.lab.name}研究室详情`"
         >
           <ExplorerIcon name="chevron" />
@@ -117,7 +137,11 @@ async function removeTarget() {
       <nav :aria-label="`${target.lab.name}快捷操作`">
         <Button type="text" @click="emit('contact', target.lab.id)">
           考学经历
-</Button><RouterLink :to="`${labPath(target)}?tab=materials`">材料</RouterLink><RouterLink :to="`${labPath(target)}?tab=todos`">待办</RouterLink>
+</Button><RouterLink :to="`/japan-grad/applications/labs/${target.lab.id}`">
+          材料
+</RouterLink><RouterLink :to="`/japan-grad/applications/labs/${target.lab.id}`">
+          待办
+        </RouterLink>
       </nav>
     </div>
   </article>

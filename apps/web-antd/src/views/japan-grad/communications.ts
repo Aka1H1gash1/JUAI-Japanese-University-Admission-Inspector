@@ -1,9 +1,14 @@
 import type { ProfessorContact } from './application-planning';
-import { defineStore } from 'pinia';
-import { ref } from 'vue';
 import type { StoredDocument } from './documents';
+
+import { ref } from 'vue';
+
+import { defineStore } from 'pinia';
+
 import { localApi } from './local-api';
 export interface MailRecord {
+  sender?: string;
+  recipient?: string;
   id: string;
   professorId: string;
   experienceId: string;
@@ -18,10 +23,10 @@ export interface MailRecord {
   createdAt: string;
 }
 export const useCommunicationsStore = defineStore('juai-communications', () => {
-  const mails = ref<Record<string, MailRecord[]>>({}),
-    documents = ref<Record<string, StoredDocument[]>>({}),
-    error = ref(''),
-    loading = ref(false);
+  const documents = ref<Record<string, StoredDocument[]>>({});
+  const errorMessage = ref('');
+  const loading = ref(false);
+  const mails = ref<Record<string, MailRecord[]>>({});
   const contactDrafts = ref<
     Record<
       string,
@@ -33,7 +38,7 @@ export const useCommunicationsStore = defineStore('juai-communications', () => {
   const generations = new Map<string, number>();
   async function load(ids: string[]) {
     const unique = [...new Set(ids)].filter(Boolean);
-    if (!unique.length) return;
+    if (unique.length === 0) return;
     const versions = new Map(
       unique.map((id) => {
         const next = (generations.get(id) ?? 0) + 1;
@@ -42,7 +47,7 @@ export const useCommunicationsStore = defineStore('juai-communications', () => {
       }),
     );
     loading.value = true;
-    error.value = '';
+    errorMessage.value = '';
     try {
       for (let start = 0; start < unique.length; start += 100) {
         const batch = unique.slice(start, start + 100);
@@ -60,7 +65,7 @@ export const useCommunicationsStore = defineStore('juai-communications', () => {
           if (generations.get(id) === versions.get(id)) {
             mails.value[id] = data.messages
               .filter((m) => m.professorId === id)
-              .sort(
+              .toSorted(
                 (a, b) =>
                   a.date.localeCompare(b.date) ||
                   a.createdAt.localeCompare(b.createdAt) ||
@@ -71,8 +76,9 @@ export const useCommunicationsStore = defineStore('juai-communications', () => {
             );
           }
       }
-    } catch (e) {
-      error.value = e instanceof Error ? e.message : '关联资料读取失败。';
+    } catch (error) {
+      errorMessage.value =
+        error instanceof Error ? error.message : '关联资料读取失败。';
     } finally {
       loading.value = false;
     }
@@ -97,7 +103,7 @@ export const useCommunicationsStore = defineStore('juai-communications', () => {
     documents,
     requirements,
     contactDrafts,
-    error,
+    error: errorMessage,
     loading,
     load,
     forExperience,

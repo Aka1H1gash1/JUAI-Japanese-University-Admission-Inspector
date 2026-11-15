@@ -41,9 +41,9 @@ const contactOpen = ref(false);
 const contactLabId = ref('');
 const contactProfessorId = ref('');
 function manageContact(id: string, professorId?: string) {
-  contactProfessorId.value = professorId || '';
-  contactLabId.value = id;
-  contactOpen.value = true;
+  void router.push(
+    `/japan-grad/applications/labs/${id}?view=contact${professorId ? `&professor=${professorId}` : ''}`,
+  );
 }
 const query = ref('');
 const foreignFilter = ref('');
