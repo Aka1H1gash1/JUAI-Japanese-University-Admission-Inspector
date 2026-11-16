@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdir, mkdtemp, readFile, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import process from 'node:process';
 import { DatabaseSync } from 'node:sqlite';
 /* oxlint-disable vitest/no-import-node-test, unicorn/no-await-expression-member -- Standalone offline export compatibility tests. */
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
+import { promisify } from 'node:util';
 
 import { importMySQLExport } from './import-mysql-export.mjs';
 import { createLocalApp } from './server.mjs';
@@ -74,4 +78,21 @@ test('offline conversion rejects an invalid table set before publishing the targ
     /表结构/,
   );
   assert.equal(await readFile(`${f.source}/申请.txt`, 'utf8'), '日本語・中文');
+});
+
+test('offline conversion CLI executes when invoked through a symlink', async () => {
+  const f = await fixture();
+    const link = `${f.root}/converter.mjs`;
+    const target = `${f.root}/from-cli`;
+  await symlink(
+    fileURLToPath(new URL('import-mysql-export.mjs', import.meta.url)),
+    link,
+  );
+  const { stdout } = await promisify(execFile)(process.execPath, [
+    link,
+    f.source,
+    target,
+  ]);
+  assert.equal(JSON.parse(stdout).converted, true);
+  assert.equal(await readFile(`${target}/申请.txt`, 'utf8'), '日本語・中文');
 });

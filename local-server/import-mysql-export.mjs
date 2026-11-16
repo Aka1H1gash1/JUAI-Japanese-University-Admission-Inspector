@@ -1,11 +1,11 @@
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
+import { existsSync, realpathSync } from 'node:fs';
 import { cp, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import process from 'node:process';
 // Offline compatibility conversion for an online personal export. No MySQL server required.
 import { DatabaseSync } from 'node:sqlite';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath } from 'node:url';
 
 import { createLocalApp } from './server.mjs';
 const quote = (name) => `"${name.replaceAll('"', '""')}"`;
@@ -125,7 +125,8 @@ export async function importMySQLExport(source, target) {
 }
 if (
   process.argv[1] &&
-  pathToFileURL(path.resolve(process.argv[1])).href === import.meta.url
+  existsSync(process.argv[1]) &&
+  realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)
 ) {
   const [source, target] = process.argv.slice(2);
   if (!source || !target)
