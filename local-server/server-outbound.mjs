@@ -1,6 +1,6 @@
 import process from 'node:process';
 
-import { Agent, fetch as request } from 'undici';
+import { Agent, FormData as ProviderFormData, fetch as request } from 'undici';
 
 import { publicAddresses } from './collection-web.mjs';
 let usageObserver;
@@ -19,6 +19,21 @@ export function validateServerProvider(url) {
     !allowed.includes(url.hostname)
   )
     throw new Error('服务器仅允许管理员启用的公网 HTTPS 模型服务商。');
+}
+// Node's built-in FormData and the separately installed undici use distinct
+// brands. undici otherwise stringifies the native body as '[object FormData]'.
+export function providerRequestBody(body) {
+  if (
+    !(body instanceof globalThis.FormData) ||
+    body instanceof ProviderFormData
+  )
+    return body;
+  const result = new ProviderFormData();
+  for (const [name, value] of body) {
+    if (typeof value === 'string') result.append(name, value);
+    else result.append(name, value, value.name || 'file');
+  }
+  return result;
 }
 export async function providerFetch(raw, options = {}) {
   if (process.env.JUAI_SERVER_MODE !== '1') return fetch(raw, options);
@@ -77,6 +92,7 @@ export async function providerFetch(raw, options = {}) {
   try {
     const response = await request(url, {
       ...options,
+      body: providerRequestBody(options.body),
       dispatcher,
       redirect: 'error',
     });

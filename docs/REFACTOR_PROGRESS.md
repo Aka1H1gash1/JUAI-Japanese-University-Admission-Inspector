@@ -157,3 +157,12 @@
 已接通官方 OCR、Files 原生图文输入与 Fetch；已有 Search、工作区函数工具、邮件草稿继续复用。OCR 作用于用户选择的原页，Files 只上传当前文档，来源核验/逐项采纳/不自动发信不变。新增费用与上传说明，保留其他服务商及本机路径。无需数据库迁移。完整行为、限制和官方依据见 DEEPSEEK_APP_APIS.md。
 
 最终验证：Node24.22.1 下后端91项（含新增8项）、前端11文件42项及脚本业务9项通过；完整类型检查和最终生产构建通过。agent-browser 独立会话验证桌面与390px手机界面，上传/一小时过期/费用提示可见、无横向溢出；截图 /private/tmp/juai-deepseek-desktop.png 和 /private/tmp/juai-deepseek-mobile.png。浏览器临时工作区明确阻止全部真实 DeepSeek 请求。提交时运行原有全套 Git hooks，提交标题 feat(project): integrate DeepSeek OCR files and web fetch。未调用付费模型、未部署。
+
+
+### 2026-11-17 部署与生产传输修复
+
+用户已授权部署并使用提供的 Key 做最小真实接口验收、仅用于自己的账号。Server1.2.0/平台4422955/核心d95748a47/CI43935623233构建和测试通过，包SHA256 f07effba2d5f3ef420a7d8c496ff96c0ff94110b7572b8405603d771e7ff935a。部署前快照2026-11-16T19-03-28-876Z已异机校验84文件一致；实际切换前快照2026-11-16T19-14-43-262Z保留。
+
+生产原生文件验收发现独立undici不识别Node内置FormData，原样发送会成为text/plain / [object FormData]并被供应商400拒绝。本地真实直连使用Node fetch，未覆盖这个传输差异。已明确重现并在服务器出站层转换为对应undici FormData，增加真实序列化/中文文件名/字段顺序与非表单不变的回归。1.2.0已做兼容程序回滚到1.1.1，MySQL数据没有恢复或切换，准备1.2.1固定CI补丁。
+
+另发现公开DNS指向198.54.117.242、Namecheap verify-contact-details验证NS；Google/Cloudflare DoH一致。指定43.133.255.40并保留TLS域名校验时服务器HTTPS正常。注册商联系邮箱验证需所有者处理，已询问用户，不能宣称普通域名访问已恢复。用户Key与两个现有活跃账号已存配置相同；未识别唯一账号前不覆盖任何用户配置。

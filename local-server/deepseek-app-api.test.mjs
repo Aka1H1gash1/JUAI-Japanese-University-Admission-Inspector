@@ -545,3 +545,36 @@ test('admissions API renders only selected PDF pages, uses native OCR, and creat
   const after = await parse(await call('/workspace'));
   assert.deepEqual(after.data, before.data);
 });
+
+test('server transport encodes Node-native multipart using the provider FormData brand', async () => {
+  const { Request, FormData: ProviderFormData } = await import('undici');
+  const { providerRequestBody } = await import('./server-outbound.mjs');
+  const native = new FormData();
+  native.append('purpose', 'rich_layout_recognition');
+  native.append('expires_after[anchor]', 'created_at');
+  native.append('expires_after[seconds]', '3600');
+  native.append('file', new Blob(['synthetic PDF bytes']), '原件.pdf');
+  const body = providerRequestBody(native);
+  assert.ok(body instanceof ProviderFormData);
+  const request = new Request('https://api.deepseek.com/files', {
+    method: 'POST',
+    body,
+  });
+  assert.match(
+    request.headers.get('content-type'),
+    /^multipart\/form-data; boundary=/,
+  );
+  const parsed = await request.formData();
+  assert.deepEqual(
+    [...parsed.keys()],
+    ['purpose', 'expires_after[anchor]', 'expires_after[seconds]', 'file'],
+  );
+  assert.equal(parsed.get('file').name, '原件.pdf');
+  assert.equal(await parsed.get('file').text(), 'synthetic PDF bytes');
+  assert.equal(providerRequestBody(body), body);
+  assert.equal(
+    providerRequestBody('{"model":"fixture"}'),
+    '{"model":"fixture"}',
+  );
+  assert.equal(providerRequestBody(undefined), undefined);
+});
