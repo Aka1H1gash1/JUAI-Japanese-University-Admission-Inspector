@@ -352,11 +352,15 @@ export async function createLocalApp({
   staticDir,
   allowedOrigins = [],
   platform,
+  database,
 }) {
   await mkdir(workspace, { recursive: true });
   workspace = await realpath(workspace);
-  const db = new DatabaseSync(path.join(workspace, 'workspace.db'));
-  db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
+  const db = database ?? new DatabaseSync(path.join(workspace, 'workspace.db'));
+  if (database && database.dialect !== 'mysql')
+    throw new Error('Unsupported injected database.');
+  if (!database)
+    db.exec('PRAGMA journal_mode = WAL; PRAGMA foreign_keys = ON;');
   // Back up an existing pre-v14 database before any legacy migration/backfill
   // can modify it. A fresh installation has no legacy table and needs no copy.
   let migrationBackup;
@@ -1646,6 +1650,9 @@ export async function createLocalApp({
         if (error instanceof HttpError) {
           status = error.status;
           description = error.message;
+        } else if (db.dialect === 'mysql' && error.database === 'mysql') {
+          status = error.status || 503;
+          description = error.message;
         } else if (error.code === 'ENOENT') {
           status = 404;
           description = '本地文件未找到，请检查工作区文件夹。';
@@ -1690,6 +1697,7 @@ export async function createLocalApp({
     return total;
   };
   server.isBusy = () => server.activeTaskCount() > 0;
+  server.database = db;
   server.dispose = () => {
     server.emit('japangrad:shutdown');
     server.emit('close');

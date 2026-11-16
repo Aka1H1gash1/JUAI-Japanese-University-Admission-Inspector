@@ -46,15 +46,23 @@ export async function createManualBackup(
       verbatimSymlinks: true,
       filter: (file) => !SKIPPED.has(path.relative(workspace, file)),
     });
-    await backup(db, path.join(temporary, 'workspace.db'));
-    const check = new DatabaseSync(path.join(temporary, 'workspace.db'), {
-      readOnly: true,
-    });
-    try {
-      if (check.prepare('PRAGMA quick_check').get().quick_check !== 'ok')
-        throw new Error('数据库备份校验未通过。');
-    } finally {
-      check.close();
+    if (db.dialect === 'mysql') {
+      await writeFile(
+        path.join(temporary, 'MYSQL_WORKSPACE.json'),
+        JSON.stringify(db.snapshot()),
+        { mode: 0o600 },
+      );
+    } else {
+      await backup(db, path.join(temporary, 'workspace.db'));
+      const check = new DatabaseSync(path.join(temporary, 'workspace.db'), {
+        readOnly: true,
+      });
+      try {
+        if (check.prepare('PRAGMA quick_check').get().quick_check !== 'ok')
+          throw new Error('数据库备份校验未通过。');
+      } finally {
+        check.close();
+      }
     }
     await writeFile(
       path.join(temporary, 'JUAI_BACKUP.json'),

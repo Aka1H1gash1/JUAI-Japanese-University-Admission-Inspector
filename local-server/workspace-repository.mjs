@@ -407,6 +407,18 @@ export function createWorkspaceRepository({
           }
         }
       }
+      const deferredMain =
+        db.dialect === 'mysql'
+          ? wanted.labs
+              .filter((row) => row.main_professor_id)
+              .map((row) => [row.id, row.main_professor_id])
+          : [];
+      if (db.dialect === 'mysql') {
+        db.prepare(
+          'UPDATE labs SET main_professor_id=NULL WHERE main_professor_id IS NOT NULL',
+        ).run();
+        for (const row of wanted.labs) row.main_professor_id = null;
+      }
       const old = Object.fromEntries(
         Object.keys(tableSpecs).map((name) => [
           name,
@@ -475,6 +487,11 @@ export function createWorkspaceRepository({
           ).run(...columns.map((field) => row[field]));
         }
       }
+      for (const [id, professorId] of deferredMain)
+        db.prepare('UPDATE labs SET main_professor_id=? WHERE id=?').run(
+          professorId,
+          id,
+        );
       // A major moved to another school must not carry an old post's affiliation.
       if (
         db
@@ -535,6 +552,14 @@ export function createWorkspaceRepository({
           ),
         });
         const rows = flatten(additions);
+        const deferredMain =
+          db.dialect === 'mysql'
+            ? rows.labs
+                .filter((row) => row.main_professor_id)
+                .map((row) => [row.id, row.main_professor_id])
+            : [];
+        if (db.dialect === 'mysql')
+          for (const row of rows.labs) row.main_professor_id = null;
         let count = 0;
         for (const [table, spec] of Object.entries(tableSpecs)) {
           const offsets = new Map();
@@ -557,6 +582,11 @@ export function createWorkspaceRepository({
             count++;
           }
         }
+        for (const [id, professorId] of deferredMain)
+          db.prepare('UPDATE labs SET main_professor_id=? WHERE id=?').run(
+            professorId,
+            id,
+          );
         for (const exam of resources.exams ?? []) {
           if (exam.state !== 'new') continue;
           const position = db

@@ -5,6 +5,7 @@ import { once } from 'node:events';
 import { mkdir, mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import { chromium } from 'playwright';
 
@@ -19,8 +20,17 @@ const artifacts =
   process.env.ARTIFACT_DIR ||
   path.join(tmpdir(), 'juai-product-acceptance-artifacts');
 await mkdir(artifacts, { recursive: true });
+const databaseFactory = process.env.JUAI_SMOKE_DATABASE_FACTORY
+  ? await import(
+      pathToFileURL(path.resolve(process.env.JUAI_SMOKE_DATABASE_FACTORY))
+    )
+  : undefined;
+const database = databaseFactory
+  ? await databaseFactory.createDatabase(workspace)
+  : undefined;
 const app = await createLocalApp({
   workspace,
+  database,
   staticDir: path.resolve('apps/web-antd/dist'),
 });
 app.listen(0, '127.0.0.1');
