@@ -166,3 +166,18 @@
 生产原生文件验收发现独立undici不识别Node内置FormData，原样发送会成为text/plain / [object FormData]并被供应商400拒绝。本地真实直连使用Node fetch，未覆盖这个传输差异。已明确重现并在服务器出站层转换为对应undici FormData，增加真实序列化/中文文件名/字段顺序与非表单不变的回归。1.2.0已做兼容程序回滚到1.1.1，MySQL数据没有恢复或切换，准备1.2.1固定CI补丁。
 
 另发现公开DNS指向198.54.117.242、Namecheap verify-contact-details验证NS；Google/Cloudflare DoH一致。指定43.133.255.40并保留TLS域名校验时服务器HTTPS正常。注册商联系邮箱验证需所有者处理，已询问用户，不能宣称普通域名访问已恢复。用户Key与两个现有活跃账号已存配置相同；未识别唯一账号前不覆盖任何用户配置。
+
+
+### DeepSeek 部署最终状态（2026-11-17）
+
+已发布Server1.2.1，固定平台712c380a100dcc6672e2366b2907ee6552e1eb23 / 核心c79448a8329855c76db5427f0bd7e7dab9359ba3；CI43938825893全部成功。发布包SHA256为9de71a7d8961ddcc19045e262b9caea8b5370a8b5e3d395e7fb2fa71123f2f2f。原生multipart生产传输已修复，新增回归后后端92项；前端42项、平台11项、真实MySQL8项、原设备MySQL契约及两引擎浏览器矩阵通过。1.2.0未通过生产验收，曾兼容程序回滚到1.1.1；随后才发布此补丁。全程保留MySQL数据，不做数据库恢复或迁移。
+
+用户授权的少量真实API验收仅用合成资料及官方公开文档：OCR、Files图文上传/问答、Search、Fetch，以及服务器传输模式下文件与函数工具多轮全部通过。生产HTTPS（指定真实IP并正常校验TLS域名）验证文件SSE、PDF/Range、OCR→结构化草稿；成功识别合成截止日2027-06-15，草稿保持pending，未自动改正式字段。独立验收账号最终disabled、sessions=0、keys=0，旧Cookie API401/页面302登录；未发送邮件、未使用真实用户材料。
+
+切换前最终快照2026-11-16T19-33-14-524Z；验收清理后快照2026-11-16T19-36-50-485Z。异机89文件哈希一致，聚合945e304d6f48115b0f0d9100ffc167521c0ff01caa1d2317965afa6df1d64709。原17工作区1020表1670行逐行一致，65原文件（含MySQL标记）哈希一致；原用户/vault/MFA行保持，主密钥不变。活动目录SQLite数据库文件0。原1.1.1程序、环境备份和各快照保留。
+
+本地两仓库源码与固定CI代码一致；520个前端静态文件与线上逐文件哈希一致，聚合e636214ecae77a46cd614c828c2073de84a94d766c8033ef7c35f895337b6633。核心历史包1.4.2不改，本地便携版仍SQLite。后续文档提交不改变CI运行源码，不因文档SHA不同重复发布。
+
+用户提供的Key与两条现有启用的官方DeepSeek连接均一致，不需重复写入，原用户密钥配置没有覆盖。所有验收凭据仅在私有忽略目录/加密vault，截图与证据在私有artifacts/deepseek-deploy-20261117。
+
+外部阻塞仍存在：公开Google/Cloudflare DNS把gotojuai.online解析到198.54.117.242，NS为Namecheap verify-contact-details验证服务。服务器应用/MySQL/Nginx和正确IP上的有效HTTPS正常；普通域名访问尚未恢复，不能宣称公网域名完整验收通过。Namecheap官方说明这种验证NS用于联系信息待验证的域名，需所有者完成联系邮箱确认，已询问用户；没有更改系统/公共DNS或注册商账户。官方处理说明：https://www.namecheap.com/support/knowledgebase/article.aspx/10698/46/what-to-do-if-my-domain-was-suspended-due-to-whois-verification-process/
