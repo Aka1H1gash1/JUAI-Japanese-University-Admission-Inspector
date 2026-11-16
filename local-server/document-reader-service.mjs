@@ -475,6 +475,14 @@ export function createDocumentReaderService({
         owner: owner.owner,
       };
     },
+    async assistantFile(id, expectedHash) {
+      await this.assistantDocument(id, expectedHash);
+      const current = await source(id);
+      const bytes = await readFile(current.file);
+      if (hash(bytes) !== expectedHash)
+        fail('原文件已变化，请重新打开资料。', 409);
+      return { bytes, filename: current.record.filename };
+    },
     async assistantPages(id, expectedHash) {
       await this.assistantDocument(id, expectedHash);
       const current = await source(id);

@@ -358,7 +358,8 @@ function goToMajor() {
       </div>
       <small>分两步：先在本机读取所选文件的文字，这一步不会发送任何内容；读取完成后，再用「AI
         管理」里设置的模型提取为草稿。 支持 PDF、DOCX、MD、TXT；扫描 PDF
-        会先在本机 OCR，或交给支持图片的模型。旧 DOC 请先转为 PDF 或
+        会先使用当前 OCR（DeepSeek
+        官方连接使用云端识别），或交给支持图片的模型。旧 DOC 请先转为 PDF 或
         DOCX。</small>
     </div>
     <section v-if="jobs.length" class="analysis-jobs">

@@ -6,6 +6,8 @@ import path from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
+import { createDeepseekAppApi, officialDeepseek } from './deepseek-app-api.mjs';
+
 function execute(command, args, input, signal) {
   return new Promise((resolve, reject) => {
     const child = spawn(command, args, {
@@ -46,7 +48,12 @@ function execute(command, args, input, signal) {
     child.stdin.end(input);
   });
 }
-export function createAdmissionOcr() {
+export function createAdmissionOcr({ resolve } = {}) {
+  const cloud = createDeepseekAppApi();
+  const selection = (override) => {
+    const value = override === undefined ? resolve?.() : override;
+    return officialDeepseek(value?.config) ? value : undefined;
+  };
   let cached;
   async function engine() {
     if (cached) return cached;
@@ -90,11 +97,33 @@ export function createAdmissionOcr() {
     return { name: '', type: 'unavailable' };
   }
   return {
-    async status() {
+    clear() {
+      cloud.clear();
+    },
+    async status(override) {
+      if (selection(override))
+        return { available: true, name: 'DeepSeek OCR（云端，按页计费）' };
       const value = await engine();
       return { available: value.type !== 'unavailable', name: value.name };
     },
-    async read(image, signal) {
+    async read(image, signal, override) {
+      signal?.throwIfAborted();
+      const selected = selection(override);
+      if (selected) {
+        const pages = await cloud.ocr({
+          ...selected,
+          bytes: Buffer.from(image, 'base64'),
+          signal,
+        });
+        return pages
+          .map((page) =>
+            page.text.replaceAll(
+              /<｜box｜>[\s\S]*?<｜\/box｜>|<｜\/?ref｜>/g,
+              '',
+            ),
+          )
+          .join('\n');
+      }
       const value = await engine();
       if (value.type === 'unavailable')
         throw new Error(

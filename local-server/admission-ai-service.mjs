@@ -234,13 +234,25 @@ export function createAdmissionAiService({
     INSERT INTO schema_migrations VALUES (9, datetime('now'));`),
     );
   const active = new Map();
-  const ocr = createAdmissionOcr();
+  const ocr = createAdmissionOcr({
+    resolve: () => {
+      const selected = ai.resolve('admission_extract', false);
+      return selected && ai.keyConfigured(selected.provider)
+        ? {
+            config: selected.provider,
+            apiKey: ai.credentials(selected.provider),
+          }
+        : undefined;
+    },
+  });
   let closed = false;
   const unsubscribeAi = ai.onInvalidate((id) => {
+    ocr.clear();
     for (const { controller, run } of active.values())
       if (
         run.connectionId === id ||
-        (id === '__feature_admission_extract__' && run.mode === 'managed')
+        (id === '__feature_admission_extract__' &&
+          ['api', 'managed'].includes(run.mode))
       )
         controller.abort();
   });
@@ -371,7 +383,7 @@ export function createAdmissionAiService({
       save(run);
     };
     try {
-      const ocrStatus = await ocr.status();
+      const ocrStatus = await ocr.status(model.ocrSelection || null);
       const pages = [];
       for (const page of selected.pages) {
         signal.throwIfAborted();
@@ -388,12 +400,16 @@ export function createAdmissionAiService({
         if (needsImage || needsOcr) {
           update(
             'reading',
-            `${needsOcr ? '本机 OCR' : '读取页面图像'} · ${page.source.title} · 第 ${page.page} 页`,
+            `${needsOcr ? ocrStatus.name : '读取页面图像'} · ${page.source.title} · 第 ${page.page} 页`,
           );
           const image = await analysis.image(page.source, page.page);
           signal.throwIfAborted();
           if (needsOcr) {
-            const text = await ocr.read(image, signal);
+            const text = await ocr.read(
+              image,
+              signal,
+              model.ocrSelection || null,
+            );
             if (text.replaceAll(/\s/g, '').length < 10)
               warnings.push(
                 `${page.source.title}第 ${page.page} 页 OCR 未获得足够文字，可能为空白或无法辨认；本次不能确认该页内容，请查看原图。`,
@@ -598,7 +614,9 @@ export function createAdmissionAiService({
     save(run);
     try {
       const model = await runner(input, job);
-      const ocrStatus = await ocr.status();
+      run.connectionId = model.connectionId;
+      controller.signal.throwIfAborted();
+      const ocrStatus = await ocr.status(model.ocrSelection || null);
       const selected = await pagesFor(job, input.ranges);
       const imagePages = selected.pages.filter(
         (p) =>
@@ -611,9 +629,9 @@ export function createAdmissionAiService({
           (p.lowText && input.scanMode === 'auto' && ocrStatus.available),
       );
       if (imagePages.length > 0 && !model.supportsImages)
-        fail('所选资料包含扫描页，需要启用支持图片的模型，或改用本机 OCR。');
+        fail('所选资料包含扫描页，需要启用支持图片的模型，或改用 OCR。');
       if (ocrPages.length > 0 && !ocrStatus.available)
-        fail('本机日语 OCR 尚不可用，请选择支持图片的模型。');
+        fail('OCR 尚不可用，请选择支持图片的模型。');
       if (imagePages.length > 18 || ocrPages.length > 24)
         fail('每次最多直接分析 18 张页面图像或 OCR 24 页，请缩小页码范围。');
       if ([...imagePages, ...ocrPages].some((p) => !p.pdf))
@@ -724,6 +742,7 @@ export function createAdmissionAiService({
     },
     close() {
       closed = true;
+      ocr.clear();
       unsubscribeAi();
       for (const { controller } of active.values()) controller.abort();
     },

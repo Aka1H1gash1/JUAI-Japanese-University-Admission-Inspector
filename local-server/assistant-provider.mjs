@@ -1,7 +1,11 @@
+import process from 'node:process';
+
+import { deepseekFilesSupported } from './deepseek-app-api.mjs';
 import { providerFetch, validateServerProvider } from './server-outbound.mjs';
 export function providerConfig(input, fail) {
   if (input?.protocol === 'codex') {
-    if (process.env.JUAI_SERVER_MODE === '1') fail('服务器模式不执行本机 Codex。',403);
+    if (process.env.JUAI_SERVER_MODE === '1')
+      fail('服务器模式不执行本机 Codex。', 403);
     if (
       typeof input.model !== 'string' ||
       input.model.length > 160 ||
@@ -36,7 +40,11 @@ export function providerConfig(input, fail) {
     fail('API 地址不是有效 URL。');
   }
   const local = ['127.0.0.1', '[::1]', 'localhost'].includes(url.hostname);
-  try { validateServerProvider(url); } catch(e) { fail(e.message,403); }
+  try {
+    validateServerProvider(url);
+  } catch (error) {
+    fail(error.message, 403);
+  }
   if (
     (url.protocol !== 'https:' && !(local && url.protocol === 'http:')) ||
     url.username ||
@@ -237,6 +245,7 @@ export async function modelTurn({
   signal,
   onText,
   images = [],
+  files = [],
   outputSchema,
   maxOutputTokens,
 }) {
@@ -245,15 +254,31 @@ export async function modelTurn({
     config.adapter === 'deepseek' ||
     new URL(config.baseUrl).hostname === 'api.deepseek.com';
   maxOutputTokens ??= config.maxOutputTokens || 4096;
-  if (images.length > 0) {
+  if (
+    files.length > 0 &&
+    (!deepseekFilesSupported(config) ||
+      files.length > 20 ||
+      files.some(
+        (id) => typeof id !== 'string' || !/^file-[\w-]{1,200}$/.test(id),
+      ))
+  )
+    throw new Error('文件输入需要 DeepSeek Flash 官方连接和有效文件标识。');
+  if (images.length > 0 || files.length > 0) {
     messages = structuredClone(messages);
-    const last = messages.at(-1);
+    const last =
+      files.length > 0 && images.length === 0
+        ? messages.findLast(
+            (message) =>
+              message.role === 'user' && typeof message.content === 'string',
+          )
+        : messages.at(-1);
     if (last?.role !== 'user' || typeof last.content !== 'string')
-      throw new Error('图片需要随用户消息一起提交。');
+      throw new Error('文件或图片需要随用户消息一起提交。');
     last.content =
       protocol === 'responses'
         ? [
             { type: 'input_text', text: last.content },
+            ...files.map((file_id) => ({ type: 'input_file', file_id })),
             ...images.map((url) => ({
               type: 'input_image',
               image_url: url,
@@ -262,6 +287,7 @@ export async function modelTurn({
           ]
         : [
             { type: 'text', text: last.content },
+            ...files.map((file_id) => ({ type: 'file', file_id })),
             ...images.map((url) => ({
               type: 'image_url',
               image_url: { url, detail: 'high' },
@@ -327,7 +353,7 @@ export async function modelTurn({
             ? { max_completion_tokens: maxOutputTokens }
             : { max_tokens: maxOutputTokens }),
           stream: config.stream,
-          ...(config.stream ? {stream_options:{include_usage:true}} : {}),
+          ...(config.stream ? { stream_options: { include_usage: true } } : {}),
         };
   try {
     const response = await providerFetch(

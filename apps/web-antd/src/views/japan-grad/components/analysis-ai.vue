@@ -262,17 +262,17 @@ async function stop() {
             v-model:value="scanMode"
             :disabled="running"
             :options="[
-              { value: 'auto', label: '自动：文字优先，扫描页优先本机 OCR' },
+              { value: 'auto', label: '自动：文字优先，扫描页使用当前 OCR' },
               { value: 'text', label: '仅读取文字层' },
-              { value: 'ocr', label: '所有所选页先做本机 OCR' },
+              { value: 'ocr', label: '所有所选页先做 OCR' },
               { value: 'vision', label: '所有所选页交给图片模型' },
             ]"
         /></label>
         <p>
           {{
             settings.ocr.available
-              ? `本机 OCR 可用：${settings.ocr.name}。识别后仅将文字交给 AI。`
-              : '本机日语 OCR 不可用；扫描页可交给支持图片的模型直接识别。'
+              ? `OCR 可用：${settings.ocr.name}。识别后将文字交给 AI；云端 OCR 按页计费，停止后服务商可能继续处理。`
+              : 'OCR 不可用；扫描页可交给支持图片的模型直接识别。'
           }}
         </p>
         <p>

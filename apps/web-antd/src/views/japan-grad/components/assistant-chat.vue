@@ -239,6 +239,17 @@ const scroll = ref<HTMLElement>();
 const session = ref<Session>();
 const sessions = ref<SessionRow[]>([]);
 const settings = ref<Settings>();
+const nativeFileInput = computed(() => {
+  const provider = session.value?.provider || settings.value?.provider;
+  try {
+    return (
+      provider?.model === 'deepseek-flash' &&
+      new URL(provider.baseUrl).origin === 'https://api.deepseek.com'
+    );
+  } catch {
+    return false;
+  }
+});
 const settingsOpen = ref(false);
 const status = ref('');
 const attachment = ref<{ page: number; quote: string }>();
@@ -1237,7 +1248,9 @@ const proposalLabel = (status: string) =>
         <footer>
           <span>{{
             reader
-              ? '提问及读取的原文会交给所选模型处理'
+              ? nativeFileInput
+                ? '当前原文件会上传 DeepSeek，云端保留一小时；PDF / Word 解析按页计费，对话另计输入费用'
+                : '提问及读取的原文会交给所选模型处理'
               : '授权资料会发送到你配置的模型服务'
           }}</span><Button v-if="busy || session?.running" @click="stop">
             停止回答

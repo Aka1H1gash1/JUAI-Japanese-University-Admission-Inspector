@@ -38,6 +38,7 @@ import {
   fetchCollectionUrl,
 } from './collection-web.mjs';
 import { storeContent } from './content-store.mjs';
+import { createDeepseekAppApi, officialDeepseek } from './deepseek-app-api.mjs';
 import { collectExperienceCandidates } from './experience-post-service.mjs';
 import { validateFile } from './file-types.mjs';
 import geography from './japan-geography.json' with { type: 'json' };
@@ -100,8 +101,19 @@ export function createCollectionService({
     INSERT INTO schema_migrations VALUES (11,datetime('now'));`),
     );
   const active = new Map();
+  const deepseekApps = createDeepseekAppApi();
   const browser = browserAdapter || createCollectionBrowser();
-  const ocr = createAdmissionOcr();
+  const ocr = createAdmissionOcr({
+    resolve: () => {
+      const selected = ai.resolve('web_collection', false);
+      return selected && ai.keyConfigured(selected.provider)
+        ? {
+            config: selected.provider,
+            apiKey: ai.credentials(selected.provider),
+          }
+        : undefined;
+    },
+  });
   const workers = new Set();
   let closed = false;
   const save = (job) => {
@@ -150,6 +162,7 @@ export function createCollectionService({
     }
   }
   const unsubscribe = ai.onInvalidate((id) => {
+    ocr.clear();
     for (const { job: j, controller } of active.values())
       if (j.connectionId === id || id === '__feature_web_collection__')
         controller.abort();
@@ -293,6 +306,17 @@ export function createCollectionService({
       j,
       `正在读取：${new URL(url).hostname} · ${String(purpose || '目标资料').slice(0, 80)}`,
     );
+    const selection = ai.resolveRequest('web_collection', j);
+    const nativeFetch =
+      officialDeepseek(selection.provider) && j.browserMode !== 'browser';
+    const readNative = () =>
+      deepseekApps.fetchPage({
+        config: selection.provider,
+        apiKey: ai.credentials(selection.provider),
+        url,
+        signal,
+      });
+    let nativeAttempted = false;
     let value;
     if (j.browserMode === 'browser')
       value = await browser.read(url, signal, { taskId: j.id });
@@ -301,12 +325,24 @@ export function createCollectionService({
         value = await fetchCollectionUrl(url, signal);
       } catch (error) {
         if (signal.aborted) throw error;
-        if (
-          j.browserMode === 'auto' &&
-          (await browser.status().then((status) => status.available))
-        )
-          value = await browser.read(url, signal);
-        else throw error;
+        let readError = error;
+        if (nativeFetch) {
+          nativeAttempted = true;
+          try {
+            value = await readNative();
+          } catch (error) {
+            readError = error;
+          }
+        }
+        signal.throwIfAborted();
+        if (!value) {
+          if (
+            j.browserMode === 'auto' &&
+            (await browser.status().then((status) => status.available))
+          )
+            value = await browser.read(url, signal);
+          else throw readError;
+        }
       }
       if (
         value.kind === 'web' &&
@@ -315,6 +351,31 @@ export function createCollectionService({
         (await browser.status().then((status) => status.available))
       )
         value = await browser.read(url, signal);
+    }
+    if (
+      nativeFetch &&
+      !nativeAttempted &&
+      value.kind === 'web' &&
+      value.via !== 'browser'
+    ) {
+      try {
+        const native = await readNative();
+        value = {
+          ...native,
+          links: [
+            ...new Map(
+              [...value.links, ...native.links].map((l) => [l.url, l]),
+            ).values(),
+          ].slice(0, 250),
+          images: value.images || [],
+        };
+      } catch (error) {
+        if (signal.aborted) throw error;
+        value.warnings = [
+          ...(value.warnings || []),
+          `DeepSeek 网页读取未完成，保留直接读取的原文：${error.message}`,
+        ];
+      }
     }
     signal.throwIfAborted();
     if (
@@ -470,12 +531,17 @@ export function createCollectionService({
         !page.ocrAttempted
       ) {
         page.ocrAttempted = true;
-        if (await ocr.status().then((status) => status.available)) {
+        const selected = ai.resolveRequest('web_collection', j);
+        const ocrSelection = {
+          config: selected.provider,
+          apiKey: ai.credentials(selected.provider),
+        };
+        if (await ocr.status(ocrSelection).then((status) => status.available)) {
           const bytes = await readFile(await safeFile(source.path));
           if (digest(bytes) !== source.sha256)
             throw new Error('缓存资料版本已变化，请重新收集。');
           const image = await parser(bytes, page.page, signal);
-          page.text = await ocr.read(image.image, signal);
+          page.text = await ocr.read(image.image, signal, ocrSelection);
           page.ocr = true;
         }
       }
@@ -2011,6 +2077,8 @@ export function createCollectionService({
     },
     close() {
       closed = true;
+      ocr.clear();
+      deepseekApps.clear();
       unsubscribe();
       for (const { controller } of active.values()) controller.abort();
       for (const worker of workers) void worker.terminate();

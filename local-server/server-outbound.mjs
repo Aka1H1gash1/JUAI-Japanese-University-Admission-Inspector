@@ -28,9 +28,16 @@ export async function providerFetch(raw, options = {}) {
   let model = '';
   try {
     model =
-      JSON.parse(options.body || '{}').model ||
-      (url.pathname.endsWith('/tools/search') ? 'web_search' : '');
+      JSON.parse(typeof options.body === 'string' ? options.body : '{}')
+        .model || '';
   } catch {}
+  model ||=
+    {
+      '/v1/tools/search': 'web_search',
+      '/v1/tools/fetch': 'web_fetch',
+      '/v1/tools/ocr': 'document_ocr',
+      '/files': 'document_upload',
+    }[url.pathname] || '';
   const report = usageObserver?.({
     provider: url.hostname,
     model,

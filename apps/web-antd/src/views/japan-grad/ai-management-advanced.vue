@@ -495,7 +495,7 @@ async function revokeAgent(agent: ExternalAgent) {
             <div>
               <h3>{{ feature.name }}</h3>
               <p>{{ feature.description }}</p>
-              <small v-if="feature.tools">需要支持工具调用的模型</small><small v-else>扫描页可先本机 OCR，或使用图片模型</small>
+              <small v-if="feature.tools">需要支持工具调用的模型</small><small v-else>扫描页可用 DeepSeek OCR、本机 OCR 或图片模型</small>
             </div>
             <Switch
               v-model:checked="feature.enabled"

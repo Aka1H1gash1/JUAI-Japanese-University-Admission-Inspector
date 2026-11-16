@@ -149,3 +149,11 @@
 ## 线上MySQL迁移最终完成
 
 2026-11-16，用户限定范围“线上MySQL，本地SQLite”已完成。最终运行Server1.1.1、MySQL8.4.13，固定平台2d907bb/corece17eed0a，CI43863695827。正式迁移及密钥/视图/文件验证、真实备份恢复、异机哈希及线上HTTP验收全部完成。恢复CLI的current符号链接入口问题已修复并增加真实子进程回归；该补丁仅更新代码，不重迁数据。原SQLite归档、工作区文件和账号保留。最终证据见MYSQL_ACCEPTANCE.md；早期“尚未切换”是历史记录，不能当作当前待办。后续只执行新任务，不重复迁移。
+
+## DeepSeek 新应用 API 接入（2026-11-17）
+
+用户明确仅升级现有功能，不需要模拟面试。新分支 feat/deepseek-app-apis，从 c9767de04 起开发，修改前 bundle 已保存 ../git-backups/deepseek-app-apis-20261117/core.bundle；没有操作真实工作区或生产数据。
+
+已接通官方 OCR、Files 原生图文输入与 Fetch；已有 Search、工作区函数工具、邮件草稿继续复用。OCR 作用于用户选择的原页，Files 只上传当前文档，来源核验/逐项采纳/不自动发信不变。新增费用与上传说明，保留其他服务商及本机路径。无需数据库迁移。完整行为、限制和官方依据见 DEEPSEEK_APP_APIS.md。
+
+最终验证：Node24.22.1 下后端91项（含新增8项）、前端11文件42项及脚本业务9项通过；完整类型检查和最终生产构建通过。agent-browser 独立会话验证桌面与390px手机界面，上传/一小时过期/费用提示可见、无横向溢出；截图 /private/tmp/juai-deepseek-desktop.png 和 /private/tmp/juai-deepseek-mobile.png。浏览器临时工作区明确阻止全部真实 DeepSeek 请求。提交时运行原有全套 Git hooks，提交标题 feat(project): integrate DeepSeek OCR files and web fetch。未调用付费模型、未部署。
