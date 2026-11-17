@@ -13,6 +13,8 @@ import {
 } from '../overview-calendar';
 import ExplorerIcon from './explorer-icon.vue';
 
+import './overview-calendar.css';
+
 const props = defineProps<{ events: PlannerEvent[]; today: string }>();
 const emit = defineEmits<{ todo: [event: PlannerEvent] }>();
 const view = ref<'month' | 'week'>('week');
@@ -102,17 +104,20 @@ function addTodo(event: PlannerEvent) {
           size="small"
           :aria-label="view === 'week' ? '上一周' : '上个月'"
           @click="anchor = moveCalendar(anchor, view, -1)"
-          >
-<ExplorerIcon name="back" />
+        >
+          <ExplorerIcon name="back" />
 </Button><Button size="small" @click="anchor = today">今天</Button><Button
           size="small"
           :aria-label="view === 'week' ? '下一周' : '下个月'"
           @click="anchor = moveCalendar(anchor, view, 1)"
-          >
-<ExplorerIcon name="chevron" />
-</Button>
+        >
+          <ExplorerIcon name="chevron" />
+        </Button>
       </div>
     </div>
+    <p v-if="view === 'week'" class="calendar-scroll-hint">
+      左右滑动查看完整一周
+    </p>
     <div class="calendar-scroll">
       <div
         class="calendar-grid"
@@ -187,8 +192,8 @@ function addTodo(event: PlannerEvent) {
         <span class="calendar-key tone-application">出愿</span><span class="calendar-key tone-exam">考试</span><span class="calendar-key tone-contact">联络</span><span class="calendar-key tone-result">结果</span>
       </div>
       <RouterLink to="/japan-grad/journey?view=timeline">
-编辑日程 <ExplorerIcon name="arrow" />
-</RouterLink>
+        编辑日程 <ExplorerIcon name="arrow" />
+      </RouterLink>
     </footer>
     <Modal
       v-model:open="detailOpen"
@@ -216,10 +221,14 @@ function addTodo(event: PlannerEvent) {
           </p>
           <div>
             <RouterLink :to="path(event)" @click="selectedDay = ''">
-查看原记录 <ExplorerIcon name="arrow" />
-</RouterLink><Button v-if="!event.complete" size="small" @click="addTodo(event)">
-<ExplorerIcon name="plus" />加入待办
-</Button>
+              查看原记录 <ExplorerIcon name="arrow" />
+</RouterLink><Button
+              v-if="!event.complete"
+              size="small"
+              @click="addTodo(event)"
+            >
+              <ExplorerIcon name="plus" />加入待办
+            </Button>
           </div>
         </article>
       </div>

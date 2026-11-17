@@ -31,7 +31,9 @@ const database = databaseFactory
 const app = await createLocalApp({
   workspace,
   database,
-  staticDir: path.resolve('apps/web-antd/dist'),
+  staticDir: path.resolve(
+    process.env.JUAI_SMOKE_STATIC_DIR || 'apps/web-antd/dist',
+  ),
 });
 app.listen(0, '127.0.0.1');
 await once(app, 'listening');
@@ -122,6 +124,58 @@ try {
       `Horizontal overflow: ${page.url()}`,
     );
   }
+  async function checkCalendarLayout(calendarPage) {
+    await calendarPage.locator('.calendar-grid').waitFor();
+    const geometry = await calendarPage.evaluate(() => {
+      const grid = document.querySelector('.calendar-grid');
+      const weekdays = [...document.querySelectorAll('.calendar-weekday')];
+      return {
+        display: getComputedStyle(grid).display,
+        columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        weekdayRows: new Set(
+          weekdays.map((el) => Math.round(el.getBoundingClientRect().top)),
+        ).size,
+        weekdayColumns: new Set(
+          weekdays.map((el) => Math.round(el.getBoundingClientRect().left)),
+        ).size,
+        height: document
+          .querySelector('.overview-calendar')
+          .getBoundingClientRect().height,
+        overflow: document.documentElement.scrollWidth > innerWidth + 1,
+      };
+    });
+    assert.equal(
+      geometry.display,
+      'grid',
+      'Calendar CSS must load without visiting overview',
+    );
+    assert.equal(geometry.columns, 7);
+    assert.equal(
+      geometry.weekdayRows,
+      1,
+      'Weekdays must form one horizontal row',
+    );
+    assert.equal(geometry.weekdayColumns, 7);
+    assert.ok(geometry.height >= 300 && geometry.height <= 550);
+    assert.equal(geometry.overflow, false);
+  }
+  // A fresh document is essential: earlier overview navigation used to mask the
+  // prototype calendar's missing page-level stylesheet dependency.
+  for (const width of [1440, 390]) {
+    const direct = await context.newPage();
+    direct.on('pageerror', (error) => errors.push(error.message));
+    await direct.setViewportSize({ width, height: 900 });
+    await direct.goto(
+      `${base}/japan-grad/design/application-flow?view=timeline`,
+    );
+    await checkCalendarLayout(direct);
+    await direct.getByText('30 天 · 月', { exact: true }).click();
+    await checkCalendarLayout(direct);
+    await direct.close();
+  }
+  console.log(
+    'PASS direct calendar entry: desktop/mobile, week/month, seven columns, no dependency on overview navigation',
+  );
   await visit('/japan-grad/universities/u1/schools/s1/majors/m1');
   await page
     .getByRole('button', { name: '从已解析考试建立', exact: true })
@@ -305,6 +359,7 @@ try {
     '/japan-grad/settings',
     '/japan-grad/ai',
     '/japan-grad/collection',
+    '/japan-grad/design/application-flow?view=timeline',
   ];
   for (const [theme, width, height] of [
     ['light', 1440, 900],
@@ -319,6 +374,11 @@ try {
     for (const [index, route] of routes.entries()) {
       await visit(route);
       await noOverflow();
+      if (
+        route === '/japan-grad/calendar' ||
+        route.includes('design/application-flow')
+      )
+        await checkCalendarLayout(page);
       assert.equal(await page.locator('#japangrad-main h1').count(), 1, route);
       if ([0, 5, 10, 11, 14].includes(index))
         await page.screenshot({

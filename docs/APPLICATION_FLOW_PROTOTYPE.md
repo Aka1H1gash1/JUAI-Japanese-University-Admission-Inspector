@@ -41,3 +41,10 @@
 源记录实际无材料、无邮件；浏览器截图中标为“原型演示/草稿”的材料与信件均手动在页面内录入，刷新即清除。AI工作台只有交互预览，既未调用模型，也未返回虚构摘要/代笔。仅本地附件名显示，未上传；后台复核仍materials=0、mails=0、contact=consent，写入403。材料源原文为空，不自动套用通用模板。
 
 截图和日志位于私有忽略目录../juai-server/artifacts/application-flow-prototype-20261117，工作区源副本/恢复数据均不提交。原型后端和Vite前端保留运行；原本5667/5188服务没有停止或替换。线上Server1.2.1及其固定CI包不变。独立构建目录/private/tmp/juai-application-prototype-dist，没有覆盖原有正式dist。
+
+
+## 日历验收补正
+
+用户反馈的纵向纯文字日历确实是缺陷，初轮视觉验收遗漏了组件独立入口。OverviewCalendar原先依赖overview.css，由页面懒加载顺序决定布局是否正常。现在日历CSS随组件加载，并新增从全新浏览器文档直达原型的七列/星期同一行/高度几何回归，覆盖桌面、手机、周和月；旧日历页继续检查，日期和数据没有更改。修复截图calendar-fixed-week.png、calendar-fixed-month.png、calendar-fixed-mobile.png位于原私有截图目录。不能用“脚本无错误”代替对实际布局的检查。
+
+补正后的浏览器回归已实际通过：新文档直达桌面/手机周月日历的几何断言，以及18路由×明/暗主题与两种尺寸。回归支持JUAI_SMOKE_STATIC_DIR使用临时构建，避免覆盖正式dist。
