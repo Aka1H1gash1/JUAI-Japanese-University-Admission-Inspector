@@ -181,3 +181,20 @@
 用户提供的Key与两条现有启用的官方DeepSeek连接均一致，不需重复写入，原用户密钥配置没有覆盖。所有验收凭据仅在私有忽略目录/加密vault，截图与证据在私有artifacts/deepseek-deploy-20261117。
 
 外部阻塞仍存在：公开Google/Cloudflare DNS把gotojuai.online解析到198.54.117.242，NS为Namecheap verify-contact-details验证服务。服务器应用/MySQL/Nginx和正确IP上的有效HTTPS正常；普通域名访问尚未恢复，不能宣称公网域名完整验收通过。Namecheap官方说明这种验证NS用于联系信息待验证的域名，需所有者完成联系邮箱确认，已询问用户；没有更改系统/公共DNS或注册商账户。官方处理说明：https://www.namecheap.com/support/knowledgebase/article.aspx/10698/46/what-to-do-if-my-domain-was-suspended-due-to-whois-verification-process/
+
+## 申请流程与邮件工作台原型（2026-11-17，进行中）
+
+用户最新要求先看原型，当前不做正式业务迁移/部署/付费AI。分支design/application-workflow-prototype，基线960b1ac13；代码bundle在../git-backups/application-workflow-prototype-20261117/core.bundle。原有未跟踪文件保留。
+
+已审查出总览五节点与教授联络七状态不同、总览未渲染考试日程、工作台仅批次日期及材料读取不一致。新原型使用同一页内状态同时呈现总览与工作台，顶部双列、阶段/材料集中、邮件三栏，保留日历。当前方案、数据边界和后续正式模型要求见APPLICATION_FLOW_PROTOTYPE.md。
+
+为真实预览，仅只读导出截图匹配的工作区并离线转到临时SQLite副本；原型后端5679拒绝全部写入和AI请求，前端5198用独立API目标，保留原服务。源工作区当时教授记录为consent，未建立材料、无邮件、无结构化招生批次，原型如实显示；阶段默认只作参考映射，未迁移或覆盖。现正完成类型/布局与浏览器交互验收。
+
+
+### 申请工作流原型交付
+
+独立预览入口http://127.0.0.1:5198/japan-grad/design/application-flow；总览加?screen=overview，邮件加?view=mail。顶部目标/时间压为约91px高的两列，阶段摘要压缩，材料区集中到主工作区。原型同一内存状态驱动总览和工作台；默认阶段仅参考原联络记录，手动设定和查看阶段分开；每阶段输入分别保留。邮件三栏、正文/附件、关键词检索、原型草稿与AI流程预览完成，原日历/时间线保留。同日多来源仅摘要归组，原6条时间线记录仍保留。
+
+新增5项来源语义测试，前端12文件47项通过；类型与独立临时构建通过，原有全部Git hooks在提交时运行。桌面/390px/深色浏览器检查无横向溢出及脚本错误、h1唯一。截图/日志见私有artifacts/application-flow-prototype-20261117和APPLICATION_FLOW_PROTOTYPE.md。手工演示条目始终标注原型，刷新不保存，不伪造AI结果；后端仍材料0/邮件0/联络consent，写请求403，付费AI0，正式数据无写入。现有本地服务和线上1.2.1保留，生产布局/计算器/数据库没有替换或迁移。
+
+提交标题feat(project): prototype unified application stages and mail workspace。下一步等待用户审阅本原型的结构与阶段方案，随后按其反馈实施兼容数据模型、真实API和正式页面；不能把原型内存交互当作已完成的业务持久化。

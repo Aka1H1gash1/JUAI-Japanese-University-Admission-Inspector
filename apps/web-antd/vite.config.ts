@@ -1,3 +1,5 @@
+import process from 'node:process';
+
 import { defineConfig } from '@vben/vite-config';
 
 export default defineConfig(async () => {
@@ -7,7 +9,7 @@ export default defineConfig(async () => {
       server: {
         proxy: {
           '/api/japangrad': {
-            target: 'http://127.0.0.1:5667',
+            target: process.env.JAPANGRAD_API_TARGET || 'http://127.0.0.1:5667',
             changeOrigin: true,
           },
           '/api': {

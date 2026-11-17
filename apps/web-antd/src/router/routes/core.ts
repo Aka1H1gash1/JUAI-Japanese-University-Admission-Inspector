@@ -120,6 +120,12 @@ const coreRoutes: RouteRecordRaw[] = [
         meta: { title: '特殊入学项目' },
       },
       {
+        path: 'design/application-flow',
+        component: () =>
+          import('#/views/japan-grad/application-flow-prototype.vue'),
+        meta: { title: '申请工作流 · 交互原型', hideInMenu: true },
+      },
+      {
         path: 'design',
         component: () =>
           import('#/views/japan-grad/design-system/preview-index.vue'),
