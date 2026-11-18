@@ -32,12 +32,16 @@ import UniversityLogo from './components/university-logo.vue';
 import { fileSize, fileUrl } from './documents';
 import { useExplorerStore } from './explorer';
 import { labContext, labPath } from './lab-targets';
-import { localApi } from './local-api';
+import { jsonOptions, localApi } from './local-api';
 import { vAccessibleSelect } from './select-accessibility';
 
 import './application-flow-prototype.css';
 
+const props = withDefaults(defineProps<{ formal?: boolean }>(), {
+  formal: false,
+});
 interface Material {
+  version?: number;
   id: string;
   title: string;
   complete: boolean;
@@ -48,10 +52,13 @@ interface Material {
 }
 interface Target {
   id: string;
+  savedMailId?: string;
+  version: number;
+  workflow?: Workflow;
   batch_id: null | string;
   contacts: { professor_id: string; experience_id: string }[];
   materials: Material[];
-  mails: MailRecord[];
+  mails: (MailRecord & { documents?: StoredDocument[]; recordHash?: string })[];
 }
 interface Draft {
   id: string;
@@ -59,21 +66,191 @@ interface Draft {
   body: string;
   recipient: string;
   files: File[];
+  sender?: string;
   saved: boolean;
+  version?: number;
+  documents?: StoredDocument[];
 }
 const store = useExplorerStore();
 const route = useRoute();
 const router = useRouter();
 const { modal } = App.useApp();
+const newBatchId = ref<string>();
+const existingMails = ref<MailRecord[]>([]);
+const existingMailId = ref<string>();
+async function openTarget(batchId?: string) {
+  await action(async () => {
+    const state = await localApi<Target>(
+      `/applications/labs/${labId.value}`,
+      jsonOptions('POST', { batchId }),
+    );
+    targetRows.value = await localApi(`/applications/labs/${labId.value}`);
+    targetId.value = state.id;
+    void router.replace({ query: { ...route.query, target: state.id } });
+    await readTarget();
+  });
+}
+async function findExistingMails() {
+  await action(async () => {
+    const records = await Promise.all(
+      (original.value?.contacts ?? []).map((contact) =>
+        localApi<MailRecord[]>(`/messages?professorId=${contact.professor_id}`),
+      ),
+    );
+    existingMails.value = records
+      .flat()
+      .filter(
+        (mail) =>
+          original.value?.contacts.some(
+            (contact) =>
+              contact.professor_id === mail.professorId &&
+              contact.experience_id === mail.experienceId,
+          ) && !original.value?.mails.some((record) => record.id === mail.id),
+      );
+    if (existingMails.value.length === 0)
+      feedback.value = '当前关联经历没有可导入的其他邮件。';
+  });
+}
+async function linkExistingMail() {
+  if (!existingMailId.value) return;
+  await action(async () => {
+    original.value = await localApi<Target>(
+      `/applications/${targetId.value}/mail`,
+      jsonOptions('POST', { messageId: existingMailId.value }),
+    );
+    selectedMailId.value = existingMailId.value || '';
+    existingMails.value = existingMails.value.filter(
+      (mail) => mail.id !== existingMailId.value,
+    );
+    existingMailId.value = undefined;
+  });
+}
+const selectedTeacher = ref('');
+const selectedExperience = ref('');
+const teacherExperiences = computed(() => {
+  const teacher = target.value?.professors.find(
+    (item) => item.id === selectedTeacher.value,
+  );
+  return [teacher?.contact, ...(teacher?.contactHistory ?? [])].filter(
+    (item) => !!item?.experienceId,
+  );
+});
+async function bindExperience() {
+  if (!original.value || !selectedTeacher.value || !selectedExperience.value)
+    return;
+  await action(async () => {
+    await localApi(
+      `/applications/${targetId.value}/contacts`,
+      jsonOptions('POST', {
+        version: original.value?.version,
+        professorId: selectedTeacher.value,
+        experienceId: selectedExperience.value,
+      }),
+    );
+    await readTarget();
+  });
+}
 const targets = computed(() =>
   store.labs
-    .filter((lab) => lab.wantApply)
+    .filter(
+      (lab) => lab.wantApply || (props.formal && lab.id === route.params.labId),
+    )
     .flatMap((lab) => {
       const target = labContext(store, lab.id);
       return target ? [target] : [];
     }),
 );
-const labId = ref('');
+const labId = ref(props.formal ? String(route.params.labId || '') : '');
+const workflowVersion = ref(0);
+const workflowStageSet = ref(false);
+const aiResult = ref('');
+const attachmentSuggestions = ref<
+  { documentId?: string; title: string; reason: string }[]
+>([]);
+const editingRecordHash = ref('');
+const editingProfessor = ref('');
+const fileChoices = ref<StoredDocument[]>([]);
+const existingFile = ref<string>();
+const aiBusy = ref(false);
+const working = ref(false);
+interface Workflow {
+  savedDraftId?: string;
+  currentStage: FlowStageId | null;
+  version: number;
+  stages: Record<string, Record<string, string>>;
+  drafts: Array<{
+    id: string;
+    subject: string;
+    body: string;
+    recipient: string;
+    version: number;
+    documentIds: string[];
+    documents?: StoredDocument[];
+  }>;
+}
+async function action(fn: () => Promise<void>) {
+  if (working.value) return;
+  working.value = true;
+  errorMessage.value = '';
+  try {
+    await fn();
+    if (props.formal)
+      window.dispatchEvent(new Event('juai:application-change'));
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : '操作失败，请保留草稿后重试';
+  } finally {
+    working.value = false;
+  }
+}
+function acceptWorkflow(value: Workflow) {
+  workflowVersion.value = value.version;
+  workflowStageSet.value = !!value.currentStage;
+  currentStage.value = value.currentStage || '';
+  stageRecords.value = value.stages;
+  drafts.value = value.drafts.map((d) => ({ ...d, files: [], saved: true }));
+}
+async function refreshWorkflow() {
+  if (targetId.value)
+    acceptWorkflow(
+      await localApi<Workflow>(`/applications/${targetId.value}/workflow`),
+    );
+}
+async function uploadDocument(file: File) {
+  const response = await fetch('/api/japangrad/documents', {
+    method: 'POST',
+    headers: {
+      'X-JapanGrad-Client': '1',
+      'X-JapanGrad-Metadata': encodeURIComponent(
+        JSON.stringify({
+          ownerType: 'workspace',
+          ownerId: 'workspace',
+          kind: 'other',
+          year: new Date().getFullYear(),
+          title: file.name,
+          filename: file.name,
+        }),
+      ),
+    },
+    body: file,
+  });
+  const value = await response.json();
+  if (!response.ok) throw new Error(value.error || '上传失败');
+  return value as StoredDocument;
+}
+async function completeMaterial(m: Material, complete: boolean) {
+  if (!props.formal) {
+    m.complete = complete;
+    return;
+  }
+  await action(async () => {
+    const state = await localApi<Target>(
+      `/applications/${targetId.value}/materials/${m.id}`,
+      jsonOptions('PUT', { ...m, complete }),
+    );
+    materials.value = state.materials;
+  });
+}
 const target = computed(() =>
   targets.value.find((t) => t.lab.id === labId.value),
 );
@@ -113,11 +290,13 @@ const contact = computed(() => {
       person.value?.contact,
   );
 });
-const currentStage = ref<FlowStageId>('prepare');
+const currentStage = ref<'' | FlowStageId>(props.formal ? '' : 'prepare');
 const viewedStage = ref<FlowStageId>('prepare');
 const stageChanged = ref(false);
-const stageLabel = computed(
-  () => FLOW_STAGES.find((s) => s.id === currentStage.value)?.label || '未设置',
+const stageLabel = computed(() =>
+  props.formal && !workflowStageSet.value
+    ? '申请阶段未设置'
+    : FLOW_STAGES.find((s) => s.id === currentStage.value)?.label || '未设置',
 );
 const viewedLabel = computed(
   () =>
@@ -130,21 +309,26 @@ const fieldDraft = ref<Record<string, string>>({});
 const screen = ref<'overview' | 'workspace'>(
   route.query.screen === 'overview' ? 'overview' : 'workspace',
 );
-const tab = ref(
-  ['mail', 'timeline'].includes(String(route.query.view))
-    ? String(route.query.view)
-    : 'stages',
-);
+function initialTab() {
+  const requested = String(route.query.view);
+  if (requested === 'contact') return 'mail';
+  return ['mail', 'timeline'].includes(requested) ? requested : 'stages';
+}
+const tab = ref(initialTab());
 const drafts = ref<Draft[]>([]);
 const selectedMailId = ref('');
 const query = ref('');
 const mailFilter = ref('all');
 const compose = ref(false);
+const recordMode = ref<'draft' | 'received' | 'sent'>('draft');
+const recordDate = ref('');
+const editingRecordId = ref('');
 const aiAction = ref('progress');
 const writingRequirements = ref('');
 const fileInput = ref<HTMLInputElement>();
 const uploadMaterial = ref<HTMLInputElement>();
 const materialEditor = ref(false);
+const editingMaterialId = ref('');
 const newMaterialTitle = ref('');
 const newMaterialNotes = ref('');
 const currentDraft = computed(() =>
@@ -222,7 +406,7 @@ const mailbox = computed(() =>
       id: d.id,
       subject: d.subject || '无主题草稿',
       preview: d.body || '尚未填写正文',
-      date: '本地草稿',
+      date: props.formal ? '未发送草稿' : '本地草稿',
       direction: 'draft',
       sender: '我',
     })),
@@ -252,7 +436,7 @@ watch(
   { immediate: true },
 );
 watch(
-  labId,
+  () => target.value?.lab.id,
   async (id) => {
     const sequence = ++generation;
     original.value = undefined;
@@ -263,6 +447,10 @@ watch(
     targetRows.value = [];
     targetId.value = '';
     stageChanged.value = false;
+    aiResult.value = '';
+    attachmentSuggestions.value = [];
+    fileChoices.value = [];
+    existingFile.value = undefined;
     if (!id) return;
     loading.value = true;
     errorMessage.value = '';
@@ -278,7 +466,10 @@ watch(
       if (sequence !== generation) return;
       targetRows.value = rows;
       batches.value = bs;
-      targetId.value = rows[0]?.id || '';
+      targetId.value =
+        rows.find((row) => row.id === route.query.target)?.id ||
+        rows[0]?.id ||
+        '';
       await readTarget(sequence);
     } catch (error) {
       if (sequence === generation)
@@ -311,7 +502,10 @@ async function readTarget(sequence = generation) {
   );
   currentStage.value = suggestedFlowStage(contact.value);
   viewedStage.value = currentStage.value;
-  selectedMailId.value = state.mails.at(-1)?.id || '';
+  if (props.formal && state.workflow) acceptWorkflow(state.workflow);
+  if (currentStage.value) viewedStage.value = currentStage.value;
+  selectedMailId.value =
+    state.mails.at(-1)?.id || drafts.value.at(-1)?.id || '';
   if (person.value) {
     const library = await localApi<{ documents: StoredDocument[] }>(
       `/experience-library?professorIds=${person.value.id}`,
@@ -324,6 +518,13 @@ async function readTarget(sequence = generation) {
   }
 }
 async function chooseTarget() {
+  ++generation;
+  aiResult.value = '';
+  attachmentSuggestions.value = [];
+  fileChoices.value = [];
+  existingFile.value = undefined;
+  if (props.formal)
+    void router.replace({ query: { ...route.query, target: targetId.value } });
   drafts.value = [];
   compose.value = false;
   selectedMailId.value = '';
@@ -343,7 +544,23 @@ function setTab(value: string) {
   screen.value = 'workspace';
   void router.replace({ query: { ...route.query, view: value } });
 }
-function setCurrent() {
+async function setCurrent() {
+  if (props.formal) {
+    await action(async () => {
+      acceptWorkflow(
+        await localApi<Workflow>(
+          `/applications/${targetId.value}/workflow`,
+          jsonOptions('PUT', {
+            version: workflowVersion.value,
+            stage: viewedStage.value,
+            makeCurrent: true,
+          }),
+        ),
+      );
+      feedback.value = '申请阶段已保存，总览与修考之路同步读取。';
+    });
+    return;
+  }
   currentStage.value = viewedStage.value;
   stageChanged.value = true;
   feedback.value = '已更新原型阶段；总览视图同步，正式数据未更改。';
@@ -352,12 +569,48 @@ function editStage() {
   fieldDraft.value = { ...fields.value };
   stageEditor.value = true;
 }
-function saveStage() {
+async function saveStage() {
+  if (props.formal) {
+    await action(async () => {
+      acceptWorkflow(
+        await localApi<Workflow>(
+          `/applications/${targetId.value}/workflow`,
+          jsonOptions('PUT', {
+            version: workflowVersion.value,
+            stage: viewedStage.value,
+            makeCurrent: false,
+            fields: fieldDraft.value,
+          }),
+        ),
+      );
+      stageEditor.value = false;
+      feedback.value = '阶段记录已保存。';
+    });
+    return;
+  }
   stageRecords.value[viewedStage.value] = { ...fieldDraft.value };
   stageEditor.value = false;
   feedback.value = '阶段记录仅保留在本次原型中，切换阶段不会丢失，刷新后重置。';
 }
 function previewImport() {
+  if (props.formal) {
+    modal.confirm({
+      title: '从已保存要求建立材料清单',
+      content: batch.value
+        ? '材料生成后独立管理，已有项目保留。'
+        : '请确认专攻通用材料要求适用于本申请目标；不适用的内容请勿导入。',
+      okText: '确认适用并生成',
+      onOk: () =>
+        action(async () => {
+          const state = await localApi<Target>(
+            `/applications/${targetId.value}/seed`,
+            jsonOptions('POST', { confirmCommon: !batch.value }),
+          );
+          materials.value = state.materials;
+        }),
+    });
+    return;
+  }
   modal.confirm({
     title: '预览材料清单',
     content:
@@ -381,7 +634,33 @@ function previewImport() {
     },
   });
 }
-function addMaterial() {
+async function addMaterial() {
+  if (props.formal) {
+    await action(async () => {
+      const state = await localApi<Target>(
+        `/applications/${targetId.value}/materials${editingMaterialId.value ? `/${editingMaterialId.value}` : ''}`,
+        jsonOptions(
+          editingMaterialId.value ? 'PUT' : 'POST',
+          editingMaterialId.value
+            ? {
+                ...materials.value.find(
+                  (m) => m.id === editingMaterialId.value,
+                ),
+                title: newMaterialTitle.value,
+                notes: newMaterialNotes.value,
+              }
+            : { title: newMaterialTitle.value, notes: newMaterialNotes.value },
+        ),
+      );
+      materials.value = state.materials;
+      selectedMaterialId.value = state.materials.at(-1)?.id || '';
+      newMaterialTitle.value = '';
+      newMaterialNotes.value = '';
+      materialEditor.value = false;
+      editingMaterialId.value = '';
+    });
+    return;
+  }
   if (!newMaterialTitle.value.trim()) return;
   const item = {
     id: crypto.randomUUID(),
@@ -398,7 +677,31 @@ function addMaterial() {
   newMaterialTitle.value = '';
   newMaterialNotes.value = '';
 }
-function addMaterialFiles(event: Event) {
+async function addMaterialFiles(event: Event) {
+  if (props.formal) {
+    const input = event.target as HTMLInputElement;
+    const m = material.value;
+    if (!m) return;
+    const files = [...(input.files || [])];
+    input.value = '';
+    await action(async () => {
+      for (const file of files) {
+        const doc = await uploadDocument(file);
+        const current = materials.value.find((item) => item.id === m.id);
+        if (!current) throw new Error('材料已变化，已上传文件保留在文件管理中');
+        const state = await localApi<Target>(
+          `/applications/${targetId.value}/materials/${m.id}`,
+          jsonOptions('PUT', {
+            ...current,
+            documentIds: [...current.files.map((f) => f.id), doc.id],
+          }),
+        );
+        materials.value = state.materials;
+      }
+      feedback.value = '文件已上传并关联；完成状态保持独立。';
+    });
+    return;
+  }
   const input = event.target as HTMLInputElement;
   if (!material.value) return;
   for (const file of input.files || []) {
@@ -423,6 +726,21 @@ function addMaterialFiles(event: Event) {
   feedback.value = '仅在原型中显示文件名，未上传；材料完成状态保持独立。';
 }
 function newDraft() {
+  recordMode.value = 'draft';
+  editingRecordId.value = '';
+  editingRecordHash.value = '';
+  editingProfessor.value = person.value?.id || '';
+  recordDate.value = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Tokyo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  })
+    .format(new Date())
+    .replace(' ', 'T');
   const d = {
     id: crypto.randomUUID(),
     subject: '',
@@ -430,14 +748,64 @@ function newDraft() {
     recipient: person.value?.email || '',
     files: [],
     saved: false,
-  };
+  } satisfies Draft;
   drafts.value.unshift(d);
   selectedMailId.value = d.id;
   compose.value = true;
   mailFilter.value = 'all';
   query.value = '';
+  return drafts.value[0];
 }
-function saveDraft() {
+async function saveDraft() {
+  if (props.formal && recordMode.value !== 'draft') {
+    const d = currentDraft.value;
+    if (!d) return;
+    await action(async () => {
+      const path = `/applications/${targetId.value}/records${editingRecordId.value ? `/${editingRecordId.value}` : ''}`;
+      const state = await localApi<Target>(
+        path,
+        jsonOptions(editingRecordId.value ? 'PUT' : 'POST', {
+          professorId: editingProfessor.value,
+          expectedHash: editingRecordHash.value,
+          direction: recordMode.value,
+          subject: d.subject,
+          body: d.body,
+          date: recordDate.value,
+          sender: d.sender || '',
+          recipient: d.recipient,
+          documentIds: d.documents?.map((f) => f.id) || [],
+        }),
+      );
+      original.value = state;
+      drafts.value = drafts.value.filter((item) => item.id !== d.id);
+      selectedMailId.value = state.savedMailId || '';
+      editingRecordId.value = '';
+      compose.value = false;
+      feedback.value = '邮件记录已保存。';
+    });
+    return;
+  }
+  if (props.formal) {
+    const d = currentDraft.value;
+    if (!d) return;
+    await action(async () => {
+      const value = await localApi<Workflow>(
+        `/applications/${targetId.value}/drafts${d.version ? `/${d.id}` : ''}`,
+        jsonOptions(d.version ? 'PUT' : 'POST', {
+          subject: d.subject,
+          body: d.body,
+          recipient: d.recipient,
+          version: d.version,
+          documentIds: d.documents?.map((f) => f.id) || [],
+        }),
+      );
+      acceptWorkflow(value);
+      selectedMailId.value = value.savedDraftId || d.id;
+      compose.value = false;
+      feedback.value = '未发送草稿已保存。';
+    });
+    return;
+  }
   if (currentDraft.value) {
     currentDraft.value.saved = true;
     compose.value = false;
@@ -445,6 +813,40 @@ function saveDraft() {
   }
 }
 function deleteMail() {
+  if (props.formal) {
+    modal.confirm({
+      title: currentDraft.value ? '删除草稿？' : '移除本目标的邮件记录？',
+      content: currentDraft.value
+        ? '附件原文件仍可在文件管理中查看。'
+        : '原联络经历的邮件和文件仍可查看。',
+      okText: '确认删除',
+      cancelText: '取消',
+      onOk: () =>
+        action(async () => {
+          const d = currentDraft.value;
+          if (d) {
+            if (d.version)
+              acceptWorkflow(
+                await localApi<Workflow>(
+                  `/applications/${targetId.value}/drafts/${d.id}`,
+                  jsonOptions('DELETE', { version: d.version }),
+                ),
+              );
+            else drafts.value = drafts.value.filter((item) => item.id !== d.id);
+          } else if (selectedMail.value) {
+            await localApi(
+              `/applications/${targetId.value}/records/${selectedMail.value.id}`,
+              jsonOptions('DELETE', {
+                expectedHash: selectedMail.value.recordHash,
+              }),
+            );
+            await readTarget();
+          }
+          selectedMailId.value = mailbox.value[0]?.id || '';
+        }),
+    });
+    return;
+  }
   if (!selectedMailId.value) return;
   modal.confirm({
     title: '从原型移除这封邮件？',
@@ -464,16 +866,178 @@ function deleteMail() {
     },
   });
 }
-function attachMail(event: Event) {
+async function loadExistingFiles() {
+  await action(async () => {
+    const files = await localApi<StoredDocument[]>('/documents/index');
+    fileChoices.value = files.filter(
+      (file) =>
+        file.ownerType === 'workspace' ||
+        (file.ownerType === 'major' && file.ownerId === target.value?.major.id),
+    );
+    if (fileChoices.value.length === 0) feedback.value = '暂无可关联的文件。';
+  });
+}
+async function attachExisting(file: StoredDocument, mode: 'mail' | 'material') {
+  if (mode === 'mail') {
+    const draft = currentDraft.value;
+    if (!draft) return;
+    draft.documents ??= [];
+    if (!draft.documents.some((doc) => doc.id === file.id))
+      draft.documents.push(file);
+    return;
+  }
+  const m = material.value;
+  if (!m || m.files.some((doc) => doc.id === file.id)) return;
+  await action(async () => {
+    const state = await localApi<Target>(
+      `/applications/${targetId.value}/materials/${m.id}`,
+      jsonOptions('PUT', {
+        ...m,
+        documentIds: [...m.files.map((doc) => doc.id), file.id],
+      }),
+    );
+    materials.value = state.materials;
+  });
+}
+function attachSuggested(id?: string) {
+  const file = materials.value
+    .flatMap((m) => m.files)
+    .find((doc) => doc.id === id);
+  if (file) void attachExisting(file, 'mail');
+}
+function chooseExisting(mode: 'mail' | 'material') {
+  const file = fileChoices.value.find((doc) => doc.id === existingFile.value);
+  if (file) void attachExisting(file, mode);
+  existingFile.value = undefined;
+}
+async function attachMail(event: Event) {
+  if (props.formal) {
+    const input = event.target as HTMLInputElement;
+    const d = currentDraft.value;
+    if (!d) return;
+    const files = [...(input.files || [])];
+    input.value = '';
+    await action(async () => {
+      for (const file of files) {
+        const doc = await uploadDocument(file);
+        d.documents ||= [];
+        d.documents.push(doc);
+      }
+      feedback.value = '附件已上传，保存草稿后完成邮件关联。';
+    });
+    return;
+  }
   const input = event.target as HTMLInputElement;
   if (currentDraft.value) currentDraft.value.files.push(...(input.files || []));
   input.value = '';
 }
-function previewAiDraft() {
+async function previewAiDraft() {
+  if (props.formal) {
+    await runAi('draft');
+    return;
+  }
   newDraft();
   aiAction.value = 'draft';
   feedback.value =
     '已打开一封独立空白草稿。原型不调用 AI，写作要求保留在右侧；正式版会在此放入可修改的代笔结果。';
+}
+async function runAi(kind: string) {
+  if (aiBusy.value || working.value) return;
+  aiBusy.value = true;
+  errorMessage.value = '';
+  try {
+    const value = await localApi<{
+      text: string;
+      workflow?: Workflow;
+      draftId?: string;
+      attachmentSuggestions?: {
+        documentId?: string;
+        title: string;
+        reason: string;
+      }[];
+    }>(
+      `/applications/${targetId.value}/ai`,
+      jsonOptions('POST', {
+        action: kind,
+        requirements: writingRequirements.value,
+        messageId: selectedMail.value?.id,
+      }),
+    );
+    aiResult.value = value.text;
+    attachmentSuggestions.value = value.attachmentSuggestions || [];
+    if (value.workflow) {
+      acceptWorkflow(value.workflow);
+      selectedMailId.value = value.draftId || '';
+      compose.value = true;
+    } else if (kind === 'draft') {
+      await refreshWorkflow();
+      selectedMailId.value = drafts.value.at(-1)?.id || '';
+      compose.value = true;
+    }
+  } catch (error) {
+    errorMessage.value =
+      error instanceof Error ? error.message : 'AI请求失败，未发送任何邮件';
+  } finally {
+    aiBusy.value = false;
+  }
+}
+function editMail() {
+  const m = selectedMail.value;
+  if (currentDraft.value) {
+    compose.value = true;
+    return;
+  }
+  if (!m) return;
+  const d = newDraft();
+  if (d) {
+    d.subject = m.subject;
+    d.body = m.body;
+    d.recipient = m.recipient || '';
+    d.sender = m.sender || '';
+    d.documents = m.documents || [];
+  }
+  recordMode.value = m.direction;
+  recordDate.value = m.date;
+  editingRecordId.value = m.id;
+  editingRecordHash.value = m.recordHash || '';
+  editingProfessor.value = m.professorId;
+}
+function editMaterial(m: Material) {
+  editingMaterialId.value = m.id;
+  newMaterialTitle.value = m.title;
+  newMaterialNotes.value = m.notes;
+  materialEditor.value = true;
+}
+function removeMaterial(m: Material) {
+  modal.confirm({
+    title: '删除材料条目？',
+    content: '关联文件仍保留在文件管理中。',
+    okText: '删除条目',
+    cancelText: '取消',
+    onOk: () =>
+      action(async () => {
+        const state = await localApi<Target>(
+          `/applications/${targetId.value}/materials/${m.id}`,
+          jsonOptions('DELETE', { version: m.version }),
+        );
+        materials.value = state.materials;
+        selectedMaterialId.value = state.materials[0]?.id || '';
+      }),
+  });
+}
+async function detachMaterialFile(doc: StoredDocument) {
+  const m = material.value;
+  if (!m) return;
+  await action(async () => {
+    const state = await localApi<Target>(
+      `/applications/${targetId.value}/materials/${m.id}`,
+      jsonOptions('PUT', {
+        ...m,
+        documentIds: m.files.filter((f) => f.id !== doc.id).map((f) => f.id),
+      }),
+    );
+    materials.value = state.materials;
+  });
 }
 function stageValue(key: string) {
   return fields.value[key] || '未填写';
@@ -482,7 +1046,7 @@ function stageValue(key: string) {
 
 <template>
   <section class="flow-prototype juai-design">
-    <div class="flow-preview-strip">
+    <div v-if="!props.formal" class="flow-preview-strip">
       <span><ExplorerIcon name="grid" />交互原型
         <b>仅本页演示，不保存正式数据</b></span>
       <div>
@@ -501,11 +1065,28 @@ function stageValue(key: string) {
         </button>
       </div>
     </div>
+    <div v-if="props.formal" class="flow-inline-actions">
+      <RouterLink to="/japan-grad/overview">申请总览</RouterLink><RouterLink to="/japan-grad/journey">修考之路</RouterLink><a v-if="targetId" :href="`/api/japangrad/applications/${targetId}/zip`">导出材料 ZIP</a><Button
+        v-if="target && !original && !loading"
+        @click="
+          action(async () => {
+            const state = await localApi<Target>(
+              `/applications/labs/${labId}`,
+              jsonOptions('POST', {}),
+            );
+            targetId = state.id;
+            await readTarget();
+          })
+        "
+      >
+        建立此申请目标
+      </Button>
+    </div>
     <p v-if="errorMessage" role="alert" class="flow-alert">
       {{ errorMessage }}
     </p>
     <p v-if="loading" role="status" class="flow-feedback">
-      正在读取工作区副本…
+      {{ props.formal ? '正在读取申请目标…' : '正在读取资料…' }}
     </p>
     <template v-if="target">
       <header class="flow-heading">
@@ -656,6 +1237,7 @@ function stageValue(key: string) {
               <Select
                 v-accessible-select
                 v-model:value="labId"
+                :disabled="working || aiBusy || loading"
                 :options="
                   targets.map((t) => ({
                     value: t.lab.id,
@@ -667,6 +1249,7 @@ function stageValue(key: string) {
                 v-accessible-select
                 v-if="targetRows.length > 1"
                 v-model:value="targetId"
+                :disabled="working || aiBusy || loading"
                 :options="
                   targetRows.map((t) => ({
                     value: t.id,
@@ -679,6 +1262,30 @@ function stageValue(key: string) {
                 @change="chooseTarget"
               /><span v-else class="flow-batch-label">{{ batchLabel }}</span>
             </div>
+            <details
+              v-if="props.formal && batches.length"
+              class="flow-stage-more"
+            >
+              <summary>建立或打开其他招生批次</summary>
+              <div class="flow-inline-actions">
+                <Select
+                  v-model:value="newBatchId"
+                  aria-label="选择目标招生批次"
+                  :options="
+                    batches.map((item) => ({
+                      value: item.id,
+                      label: item.label,
+                    }))
+                  "
+                />
+                <Button
+                  :disabled="!newBatchId || working"
+                  @click="openTarget(newBatchId)"
+                >
+                  打开批次目标
+                </Button>
+              </div>
+            </details>
           </section>
           <section class="flow-date-summary">
             <div v-for="d in dates" :key="d.label">
@@ -727,13 +1334,52 @@ function stageValue(key: string) {
                 </button>
               </li>
             </ol>
+            <details
+              v-if="props.formal && original && target.professors.length"
+              class="flow-stage-more"
+            >
+              <summary>关联教授联络经历</summary>
+              <label>教授
+                <Select
+                  v-model:value="selectedTeacher"
+                  :options="
+                    target.professors.map((teacher) => ({
+                      value: teacher.id,
+                      label: teacher.name,
+                    }))
+                  "
+                  @change="selectedExperience = ''"
+                />
+              </label>
+              <label>已有经历
+                <Select
+                  v-model:value="selectedExperience"
+                  :options="
+                    teacherExperiences.map((item) => ({
+                      value: item?.experienceId,
+                      label: item?.experienceTitle || '联络经历',
+                    }))
+                  "
+                />
+              </label>
+              <Button
+                :disabled="!selectedExperience || working"
+                @click="bindExperience"
+              >
+                保存关联
+              </Button>
+            </details>
             <div class="flow-legacy-note">
               <span>原教授联络记录</span><strong>{{ CONTACT_LABELS[contact.status] }}</strong>
               <p>
                 {{
                   stageChanged
-                    ? '当前阶段已在原型中手动调整。'
-                    : '初始阶段参考此记录展示，正式接入前需确认。'
+                    ? props.formal
+                      ? '申请阶段由本目标单独维护。'
+                      : '当前阶段已在原型中手动调整。'
+                    : props.formal
+                      ? '原联络经历保留，不自动覆盖申请阶段。'
+                      : '初始阶段参考此记录展示，正式接入前需确认。'
                 }}
               </p>
             </div>
@@ -830,7 +1476,15 @@ function stageValue(key: string) {
                 <div class="flow-inline-actions">
                   <Button v-if="candidates.length" @click="previewImport">
                     预览导入要求
-</Button><Button type="primary" @click="materialEditor = true">
+</Button><Button
+                    type="primary"
+                    @click="
+                      editingMaterialId = '';
+                      newMaterialTitle = '';
+                      newMaterialNotes = '';
+                      materialEditor = true;
+                    "
+                  >
                     <ExplorerIcon name="plus" />新增材料
                   </Button>
                 </div>
@@ -844,7 +1498,9 @@ function stageValue(key: string) {
                       :class="{ 'is-selected': material?.id === m.id }"
                     >
                       <Checkbox
-                        v-model:checked="m.complete"
+                        :checked="m.complete"
+                        :disabled="working"
+                        @change="completeMaterial(m, !m.complete)"
                         :aria-label="`完成材料：${m.title}`"
                       /><button @click="selectedMaterialId = m.id">
                         <strong>{{ m.title }}</strong><small>{{ m.preview ? '原型草稿 · ' : ''
@@ -854,6 +1510,13 @@ function stageValue(key: string) {
                               : '尚无文件'
                           }}{{ m.complete ? ' · 已勾选完成' : '' }}</small>
                       </button>
+                      <div v-if="props.formal" class="flow-inline-actions">
+                        <Button size="small" @click="editMaterial(m)">
+                          编辑
+</Button><Button size="small" @click="removeMaterial(m)">
+                          删除
+                        </Button>
+                      </div>
                     </article>
                   </template>
                   <div v-else class="flow-material-empty">
@@ -868,6 +1531,24 @@ function stageValue(key: string) {
                   </div>
                 </div>
                 <div class="flow-material-detail">
+                  <div
+                    v-if="props.formal && material"
+                    class="flow-inline-actions"
+                  >
+                    <Button @click="loadExistingFiles">选择已有文件</Button>
+                    <Select
+                      v-if="fileChoices.length"
+                      v-model:value="existingFile"
+                      aria-label="已有申请材料文件"
+                      :options="
+                        fileChoices.map((doc) => ({
+                          value: doc.id,
+                          label: doc.filename,
+                        }))
+                      "
+                      @change="chooseExisting('material')"
+                    />
+                  </div>
                   <template v-if="material">
                     <div class="flow-file-heading">
                       <h3>{{ material.title }}</h3>
@@ -882,7 +1563,11 @@ function stageValue(key: string) {
                       class="flow-upload-area"
                       @click="uploadMaterial?.click()"
                     >
-                      <ExplorerIcon name="upload" /><strong>选择本地文件</strong><span>原型仅展示文件名，不上传。上传与完成独立管理。</span>
+                      <ExplorerIcon name="upload" /><strong>选择本地文件</strong><span>{{
+                        props.formal
+                          ? '上传文件并关联当前材料；完成状态独立管理。'
+                          : '原型仅展示文件名，不上传。上传与完成独立管理。'
+                      }}</span>
 </button><input
                       ref="uploadMaterial"
                       type="file"
@@ -909,7 +1594,14 @@ function stageValue(key: string) {
                         :href="fileUrl(file.id)"
                         target="_blank"
                         rel="noreferrer"
-                        >查看</a>
+                        >查看</a><Button
+                        v-if="props.formal"
+                        type="text"
+                        size="small"
+                        @click="detachMaterialFile(file)"
+                      >
+                        解除关联
+                      </Button>
                     </div>
                     <p v-if="!material.files.length" class="flow-empty-copy">
                       暂无关联文件
@@ -966,6 +1658,30 @@ function stageValue(key: string) {
                 {{ f.label }}
               </button>
             </div>
+            <details v-if="props.formal" class="flow-stage-more">
+              <summary>导入既有邮件</summary>
+              <Button size="small" @click="findExistingMails">
+                查找关联经历邮件
+              </Button>
+              <Select
+                v-if="existingMails.length"
+                v-model:value="existingMailId"
+                aria-label="选择既有邮件"
+                :options="
+                  existingMails.map((mail) => ({
+                    value: mail.id,
+                    label: mail.subject,
+                  }))
+                "
+              />
+              <Button
+                v-if="existingMailId"
+                size="small"
+                @click="linkExistingMail"
+              >
+                关联邮件
+              </Button>
+            </details>
             <div class="flow-mail-list">
               <button
                 v-for="m in mailbox"
@@ -988,7 +1704,7 @@ function stageValue(key: string) {
                   {{
                     query
                       ? '换一个关键词试试。'
-                      : '新建邮件或手动录入往来。原型草稿不会被当作已发邮件。'
+                      : '新建草稿，或在编辑器中选择“收到的邮件 / 已发送记录”录入已有往来。'
                   }}
                 </p>
               </div>
@@ -1001,7 +1717,7 @@ function stageValue(key: string) {
                 <div>
                   <span class="flow-eyebrow">{{
                     currentDraft
-                      ? '未发送 · 原型草稿'
+                      ? '未发送草稿'
                       : selectedMail?.direction === 'received'
                         ? '收到的邮件'
                         : '已发送记录'
@@ -1014,8 +1730,11 @@ function stageValue(key: string) {
                 </div>
                 <div class="flow-inline-actions">
                   <Button
-                    v-if="currentDraft && !compose"
-                    @click="compose = true"
+                    v-if="
+                      (currentDraft || (props.formal && selectedMail)) &&
+                      !compose
+                    "
+                    @click="editMail"
                   >
                     编辑
 </Button><Button
@@ -1029,24 +1748,46 @@ function stageValue(key: string) {
               </header>
               <template v-if="currentDraft && compose">
                 <div class="flow-compose-fields">
+                  <label v-if="props.formal">邮件类型<Select
+                      v-model:value="recordMode"
+                      :options="[
+                        { value: 'draft', label: '未发送草稿' },
+                        { value: 'received', label: '收到的邮件' },
+                        { value: 'sent', label: '已发送记录' },
+                      ]"
+/></label><label v-if="props.formal && recordMode !== 'draft'">往来时间<Input
+                      v-model:value="recordDate"
+                      type="datetime-local"
+/></label><label v-if="props.formal && recordMode !== 'draft'">发件人<Input v-model:value="currentDraft.sender" /></label>
                   <label>收件人<Input
                       v-model:value="currentDraft.recipient"
+                      :disabled="working"
                       placeholder="教授邮箱"
 /></label><label>主题<Input
                       v-model:value="currentDraft.subject"
+                      :disabled="working"
                       placeholder="填写邮件主题"
                   /></label>
                 </div>
                 <Input.TextArea
                   v-model:value="currentDraft.body"
                   class="flow-compose-body"
-                  placeholder="在这里撰写邮件。正式版的 AI 代笔结果也会作为独立草稿放在这里，供你修改。"
+                  placeholder="在这里撰写邮件，或修改 AI 生成的独立草稿。"
+                  :disabled="working"
                   :auto-size="{ minRows: 12, maxRows: 20 }"
                   aria-label="邮件正文"
                 />
                 <div class="flow-compose-actions">
-                  <span>仅原型草稿，不会发送</span><Button type="primary" @click="saveDraft">
-                    保存到原型草稿
+                  <span>{{
+                    props.formal ? '草稿不会自动发送' : '仅原型草稿，不会发送'
+                  }}</span><Button type="primary" :loading="working" @click="saveDraft">
+                    {{
+                      props.formal
+                        ? recordMode === 'draft'
+                          ? '保存草稿'
+                          : '保存往来记录'
+                        : '保存到原型草稿'
+                    }}
                   </Button>
                 </div>
 </template><template v-else>
@@ -1074,7 +1815,12 @@ function stageValue(key: string) {
                   </div>
                   <div>
                     <dt>时间</dt>
-                    <dd>{{ selectedMail?.date || '本页原型草稿' }}</dd>
+                    <dd>
+                      {{
+                        selectedMail?.date ||
+                        (props.formal ? '未发送草稿' : '本页原型草稿')
+                      }}
+                    </dd>
                   </div>
                 </dl>
                 <div class="flow-mail-body">
@@ -1086,9 +1832,18 @@ function stageValue(key: string) {
               <section class="flow-mail-attachments">
                 <header class="flow-section-heading">
                   <h3>
-                    邮件附件 <span>{{ currentDraft?.files.length || 0 }}</span>
+                    邮件附件
+                    <span>{{
+                      (currentDraft?.files.length || 0) +
+                      (currentDraft?.documents?.length ||
+                        selectedMail?.documents?.length ||
+                        0)
+                    }}</span>
                   </h3>
-                  <Button v-if="currentDraft" @click="fileInput?.click()">
+                  <Button
+                    v-if="currentDraft && (!props.formal || compose)"
+                    @click="fileInput?.click()"
+                  >
                     添加附件
                   </Button>
                 </header>
@@ -1112,8 +1867,56 @@ function stageValue(key: string) {
                     移除
                   </button>
                 </div>
-                <p v-if="!currentDraft?.files.length" class="flow-muted">
-                  暂无关联附件。正式版将复用统一文件存储，附件随邮件独立关联。
+                <div
+                  v-if="props.formal && currentDraft && compose"
+                  class="flow-inline-actions"
+                >
+                  <Button @click="loadExistingFiles">选择已有文件</Button>
+                  <Select
+                    v-if="fileChoices.length"
+                    v-model:value="existingFile"
+                    aria-label="已有邮件附件"
+                    :options="
+                      fileChoices.map((doc) => ({
+                        value: doc.id,
+                        label: doc.filename,
+                      }))
+                    "
+                    @change="chooseExisting('mail')"
+                  />
+                </div>
+                <div
+                  v-for="doc in currentDraft?.documents ||
+                  selectedMail?.documents ||
+                  []"
+                  :key="doc.id"
+                  class="flow-file-row"
+                >
+                  <ExplorerIcon name="book" /><a
+                    :href="fileUrl(doc.id)"
+                    target="_blank"
+                    rel="noreferrer"
+                    >{{ doc.filename }}</a><small>{{ fileSize(doc.size) }}</small><Button
+                    v-if="props.formal && currentDraft && compose"
+                    size="small"
+                    @click="
+                      currentDraft.documents = currentDraft.documents?.filter(
+                        (file) => file.id !== doc.id,
+                      )
+                    "
+                  >
+                    解除附件
+                  </Button>
+                </div>
+                <p
+                  v-if="
+                    !currentDraft?.files.length &&
+                    !currentDraft?.documents?.length &&
+                    !selectedMail?.documents?.length
+                  "
+                  class="flow-muted"
+                >
+                  暂无关联附件。可在编辑邮件时上传附件并保存关联。
                 </p>
               </section>
             </template>
@@ -1134,16 +1937,16 @@ function stageValue(key: string) {
             </header>
             <div class="flow-ai-actions">
               <button
-                v-for="action in [
+                v-for="option in [
                   { id: 'progress', label: '总结当前进展' },
                   { id: 'ideas', label: '下一封写作思路' },
                   { id: 'draft', label: 'AI 代笔写信' },
                 ]"
-                :key="action.id"
-                :class="{ 'is-active': aiAction === action.id }"
-                @click="aiAction = action.id"
+                :key="option.id"
+                :class="{ 'is-active': aiAction === option.id }"
+                @click="aiAction = option.id"
               >
-                {{ action.label }}<ExplorerIcon name="chevron" />
+                {{ option.label }}<ExplorerIcon name="chevron" />
               </button>
             </div>
             <div class="flow-ai-scope">
@@ -1166,9 +1969,9 @@ function stageValue(key: string) {
                   :auto-size="{ minRows: 4, maxRows: 8 }"
                   placeholder="例如：确认内诺文件的签署方式，并询问后续出愿安排。"
 /></label><Button block type="primary" @click="previewAiDraft">
-                查看新邮件草稿流程
+                {{ props.formal ? '生成新邮件草稿' : '查看新邮件草稿流程' }}
               </Button>
-              <p class="flow-ai-boundary">
+              <p v-if="!props.formal" class="flow-ai-boundary">
                 原型不调用 AI。此处会打开独立空白草稿；正式接入后由 AI
                 起草，供你修改确认。
               </p>
@@ -1185,15 +1988,48 @@ function stageValue(key: string) {
                 <p>
                   {{
                     aiAction === 'progress'
-                      ? '正式版将区分教授明确表达的内容、待确认事项和下一步建议。'
-                      : '正式版将结合已选邮件、当前阶段与用户要求提出写作思路，不推测教授承诺。'
+                      ? '区分教授明确表达的内容、待确认事项和下一步建议。'
+                      : '结合本目标邮件、阶段与写作要求提出思路，不推测教授承诺。'
                   }}
                 </p>
-                <span>原型不调用模型，不展示虚构的 AI 结果</span>
+                <span v-if="!props.formal">原型不调用模型，不展示虚构的 AI 结果</span>
               </div>
             </template>
+            <Button
+              v-if="props.formal && aiAction !== 'draft'"
+              block
+              :loading="aiBusy"
+              @click="runAi(aiAction)"
+            >
+              开始整理
+            </Button>
+            <p v-if="props.formal && aiResult" class="flow-mail-body">
+              {{ aiResult }}
+            </p>
             <div class="flow-attachment-advice">
               <h3>随信附件</h3>
+              <div
+                v-for="(suggestion, index) in attachmentSuggestions"
+                :key="index"
+                class="flow-file-row"
+              >
+                <div>
+                  <strong>{{ suggestion.title }}</strong><small>{{ suggestion.reason }}</small><small v-if="!suggestion.documentId">待准备材料</small>
+                </div>
+                <Button
+                  v-if="
+                    currentDraft &&
+                    compose &&
+                    materials
+                      .flatMap((m) => m.files)
+                      .some((doc) => doc.id === suggestion.documentId)
+                  "
+                  size="small"
+                  @click="attachSuggested(suggestion.documentId)"
+                >
+                  加入草稿
+                </Button>
+              </div>
               <p>
                 代笔结果旁会给出待核对的附件建议，并可从申请材料中选择文件。
               </p>
@@ -1225,7 +2061,9 @@ function stageValue(key: string) {
               :events="targetEvents"
               :today="today"
               @todo="
-                feedback = '日程原型为只读展示；正式日程编辑与原时间线保留。'
+                feedback = props.formal
+                  ? '请在日历与待办中管理提醒。'
+                  : '日程原型为只读展示；正式日程编辑与原时间线保留。'
               "
             />
             <div class="flow-event-list">
@@ -1246,17 +2084,20 @@ function stageValue(key: string) {
       </template>
     </template>
     <div v-else-if="store.loaded && !loading" class="flow-no-target">
-      <h1>申请工作流原型</h1>
-      <p>当前工作区没有想考研究室，原型不会填充虚构目标。</p>
+      <h1>{{ props.formal ? '申请工作台' : '申请工作流原型' }}</h1>
+      <p>当前工作区没有想考研究室。请先在修考之路选择目标。</p>
     </div>
     <Modal
+      :confirm-loading="working"
+      :closable="!working"
+      :mask-closable="!working"
       v-model:open="stageEditor"
       :title="`${viewedLabel} · 编辑阶段记录`"
-      ok-text="应用到原型"
+      :ok-text="props.formal ? '保存记录' : '应用到原型'"
       cancel-text="取消"
       @ok="saveStage"
     >
-      <p class="flow-modal-note">
+      <p v-if="!props.formal" class="flow-modal-note">
         仅更新原型，不写入正式记录；切换阶段后仍保留本次输入。
       </p>
       <div class="flow-stage-form">
@@ -1273,9 +2114,12 @@ function stageValue(key: string) {
       </div>
     </Modal>
     <Modal
+      :confirm-loading="working"
+      :closable="!working"
+      :mask-closable="!working"
       v-model:open="materialEditor"
-      title="新增原型材料"
-      ok-text="加入原型清单"
+      :title="props.formal ? '新增申请材料' : '新增原型材料'"
+      :ok-text="props.formal ? '加入清单' : '加入原型清单'"
       cancel-text="取消"
       :ok-button-props="{ disabled: !newMaterialTitle.trim() }"
       @ok="addMaterial"

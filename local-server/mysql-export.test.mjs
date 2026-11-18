@@ -43,7 +43,7 @@ async function fixture() {
     format: 'juai-mysql-snapshot',
     version: 1,
     kind: 'workspace',
-    businessSchema: 19,
+    businessSchema: 20,
     tables,
   };
   await writeFile(`${source}/MYSQL_WORKSPACE.json`, JSON.stringify(snapshot));
@@ -82,8 +82,8 @@ test('offline conversion rejects an invalid table set before publishing the targ
 
 test('offline conversion CLI executes when invoked through a symlink', async () => {
   const f = await fixture();
-    const link = `${f.root}/converter.mjs`;
-    const target = `${f.root}/from-cli`;
+  const link = `${f.root}/converter.mjs`;
+  const target = `${f.root}/from-cli`;
   await symlink(
     fileURLToPath(new URL('import-mysql-export.mjs', import.meta.url)),
     link,
@@ -95,4 +95,27 @@ test('offline conversion CLI executes when invoked through a symlink', async () 
   ]);
   assert.equal(JSON.parse(stdout).converted, true);
   assert.equal(await readFile(`${target}/申请.txt`, 'utf8'), '日本語・中文');
+});
+
+test('legacy schema19 export converts with empty workflow tables', async () => {
+  const f = await fixture();
+  f.snapshot.businessSchema = 19;
+  const newTables = new Set([
+    'application_draft_files',
+    'application_drafts',
+    'application_mail_files',
+    'application_stage_fields',
+    'application_workflows',
+  ]);
+  f.snapshot.tables = Object.fromEntries(
+    Object.entries(f.snapshot.tables).filter(([name]) => !newTables.has(name)),
+  );
+  f.snapshot.tables.schema_migrations =
+    f.snapshot.tables.schema_migrations.filter((row) => row.version < 20);
+  await writeFile(
+    `${f.source}/MYSQL_WORKSPACE.json`,
+    JSON.stringify(f.snapshot),
+  );
+  const result = await importMySQLExport(f.source, `${f.root}/legacy-portable`);
+  assert.equal(result.schema, 20);
 });

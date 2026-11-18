@@ -61,7 +61,8 @@ const coreRoutes: RouteRecordRaw[] = [
       {
         name: 'ApplicationOverview',
         path: 'overview',
-        component: () => import('#/views/japan-grad/overview.vue'),
+        component: () =>
+          import('#/views/japan-grad/application-flow-overview.vue'),
         meta: { title: '申请总览' },
       },
       {

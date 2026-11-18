@@ -27,7 +27,7 @@ export async function importMySQLExport(source, target) {
     snapshot.format !== 'juai-mysql-snapshot' ||
     snapshot.version !== 1 ||
     snapshot.kind !== 'workspace' ||
-    snapshot.businessSchema !== 19
+    ![19, 20].includes(snapshot.businessSchema)
   )
     throw new Error('不支持的MySQL个人导出格式。');
   const temporary = `${target}.partial-${randomUUID()}`;
@@ -43,8 +43,18 @@ export async function importMySQLExport(source, target) {
         )
         .all()
         .map((r) => r.name);
+      const newTables = new Set([
+        'application_draft_files',
+        'application_drafts',
+        'application_mail_files',
+        'application_stage_fields',
+        'application_workflows',
+      ]);
+      const expected = tables.filter(
+        (name) => snapshot.businessSchema === 20 || !newTables.has(name),
+      );
       if (
-        tables.toSorted((a, b) => a.localeCompare(b)).join(',') !==
+        expected.toSorted((a, b) => a.localeCompare(b)).join(',') !==
         Object.keys(snapshot.tables || {})
           .toSorted((a, b) => a.localeCompare(b))
           .join(',')
@@ -67,7 +77,7 @@ export async function importMySQLExport(source, target) {
           const statement = db.prepare(
             `INSERT INTO ${quote(table)} (${columns.map((column) => quote(column)).join(',')}) VALUES (${columns.map(() => '?').join(',')})`,
           );
-          for (const row of snapshot.tables[table]) {
+          for (const row of snapshot.tables[table] || []) {
             if (!row || Object.keys(row).some((key) => !allowed.has(key)))
               throw new Error('导出包含无效字段。');
             if (
@@ -82,6 +92,10 @@ export async function importMySQLExport(source, target) {
             statement.run(...columns.map((column) => row[column]));
           }
         }
+        if (snapshot.businessSchema === 19)
+          db.prepare('INSERT INTO schema_migrations VALUES(20,?)').run(
+            new Date().toISOString(),
+          );
         for (const trigger of triggers) db.exec(trigger.sql);
         if (db.prepare('PRAGMA foreign_key_check').all().length > 0)
           throw new Error('导出中的关联记录不完整。');
@@ -117,7 +131,7 @@ export async function importMySQLExport(source, target) {
       { mode: 0o600 },
     );
     await rename(temporary, target);
-    return { workspace: target, schema: 19, converted: true };
+    return { workspace: target, schema: 20, converted: true };
   } catch (error) {
     await rm(temporary, { recursive: true, force: true });
     throw error;

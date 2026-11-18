@@ -5,21 +5,34 @@ import { computed, ref, watch } from 'vue';
 
 import { App, Button, Checkbox } from 'ant-design-vue';
 
-import { primaryProfessor } from '../application-planning';
+import { FLOW_STAGES } from '../application-flow-model';
 import { useExplorerStore } from '../explorer';
 import { universityLocation } from '../japan-geography';
 import { annualBudgetText } from '../lab-targets';
 import { localApi } from '../local-api';
-import { APPLICATION_STAGES, applicationStage } from '../overview-progress';
 import ExplorerIcon from './explorer-icon.vue';
 import UniversityLogo from './university-logo.vue';
 
-const props = defineProps<{ target: LabTarget; selected: boolean }>();
+const props = defineProps<{
+  target: LabTarget;
+  selected: boolean;
+  applications?: {
+    id: string;
+    lab_id: string;
+    batch_id: null | string;
+    workflow: { currentStage: null | string };
+    materials: { complete: boolean }[];
+  }[];
+}>();
 const emit = defineEmits<{ select: [id: string]; contact: [id: string] }>();
 const store = useExplorerStore();
 const { message } = App.useApp();
 const toggling = ref(false);
-const stage = computed(() => applicationStage(props.target));
+const applicationStages = computed(() =>
+  (props.applications || []).filter(
+    (row) => row.lab_id === props.target.lab.id,
+  ),
+);
 const progress =
   ref<Array<{ id: string; material_count: number; completed_count: number }>>();
 const progressError = ref(false);
@@ -36,7 +49,6 @@ watch(
   },
   { immediate: true },
 );
-const professor = computed(() => primaryProfessor(props.target));
 async function removeTarget() {
   if (toggling.value) return;
   toggling.value = true;
@@ -80,22 +92,26 @@ async function removeTarget() {
         </div>
       </div>
       <div class="journey-entry-stage">
-        <span>当前阶段</span><strong>{{ APPLICATION_STAGES[stage.index] }}</strong>
-        <div
-          class="journey-stage-track"
-          :aria-label="`${target.lab.name}：${stage.label}`"
+        <span>申请阶段 · 按目标维护</span><template v-if="applicationStages.length">
+          <RouterLink
+            v-for="row in applicationStages"
+            :key="row.id"
+            :to="`/japan-grad/applications/labs/${target.lab.id}?target=${row.id}`"
+          >
+            <strong>{{
+              FLOW_STAGES.find(
+                (stage) => stage.id === row.workflow.currentStage,
+              )?.label || '申请阶段未设置'
+            }}</strong><small>{{ row.batch_id ? '独立招生批次' : '未指定批次' }} · 材料
+              {{ row.materials.filter((m) => m.complete).length }} /
+              {{ row.materials.length }} · 修改阶段 →</small>
+          </RouterLink>
+</template><RouterLink
+          v-else
+          :to="`/japan-grad/applications/labs/${target.lab.id}`"
         >
-          <i
-            v-for="(label, index) in APPLICATION_STAGES"
-            :key="label"
-            :class="{
-              'is-reached': stage.reached[index],
-              'is-current': stage.index === index,
-            }"
-            :title="label"
-          ></i>
-        </div>
-        <small>{{ stage.label }}{{ professor ? ` · ${professor.name}` : '' }}</small>
+          建立 / 打开申请目标 →
+        </RouterLink>
       </div>
       <RouterLink
         :to="`/japan-grad/applications/labs/${target.lab.id}`"

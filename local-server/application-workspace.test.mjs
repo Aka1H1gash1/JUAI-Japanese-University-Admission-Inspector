@@ -245,6 +245,17 @@ test('mail AI sees only explicitly linked target mail and never sends or persist
         calls++;
         assert.ok(!args.messages[0].content.includes('OTHER_TARGET_SECRET'));
         assert.ok(args.instructions.includes('不能把推测当作教授承诺'));
+        if (JSON.parse(args.messages[0].content).action === 'draft')
+          return {
+            text: JSON.stringify({
+              subject: '新邮件草稿',
+              body: '请确认申请要求',
+              attachmentSuggestions: [
+                { title: '研究计划书', reason: '便于老师了解研究方向' },
+              ],
+            }),
+            calls: [],
+          };
         return { text: '仅供用户修改的草稿', calls: [] };
       },
     });
@@ -270,7 +281,16 @@ test('mail AI sees only explicitly linked target mail and never sends or persist
       ),
       { status: 400 },
     );
-    assert.equal(calls, 3);
+    payload = { action: 'draft', requirements: '撰写一封联络邮件' };
+    await service.handle(
+      { method: 'POST' },
+      {},
+      `/api/japangrad/applications/${a.id}/ai`,
+    );
+    assert.equal(response.workflow.drafts[0].id, response.draftId);
+    assert.equal(response.workflow.drafts[0].status, 'draft');
+    assert.equal(response.attachmentSuggestions[0].title, '研究计划书');
+    assert.equal(calls, 4);
     assert.equal(
       db.prepare('SELECT COUNT(*) AS n FROM mail_messages').get().n,
       2,
@@ -414,6 +434,85 @@ test('common material templates need explicit scope confirmation and preserve ma
       '用户确认的愿书',
     );
     assert.equal(state.materials.find((r) => r.id === m.id).complete, true);
+  } finally {
+    await f.stop();
+  }
+});
+
+test('target mail records and draft attachments persist with separate write versions', async () => {
+  const f = await fixture();
+  try {
+    const target = await (
+      await f.call(`/applications/labs/${f.lab.id}`, 'POST', {})
+    ).json();
+    const url = `/applications/${target.id}`;
+    const file = await (await f.upload()).json();
+    const record = {
+      professorId: 'p1',
+      direction: 'received',
+      subject: '现有来信',
+      body: '邮件内容',
+      date: '2027-01-01T12:00',
+      documentIds: [file.id],
+    };
+    const created = await f.call(`${url}/records`, 'POST', record);
+    assert.equal(created.status, 201);
+    const createdBody = await created.json();
+    const mail = createdBody.mails.find(
+      (item) => item.id === createdBody.savedMailId,
+    );
+    assert.equal(mail.documents[0].id, file.id);
+    const changed = await f.call(`${url}/records/${mail.id}`, 'PUT', {
+      ...record,
+      expectedHash: mail.recordHash,
+      body: '更正后的正文',
+      documentIds: undefined,
+    });
+    assert.equal(changed.status, 200);
+    const current = (await changed.json()).mails[0];
+    assert.equal(current.documents[0].id, file.id);
+    assert.equal(
+      (
+        await f.call(`${url}/records/${mail.id}`, 'DELETE', {
+          expectedHash: mail.recordHash,
+        })
+      ).status,
+      409,
+    );
+    const draft = await (
+      await f.call(`${url}/drafts`, 'POST', {
+        subject: '未发送草稿',
+        body: '草稿正文',
+        recipient: '',
+        documentIds: [file.id],
+      })
+    ).json();
+    const saved = draft.drafts.find((item) => item.id === draft.savedDraftId);
+    assert.equal(saved.documents[0].id, file.id);
+    assert.equal(
+      (
+        await f.call(`${url}/drafts/${saved.id}`, 'PUT', {
+          version: saved.version,
+          subject: saved.subject,
+          body: '更新草稿',
+          recipient: '',
+        })
+      ).status,
+      200,
+    );
+    assert.equal(
+      (
+        await f.call(`${url}/records/${mail.id}`, 'DELETE', {
+          expectedHash: current.recordHash,
+        })
+      ).status,
+      200,
+    );
+    await f.restart();
+    const restored = await (await f.call(url)).json();
+    assert.equal(restored.mails.length, 0);
+    assert.equal(restored.workflow.drafts[0].documents[0].id, file.id);
+    assert.equal(restored.workflow.drafts[0].body, '更新草稿');
   } finally {
     await f.stop();
   }

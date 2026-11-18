@@ -14,6 +14,7 @@ import { isDeepStrictEqual } from 'node:util';
 import { createAdmissionAiService } from './admission-ai-service.mjs';
 import { createAiManagementService } from './ai-management-service.mjs';
 import { createAnalysisService } from './analysis-service.mjs';
+import { migrateApplicationWorkflow } from './application-workflow.mjs';
 import {
   createApplicationWorkspace,
   migrateApplications,
@@ -826,6 +827,13 @@ export async function createLocalApp({
         kind: 'before-applications19',
       });
     migrateApplications(db);
+  }
+  if (
+    !db.prepare('SELECT version FROM schema_migrations WHERE version=20').get()
+  ) {
+    if (db.dialect !== 'mysql' && !productBackup && !migrationBackup)
+      await createManualBackup(db, workspace, { kind: 'before-workflow20' });
+    migrateApplicationWorkflow(db);
   }
   const applications = createApplicationWorkspace({
     db,

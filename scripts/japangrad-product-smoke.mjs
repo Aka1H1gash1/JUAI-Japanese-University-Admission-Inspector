@@ -282,7 +282,7 @@ try {
   await page
     .getByRole('checkbox', { name: '完成材料：研究計画書', exact: true })
     .waitFor();
-  await page.locator('.material-drop input[type=file]').setInputFiles({
+  await page.locator('.flow-material-detail input[type=file]').setInputFiles({
     name: '研究計画書.txt',
     mimeType: 'text/plain',
     buffer: Buffer.from('申请目标独立文件'),
@@ -339,6 +339,47 @@ try {
   );
   console.log(
     'PASS independent material/file completion, refresh and ZIP export',
+  );
+
+  await page.locator('.flow-stage-rail li:nth-child(5) button').click();
+  await page.getByRole('button', { name: '设为当前阶段', exact: true }).click();
+  await page.waitForFunction(
+    async (id) =>
+      (await (await fetch(`/api/japangrad/applications/${id}/workflow`)).json())
+        .currentStage === 'apply',
+    target.id,
+  );
+  await page.reload();
+  await page
+    .locator('.flow-stage-main h2')
+    .first()
+    .filter({ hasText: '出愿提交' })
+    .waitFor();
+  await visit('/japan-grad/overview');
+  await page
+    .locator('.flow-state-label')
+    .getByText('出愿提交', { exact: true })
+    .waitFor();
+  await visit(`${applicationPath}&view=contact`);
+  await page.getByRole('button', { name: '新建邮件', exact: true }).click();
+  await page.getByPlaceholder('填写邮件主题').fill('隔离测试草稿');
+  await page.locator('.flow-compose-body').fill('未发送的验收内容');
+  await page.getByRole('button', { name: /^保存草稿$/ }).click();
+  await page.waitForFunction(
+    async (id) =>
+      (
+        await (await fetch(`/api/japangrad/applications/${id}/workflow`)).json()
+      ).drafts.some((draft) => draft.subject === '隔离测试草稿'),
+    target.id,
+  );
+  await page.reload();
+  await page.getByText('隔离测试草稿', { exact: true }).first().waitFor();
+  assert.equal(
+    await page.locator('.flow-mail-workspace .flow-stage-record').count(),
+    0,
+  );
+  console.log(
+    'PASS persisted stage, overview projection and unsent draft reload',
   );
 
   const routes = [

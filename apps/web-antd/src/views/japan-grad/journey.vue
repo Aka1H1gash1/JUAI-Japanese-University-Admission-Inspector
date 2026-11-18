@@ -1,16 +1,11 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { App, Button, Input, Modal, Select, Tabs } from 'ant-design-vue';
 
-import {
-  CONTACT_OPTIONS,
-  normalizedContact,
-  primaryProfessor,
-} from './application-planning';
+import { FLOW_STAGES } from './application-flow-model';
 import ExplorerIcon from './components/explorer-icon.vue';
-import JourneyContactBoard from './components/journey-contact-board.vue';
 import JourneyContactDialog from './components/journey-contact-dialog.vue';
 import JourneyExportDialog from './components/journey-export-dialog.vue';
 import JourneyLabEntry from './components/journey-lab-entry.vue';
@@ -22,9 +17,34 @@ import QuestionLibrary from './components/question-library.vue';
 import { useExplorerStore } from './explorer';
 import { geographySearchTerms } from './japan-geography';
 import { labComparisonRows, labContext, labPath } from './lab-targets';
+import { localApi } from './local-api';
 import { vAccessibleSelect } from './select-accessibility';
 import { usePagination } from './use-pagination';
 const store = useExplorerStore();
+const applicationRows = ref<
+  {
+    id: string;
+    lab_id: string;
+    batch_id: null | string;
+    workflow: { currentStage: null | string };
+    materials: { complete: boolean }[];
+  }[]
+>([]);
+const applicationError = ref('');
+async function refreshApplications() {
+  try {
+    applicationRows.value = await localApi('/applications/summary');
+    applicationError.value = '';
+  } catch (error) {
+    applicationError.value =
+      error instanceof Error ? error.message : '进度读取失败';
+  }
+}
+onMounted(() => {
+  void refreshApplications();
+  window.addEventListener('focus', refreshApplications);
+});
+onUnmounted(() => window.removeEventListener('focus', refreshApplications));
 const { message } = App.useApp();
 const route = useRoute();
 const router = useRouter();
@@ -81,8 +101,11 @@ const visible = computed(() =>
         item.university.id === universityFilter.value) &&
       (!schoolFilter.value || item.school.id === schoolFilter.value) &&
       (!stageFilter.value ||
-        normalizedContact(primaryProfessor(item)?.contact).status ===
-          stageFilter.value) &&
+        applicationRows.value.some(
+          (row) =>
+            row.lab_id === item.lab.id &&
+            row.workflow.currentStage === stageFilter.value,
+        )) &&
       (!foreignFilter.value ||
         (item.lab.foreignStudentStatus || 'unknown') === foreignFilter.value) &&
       (!languageFilter.value ||
@@ -233,11 +256,14 @@ const { page, pageSize, total, paged } = usePagination(visible, [
                     })),
                   ]"
               /></label>
-              <label>主要联络阶段<Select
+              <label>申请阶段<Select
                   v-model:value="stageFilter"
                   :options="[
                     { value: '', label: '全部阶段' },
-                    ...CONTACT_OPTIONS,
+                    ...FLOW_STAGES.map((stage) => ({
+                      value: stage.id,
+                      label: stage.label,
+                    })),
                   ]"
               /></label>
               <label>外国人学生<Select
@@ -274,6 +300,7 @@ const { page, pageSize, total, paged } = usePagination(visible, [
             <Tabs.TabPane key="targets" tab="研究室清单">
               <div v-if="visible.length" class="journey-directory">
                 <JourneyLabEntry
+                  :applications="applicationRows"
                   v-for="item in paged"
                   :key="item.lab.id"
                   :target="item"
@@ -293,11 +320,26 @@ const { page, pageSize, total, paged } = usePagination(visible, [
                 :total="total"
               />
 </Tabs.TabPane><Tabs.TabPane key="contacts" tab="教授联络看板">
-              <JourneyContactBoard
-                v-if="view === 'contacts'"
-                :targets="visible"
-                @manage="manageContact"
-              />
+              <p v-if="applicationError" role="alert" class="form-error">
+                {{ applicationError }}
+              </p>
+              <div
+                v-for="entry in visible"
+                :key="entry.lab.id"
+                class="journey-directory-entry"
+              >
+                <h2>{{ entry.lab.name }}</h2>
+                <p>邮件正文、附件与 AI 写作统一在目标邮件工作台管理。</p>
+                <RouterLink
+                  :to="`/japan-grad/applications/labs/${entry.lab.id}?view=mail`"
+                >
+                  进入教授邮件 →
+</RouterLink><RouterLink
+                  :to="`/japan-grad/applications/labs/${entry.lab.id}?view=stages`"
+                >
+                  修改申请阶段 →
+                </RouterLink>
+              </div>
 </Tabs.TabPane><Tabs.TabPane key="timeline" tab="时间线与日程">
               <JourneyTimeline
                 v-if="view === 'timeline'"

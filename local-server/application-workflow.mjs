@@ -34,6 +34,7 @@ export function migrateApplicationWorkflow(db) {
  CREATE TABLE application_drafts(id TEXT PRIMARY KEY,target_id TEXT NOT NULL REFERENCES application_targets(id) ON DELETE CASCADE,subject TEXT NOT NULL,body TEXT NOT NULL,recipient TEXT NOT NULL,version INTEGER NOT NULL DEFAULT 1,created_at TEXT NOT NULL,updated_at TEXT NOT NULL);
  CREATE INDEX application_drafts_target ON application_drafts(target_id);
  CREATE TABLE application_draft_files(draft_id TEXT NOT NULL REFERENCES application_drafts(id) ON DELETE CASCADE,document_id TEXT NOT NULL REFERENCES document_records(id) ON DELETE RESTRICT,PRIMARY KEY(draft_id,document_id));
+ CREATE TABLE application_mail_files(target_id TEXT NOT NULL REFERENCES application_targets(id) ON DELETE CASCADE,message_id TEXT NOT NULL REFERENCES mail_messages(id) ON DELETE CASCADE,document_id TEXT NOT NULL REFERENCES document_records(id) ON DELETE RESTRICT,PRIMARY KEY(target_id,message_id,document_id));
  INSERT INTO schema_migrations VALUES(20,datetime('now'));COMMIT;`);
   } catch (error) {
     db.exec('ROLLBACK');
@@ -86,6 +87,12 @@ export function createApplicationWorkflow({ db, transaction, fail }) {
       .map((row) => ({
         ...row,
         status: 'draft',
+        documents: db
+          .prepare(
+            'SELECT d.data FROM application_draft_files f JOIN documents d ON d.id=f.document_id WHERE f.draft_id=?',
+          )
+          .all(row.id)
+          .map((r) => JSON.parse(r.data)),
         documentIds: db
           .prepare(
             'SELECT document_id FROM application_draft_files WHERE draft_id=? ORDER BY document_id',
@@ -176,17 +183,20 @@ export function createApplicationWorkflow({ db, transaction, fail }) {
       const body = string(input.body, 100_000);
       const recipient = string(input.recipient, 1000);
       const subject = string(input.subject, 1000);
-      const ids = input.documentIds ?? [];
+      const ids = input.documentIds;
       if (
-        !Array.isArray(ids) ||
-        ids.length > 100 ||
-        new Set(ids).size !== ids.length ||
-        ids.some((id) => typeof id !== 'string' || !/^[\w-]{1,100}$/.test(id))
+        ids !== undefined &&
+        (!Array.isArray(ids) ||
+          ids.length > 100 ||
+          new Set(ids).size !== ids.length ||
+          ids.some(
+            (id) => typeof id !== 'string' || !/^[\w-]{1,100}$/.test(id),
+          ))
       )
         fail('附件列表格式错误。', 400);
       const id = input.id || randomUUID();
       transaction(() => {
-        for (const documentId of ids) {
+        for (const documentId of ids ?? []) {
           const doc = db
             .prepare('SELECT owner_type,owner_id FROM documents WHERE id=?')
             .get(documentId);
@@ -213,16 +223,17 @@ export function createApplicationWorkflow({ db, transaction, fail }) {
           db.prepare(
             'INSERT INTO application_drafts(id,target_id,subject,body,recipient,created_at,updated_at) VALUES(?,?,?,?,?,?,?)',
           ).run(id, targetId, subject, body, recipient, now, now);
+        if (ids === undefined) return;
         db.prepare('DELETE FROM application_draft_files WHERE draft_id=?').run(
           id,
         );
-        for (const documentId of ids)
+        for (const documentId of ids ?? [])
           db.prepare('INSERT INTO application_draft_files VALUES(?,?)').run(
             id,
             documentId,
           );
       });
-      return read(targetId);
+      return { ...read(targetId), savedDraftId: id };
     },
     deleteDraft(targetId, id, version) {
       checkTarget(targetId);
